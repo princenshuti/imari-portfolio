@@ -99,16 +99,21 @@ export async function loadOrCreatePortfolio(user) {
     portfolioId,
     role: myRole,
     state: {
-      profile:     data.profile     || { name: '', displayCurrency: 'RWF', email: user.email },
-      assets:      data.assets      || [],
-      liabilities: data.liabilities || [],
-      goals:       data.goals       || [],
-      cashflows:         data.cashflows         || [],
-      snapshots:         data.snapshots         || [],
-      reachedMilestones: data.reachedmilestones || [],
-      fx:                data.fx                || { ...FX },
-      chat:        data.chat        || [],
-      insight:     data.insight,
+      // Merge cloud profile over safe defaults so no field is ever undefined
+      profile: {
+        name: '', displayCurrency: 'RWF', phone: '', bio: '', location: '', avatar: null,
+        ...(data.profile || {}),
+        email: user.email,           // always authoritative from auth
+      },
+      assets:            Array.isArray(data.assets)      ? data.assets      : [],
+      liabilities:       Array.isArray(data.liabilities) ? data.liabilities : [],
+      goals:             Array.isArray(data.goals)       ? data.goals       : [],
+      cashflows:         Array.isArray(data.cashflows)   ? data.cashflows   : [],
+      snapshots:         Array.isArray(data.snapshots)   ? data.snapshots   : [],
+      reachedMilestones: Array.isArray(data.reachedmilestones) ? data.reachedmilestones : [],
+      fx:                data.fx   || { ...FX },
+      chat:              Array.isArray(data.chat) ? data.chat : [],
+      insight:           data.insight ?? null,
     },
   };
 }

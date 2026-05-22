@@ -1,4 +1,4 @@
-import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense, Component } from 'react';
 import { FX, valueRWF, costRWF, toBase, fmtBase, MILESTONES } from './data.js';
 import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
@@ -21,6 +21,49 @@ const LiabilitiesView = lazy(() => import('./views/Liabilities.jsx'));
 const GoalsView       = lazy(() => import('./views/Goals.jsx'));
 const CashFlowView    = lazy(() => import('./views/CashFlow.jsx'));
 const TaxReportView   = lazy(() => import('./views/TaxReport.jsx'));
+
+// ─ Shared UI primitives ───────────────────────────────────────
+function FullScreenLoader({ message = 'Loading…' }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', background: 'var(--bg)',
+      gap: 14,
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: '50%',
+        border: '3px solid var(--line)', borderTopColor: 'var(--brand)',
+        animation: 'spin 0.7s linear infinite',
+      }} />
+      <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>{message}</div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 32, textAlign: 'center',
+      }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>⚠</div>
+        <div className="font-serif" style={{ fontSize: 20, marginBottom: 8 }}>Something went wrong</div>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 20, maxWidth: 420, lineHeight: 1.6 }}>
+          {this.state.error.message}
+        </div>
+        <button onClick={() => window.location.reload()} className="btn"
+          style={{ background: 'var(--brand)', color: '#fff', border: 0, padding: '10px 24px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600 }}>
+          Reload app
+        </button>
+      </div>
+    );
+  }
+}
 
 function upsert(arr, item, key = 'id') {
   const i = arr.findIndex(x => x[key] === item[key]);
@@ -359,13 +402,13 @@ export default function App() {
   }, [state.profile.name]);
 
   // ─ Render flow ────────────────────────────────────────────
-  if (session === undefined) return null; // still checking
+  // session === undefined  → auth check in progress (show spinner, not blank)
+  // session === null       → not logged in (show login)
+  // stateReady === false   → logged in but portfolio still loading from cloud
+  // profile.name empty     → need onboarding name
+  if (session === undefined) return <FullScreenLoader message="Checking session…" />;
   if (isConfigured && !session) return <Login pendingInvite={pendingInvite} />;
-  if (loadingPortfolio) return (
-    <div style={{ position:'fixed', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, color:'var(--ink-3)' }}>
-      Loading your portfolio…
-    </div>
-  );
+  if (!stateReady) return <FullScreenLoader message="Loading your portfolio…" />;
 
   if (!state.profile.name) {
     return <NamePrompt onSubmit={name => dispatch({ type:'setProfile', patch: { name } })} />;
@@ -413,35 +456,33 @@ export default function App() {
   const showTopBar = nav !== 'advisor';
 
   return (
-    <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
-      <Sidebar
-        active={nav} onNav={navigateTo}
-        profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
-        session={session} role={role} liabilities={state.liabilities || []}
-      />
-      <div className="col main-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
-        {showTopBar && (
-          <TopBar
-            title={titles[nav].title}
-            subtitle={titles[nav].subtitle}
-            profile={state.profile}
-            displayCurrency={state.profile.displayCurrency}
-            onCurrency={c => guardedDispatch({ type:'setProfile', patch: { displayCurrency: c } })}
-            role={role}
-          />
-        )}
-        <div key={nav} className="page-view">
-          <Suspense fallback={
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:300, color:'var(--ink-3)', fontSize:13 }}>
-              Loading…
-            </div>
-          }>
-            {view}
-          </Suspense>
+    <ErrorBoundary>
+      <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
+        <Sidebar
+          active={nav} onNav={navigateTo}
+          profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
+          session={session} role={role} liabilities={state.liabilities || []}
+        />
+        <div className="col main-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
+          {showTopBar && (
+            <TopBar
+              title={titles[nav].title}
+              subtitle={titles[nav].subtitle}
+              profile={state.profile}
+              displayCurrency={state.profile.displayCurrency}
+              onCurrency={c => guardedDispatch({ type:'setProfile', patch: { displayCurrency: c } })}
+              role={role}
+            />
+          )}
+          <div key={nav} className="page-view">
+            <Suspense fallback={<FullScreenLoader />}>
+              {view}
+            </Suspense>
+          </div>
         </div>
+        <MobileTabBar active={nav} onNav={navigateTo} />
+        <ToastContainer toasts={toasts} dismiss={dismiss} />
       </div>
-      <MobileTabBar active={nav} onNav={navigateTo} />
-      <ToastContainer toasts={toasts} dismiss={dismiss} />
-    </div>
+    </ErrorBoundary>
   );
 }
