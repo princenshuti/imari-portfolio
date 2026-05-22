@@ -131,7 +131,7 @@ function maskAccountNumber(n) {
   return `••• ${s.slice(-4)}`;
 }
 
-function AccountCard({ acc, displayCurrency, onEdit, onDelete }) {
+function AccountCard({ acc, displayCurrency, cfCount, onEdit, onDelete }) {
   const isBank = acc.kind === 'savings';
   const institution = acc.bank || acc.wallet || 'Account';
   const balance = acc.currentValue !== '' && acc.currentValue != null ? acc.currentValue : acc.purchasePrice;
@@ -149,6 +149,7 @@ function AccountCard({ acc, displayCurrency, onEdit, onDelete }) {
           {isBank ? 'Bank account' : 'Mobile money'}
           {acc.accountNumber && ` · ${maskAccountNumber(acc.accountNumber)}`}
           {isBank && acc.yieldPct ? ` · ${acc.yieldPct}% / yr` : ''}
+          {cfCount > 0 && ` · ${cfCount} cashflow${cfCount === 1 ? '' : 's'} linked`}
         </div>
       </div>
       <div className="col" style={{ alignItems:'flex-end', gap: 2 }}>
@@ -179,6 +180,15 @@ export default function AccountsView({ state, dispatch }) {
   const accounts = useMemo(() => assets.filter(a => ACCOUNT_KINDS.has(a.kind)), [assets]);
   const banks = accounts.filter(a => a.kind === 'savings');
   const momos = accounts.filter(a => a.kind === 'momo-cash');
+
+  // Count one-time cashflows linked to each account so AccountCard can display it.
+  const cashflowCountByAccount = useMemo(() => {
+    const map = {};
+    (state.cashflows || [])
+      .filter(c => c.accountId && c.recurring === 'once')
+      .forEach(c => { map[c.accountId] = (map[c.accountId] || 0) + 1; });
+    return map;
+  }, [state.cashflows]);
 
   const totalsRWF = useMemo(() => {
     let bank = 0, momo = 0;
@@ -244,7 +254,7 @@ export default function AccountsView({ state, dispatch }) {
       </div>
       {banks.length > 0 ? (
         <div className="col" style={{ gap: 10, marginBottom: 22 }}>
-          {banks.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} onEdit={setEditing} onDelete={handleDelete} />)}
+          {banks.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} onEdit={setEditing} onDelete={handleDelete} />)}
         </div>
       ) : (
         <div className="card" style={{ padding: 28, textAlign:'center', marginBottom: 22 }}>
@@ -260,7 +270,7 @@ export default function AccountsView({ state, dispatch }) {
       </div>
       {momos.length > 0 ? (
         <div className="col" style={{ gap: 10 }}>
-          {momos.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} onEdit={setEditing} onDelete={handleDelete} />)}
+          {momos.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} onEdit={setEditing} onDelete={handleDelete} />)}
         </div>
       ) : (
         <div className="card" style={{ padding: 28, textAlign:'center' }}>

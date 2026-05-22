@@ -70,6 +70,25 @@ function upsert(arr, item, key = 'id') {
   return i >= 0 ? arr.map((x, idx) => idx === i ? item : x) : [...arr, item];
 }
 
+// Recompute an account's currentValue from its purchasePrice (opening balance)
+// plus the net of all one-time cashflows linked to it.
+// This is called any time a cashflow referencing an account is added/edited/deleted,
+// and also when the account itself is saved (so manual balance edits stay consistent).
+function syncAccountBalance(assets, cashflows, accountId) {
+  if (!accountId) return assets;
+  const linked = (cashflows || []).filter(
+    c => c.accountId === accountId && c.recurring === 'once'
+  );
+  const delta = linked.reduce((sum, c) => {
+    return sum + (c.type === 'income' ? (c.amount || 0) : -(c.amount || 0));
+  }, 0);
+  return assets.map(a => {
+    if (a.id !== accountId) return a;
+    const base = typeof a.purchasePrice === 'number' ? a.purchasePrice : 0;
+    return { ...a, currentValue: base + delta };
+  });
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case 'setProfile':
@@ -77,7 +96,13 @@ function reducer(state, action) {
 
     // ── Assets ──────────────────────────────────────────────────
     case 'upsertAsset': {
-      return { ...state, assets: upsert(state.assets, action.asset) };
+      const newAssets = upsert(state.assets, action.asset);
+      // If it's a bank/MoMo account, recompute currentValue from purchasePrice + linked cashflows
+      const isAccount = action.asset.kind === 'savings' || action.asset.kind === 'momo-cash';
+      if (isAccount) {
+        return { ...state, assets: syncAccountBalance(newAssets, state.cashflows || [], action.asset.id) };
+      }
+      return { ...state, assets: newAssets };
     }
     case 'deleteAsset':
       return { ...state, assets: state.assets.filter(a => a.id !== action.id) };
@@ -101,10 +126,29 @@ function reducer(state, action) {
       return { ...state, goals: (state.goals || []).filter(g => g.id !== action.id) };
 
     // ── Cash flows ──────────────────────────────────────────────
-    case 'upsertCashflow':
-      return { ...state, cashflows: upsert(state.cashflows || [], action.entry) };
-    case 'deleteCashflow':
-      return { ...state, cashflows: (state.cashflows || []).filter(c => c.id !== action.id) };
+    case 'upsertCashflow': {
+      const newCashflows = upsert(state.cashflows || [], action.entry);
+      // Sync any accounts affected: the newly linked account, and the previously
+      // linked account (if the user changed which account is linked on an edit).
+      const oldEntry = (state.cashflows || []).find(c => c.id === action.entry.id);
+      const toSync = new Set();
+      if (action.entry.accountId) toSync.add(action.entry.accountId);
+      if (oldEntry?.accountId && oldEntry.accountId !== action.entry.accountId) {
+        toSync.add(oldEntry.accountId);
+      }
+      let newAssets = state.assets;
+      toSync.forEach(aid => { newAssets = syncAccountBalance(newAssets, newCashflows, aid); });
+      return { ...state, cashflows: newCashflows, assets: newAssets };
+    }
+    case 'deleteCashflow': {
+      const deletedEntry = (state.cashflows || []).find(c => c.id === action.id);
+      const newCashflows = (state.cashflows || []).filter(c => c.id !== action.id);
+      let newAssets = state.assets;
+      if (deletedEntry?.accountId) {
+        newAssets = syncAccountBalance(newAssets, newCashflows, deletedEntry.accountId);
+      }
+      return { ...state, cashflows: newCashflows, assets: newAssets };
+    }
 
     // ── Snapshots ────────────────────────────────────────────────
     case 'addSnapshot':
@@ -430,7 +474,15 @@ export default function App() {
 
   // Wrap dispatch in a read-only guard for viewers
   const guardedDispatch = (action) => {
-    const writeActions = new Set(['upsertAsset','deleteAsset','clearAssets','reset','setFx','replaceAll','setProfile']);
+    const writeActions = new Set([
+      'upsertAsset','deleteAsset','bulkDeleteAssets','clearAssets','reset',
+      'setFx','replaceAll','setProfile',
+      'upsertLiability','deleteLiability',
+      'upsertGoal','deleteGoal',
+      'upsertCashflow','deleteCashflow',
+      'addSnapshot','seedSnapshots',
+      'reachMilestone','appendChat','clearChat','setInsight',
+    ]);
     if (role === 'viewer' && writeActions.has(action.type)) {
       showToast('You have view-only access to this portfolio.', 'warning');
       return;
