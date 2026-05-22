@@ -1,0 +1,72 @@
+import { CLASSES, fmt, fmtBase, suggestValue, toBase, yearsBetween } from '../data.js';
+
+const iconBtnStyle = {
+  width: 26, height: 26, borderRadius: 6, border: 0, background: 'transparent',
+  color: 'var(--ink-3)', cursor: 'pointer', fontSize: 14, padding: 0,
+};
+
+export default function AssetRow({ asset, displayCurrency, onEdit, onDelete }) {
+  const cls = CLASSES.find(c => c.kind === asset.kind) || CLASSES[CLASSES.length - 1];
+  const suggested = suggestValue(asset);
+  const current = asset.currentValue !== '' && asset.currentValue != null ? asset.currentValue : suggested;
+  const cost = asset.purchasePrice || 0;
+  const gain = current - cost;
+  const gainPct = cost ? (gain / cost * 100) : 0;
+  const yrs = yearsBetween(asset.purchaseDate, new Date());
+
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'2.3fr 1fr 1.2fr 1.2fr 0.9fr 60px', alignItems:'center', padding: '14px 22px', gap: 12 }}>
+      <div className="row" style={{ gap: 12, minWidth: 0 }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: 10,
+          background:`color-mix(in oklab, ${cls.color} 18%, transparent)`,
+          color: cls.color, display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize: 18, fontWeight: 600, flexShrink: 0,
+        }}>{cls.glyph}</div>
+        <div className="col" style={{ minWidth: 0, gap: 2 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{asset.name}</div>
+          <div className="muted" style={{ fontSize: 11 }}>
+            {cls.label}
+            {asset.ticker && ` · ${asset.ticker}`}
+            {asset.shares != null && ` · ${asset.shares.toLocaleString()} sh`}
+            {asset.units != null && ` · ${asset.units} units`}
+            {asset.count != null && ` · ${asset.count} head`}
+            {asset.neighbourhood && ` · ${asset.neighbourhood}`}
+          </div>
+        </div>
+      </div>
+
+      <div className="col" style={{ gap: 2 }}>
+        <div className="num" style={{ fontSize: 12 }}>
+          {fmt(cost, asset.currency, { compact: true })}
+        </div>
+        <div className="muted" style={{ fontSize: 10 }}>{new Date(asset.purchaseDate).toLocaleDateString('en-GB', { month:'short', year:'numeric' })} · {yrs.toFixed(1)}y ago</div>
+      </div>
+
+      <div className="col" style={{ gap: 2 }}>
+        <div className="num" style={{ fontSize: 13, fontWeight: 500 }}>
+          {fmt(current, asset.currency, { compact: true })}
+        </div>
+        <div className="muted" style={{ fontSize: 10 }}>{asset.currency} · {asset.currentValue ? 'your value' : 'suggested'}</div>
+      </div>
+
+      <div className="num" style={{ fontSize: 12.5, color:'var(--ink-2)' }}>
+        {fmtBase(toBase(current, asset.currency), displayCurrency, { compact: true })}
+      </div>
+
+      <div className="col" style={{ alignItems:'flex-end', gap: 2 }}>
+        <div className="num" style={{ fontSize: 12, fontWeight: 600, color: gain >= 0 ? 'var(--up)' : 'var(--down)' }}>
+          {gain >= 0 ? '+' : ''}{gainPct.toFixed(1)}%
+        </div>
+        <div className="num" style={{ fontSize: 10, color: gain >= 0 ? 'var(--up)' : 'var(--down)' }}>
+          {gain >= 0 ? '+' : ''}{fmt(gain, asset.currency, { compact: true })}
+        </div>
+      </div>
+
+      <div className="row" style={{ gap: 4, justifyContent:'flex-end' }}>
+        <button onClick={() => onEdit(asset)} title="Edit" style={iconBtnStyle}>✎</button>
+        <button onClick={() => onDelete(asset)} title="Delete" style={{ ...iconBtnStyle, color:'var(--down)' }}>×</button>
+      </div>
+    </div>
+  );
+}
