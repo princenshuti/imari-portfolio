@@ -12,7 +12,9 @@ const COLUMNS = [
   { key: 'notes',         label: 'notes',         required: false, hint: 'Free text' },
   // Class-specific
   { key: 'neighbourhood', label: 'neighbourhood', required: false, hint: 'Real estate only' },
+  { key: 'upi',           label: 'upi',           required: false, hint: 'Real estate — Unique Parcel Identifier (e.g. 1/01/01/01/0001). Used to match rows on re-import.' },
   { key: 'model',         label: 'model',         required: false, hint: 'Vehicle only (e.g. "Toyota Rav4 2018")' },
+  { key: 'chassis',       label: 'chassis',       required: false, hint: 'Vehicle — chassis / VIN number. Used to match rows on re-import.' },
   { key: 'count',         label: 'count',         required: false, hint: 'Livestock — number of head' },
   { key: 'ticker',        label: 'ticker',        required: false, hint: 'Stocks / crypto (e.g. BOK, BTC)' },
   { key: 'shares',        label: 'shares',        required: false, hint: 'Stocks — number of shares' },
@@ -32,9 +34,9 @@ const NUMERIC_FIELDS = new Set(['purchasePrice', 'currentValue', 'count', 'share
 const DATE_FIELDS = new Set(['purchaseDate', 'maturity', 'dueDate']);
 
 const SAMPLE_ROWS = [
-  { kind: 'realestate-land', name: 'Plot in Kabuga',       currency: 'RWF', purchasePrice: 150000000, purchaseDate: '2022-06-15', currentValue: '', neighbourhood: 'Kabuga' },
+  { kind: 'realestate-land', name: 'Plot in Kabuga',       currency: 'RWF', purchasePrice: 150000000, purchaseDate: '2022-06-15', currentValue: '', neighbourhood: 'Kabuga', upi: '1/01/01/01/0001' },
   { kind: 'rse-equity',      name: 'Bank of Kigali shares',currency: 'RWF', purchasePrice: 56000,     purchaseDate: '2023-03-10', ticker: 'BOK',  shares: 200, lastPrice: 320 },
-  { kind: 'vehicle',         name: 'Toyota Rav4',          currency: 'RWF', purchasePrice: 18000000,  purchaseDate: '2021-09-01', model: 'Toyota Rav4 2018' },
+  { kind: 'vehicle',         name: 'Toyota Rav4',          currency: 'RWF', purchasePrice: 18000000,  purchaseDate: '2021-09-01', model: 'Toyota Rav4 2018', chassis: 'JTMBD33V585012345' },
   { kind: 'crypto',          name: 'Bitcoin',              currency: 'USD', purchasePrice: 1750,      purchaseDate: '2023-11-15', ticker: 'BTC', units: 0.05, lastPrice: 68240 },
   { kind: 'savings',         name: 'BK savings account',   currency: 'RWF', purchasePrice: 1200000,   purchaseDate: '2023-08-12', bank: 'Bank of Kigali', yieldPct: 5 },
 ];
@@ -124,6 +126,16 @@ export function downloadAssetTemplate() {
   wb.SheetNames = ['Instructions', 'Assets', 'Field reference', 'Classes', 'Currencies'];
 
   XLSX.writeFile(wb, `imari-asset-template-${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+// Given a parsed (imported) asset and the current portfolio asset list,
+// return the existing asset if a natural key matches, otherwise null.
+// Priority: UPI (real estate) → chassis (vehicle) → ticker+kind (equities/crypto)
+export function findExistingByNaturalKey(parsed, existingAssets) {
+  if (parsed.upi) return existingAssets.find(a => a.upi === parsed.upi) || null;
+  if (parsed.chassis) return existingAssets.find(a => a.chassis === parsed.chassis) || null;
+  if (parsed.ticker) return existingAssets.find(a => a.ticker === parsed.ticker && a.kind === parsed.kind) || null;
+  return null;
 }
 
 export function parseAssetExcel(file) {

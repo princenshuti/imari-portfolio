@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { CLASSES, valueRWF, costRWF, fmtBase } from '../data.js';
 import AssetRow from '../components/AssetRow.jsx';
 import AssetEditor from '../components/AssetEditor.jsx';
-import { downloadAssetTemplate, parseAssetExcel } from '../excel.js';
+import { downloadAssetTemplate, parseAssetExcel, findExistingByNaturalKey } from '../excel.js';
 
 export default function AssetsView({ state, dispatch }) {
   const { assets, profile } = state;
@@ -39,13 +39,31 @@ export default function AssetsView({ state, dispatch }) {
         setImportResult({ kind: 'error', message: `No valid rows. ${errors.length} error${errors.length === 1 ? '' : 's'} found.`, errors });
         return;
       }
-      const msg = `Import ${parsed.length} asset${parsed.length === 1 ? '' : 's'} into your portfolio?` +
+      // Match each parsed row against existing assets using natural keys
+      // (UPI → chassis → ticker+kind). Carry over the existing id so
+      // upsertAsset updates in place instead of creating a duplicate.
+      const matched = parsed.map(p => {
+        const existing = findExistingByNaturalKey(p, assets);
+        return existing ? { ...p, id: existing.id } : p;
+      });
+      const updates = matched.filter(p => assets.some(a => a.id === p.id));
+      const inserts = matched.filter(p => !assets.some(a => a.id === p.id));
+
+      const summary = [
+        inserts.length && `add ${inserts.length} new`,
+        updates.length && `update ${updates.length} existing`,
+      ].filter(Boolean).join(' · ');
+      const msg = `This will ${summary} asset${matched.length === 1 ? '' : 's'}.` +
         (errors.length ? `\n\n${errors.length} row${errors.length === 1 ? ' was' : 's were'} skipped due to errors.` : '');
       if (!confirm(msg)) return;
-      parsed.forEach(asset => dispatch({ type:'upsertAsset', asset }));
+      matched.forEach(asset => dispatch({ type:'upsertAsset', asset }));
       setImportResult({
         kind: errors.length ? 'partial' : 'success',
-        message: `Imported ${parsed.length} asset${parsed.length === 1 ? '' : 's'}.` + (errors.length ? ` ${errors.length} row${errors.length === 1 ? '' : 's'} skipped.` : ''),
+        message: [
+          inserts.length && `${inserts.length} asset${inserts.length === 1 ? '' : 's'} added.`,
+          updates.length && `${updates.length} asset${updates.length === 1 ? '' : 's'} updated.`,
+          errors.length  && `${errors.length} row${errors.length === 1 ? '' : 's'} skipped.`,
+        ].filter(Boolean).join('  '),
         errors,
       });
     } catch (e) {

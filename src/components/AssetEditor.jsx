@@ -14,7 +14,9 @@ export default function AssetEditor({ asset, onSave, onCancel }) {
     currentValue: asset.currentValue ?? '',
     notes: asset.notes || '',
     neighbourhood: asset.neighbourhood || '',
+    upi: asset.upi || '',
     model: asset.model || '',
+    chassis: asset.chassis || '',
     count: asset.count ?? '',
     ticker: asset.ticker || '',
     shares: asset.shares ?? '',
@@ -102,7 +104,9 @@ export default function AssetEditor({ asset, onSave, onCancel }) {
           </Field>
 
           {cls.fields.includes('neighbourhood') && <Field label="Neighbourhood"><Input value={a.neighbourhood} onChange={v=>update('neighbourhood',v)} placeholder="e.g. Kabuga" /></Field>}
+          {cls.fields.includes('upi')           && <Field label="UPI" hint="Unique Parcel Identifier — from your title deed"><Input value={a.upi} onChange={v=>update('upi',v)} placeholder="e.g. 1/01/01/01/0001" /></Field>}
           {cls.fields.includes('model')         && <Field label="Model"><Input value={a.model} onChange={v=>update('model',v)} placeholder="e.g. Toyota Rav4 2018" /></Field>}
+          {cls.fields.includes('chassis')       && <Field label="Chassis / VIN" hint="From the vehicle logbook"><Input value={a.chassis} onChange={v=>update('chassis',v)} placeholder="e.g. JTMBD33V585012345" /></Field>}
           {cls.fields.includes('count')         && <Field label="Count (head)"><Input value={a.count} onChange={v=>update('count',v)} type="number" /></Field>}
           {cls.fields.includes('ticker')        && <Field label="Ticker"><Input value={a.ticker} onChange={v=>update('ticker',v)} placeholder="e.g. BOK" /></Field>}
           {cls.fields.includes('shares')        && <Field label="Shares / units"><Input value={a.shares} onChange={v=>update('shares',v)} type="number" /></Field>}

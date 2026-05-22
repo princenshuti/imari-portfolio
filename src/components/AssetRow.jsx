@@ -41,6 +41,8 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
             {asset.units != null && ` · ${asset.units} units`}
             {asset.count != null && ` · ${asset.count} head`}
             {asset.neighbourhood && ` · ${asset.neighbourhood}`}
+            {asset.upi && ` · UPI ${asset.upi}`}
+            {asset.chassis && ` · ${asset.chassis}`}
           </div>
         </div>
       </div>

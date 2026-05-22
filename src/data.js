@@ -42,19 +42,19 @@ export function fmtBase(amountRWF, displayCurrency, opts) {
 export const CLASSES = [
   {
     kind:'realestate-land', label:'Land / plot', group:'Real estate', glyph:'▢', color:'var(--brand)',
-    fields:['neighbourhood'],
+    fields:['neighbourhood','upi'],
     rule: (a, today) => simpleGrowth(a, 0.05, today),
     note: '+5%/yr appreciation rule of thumb',
   },
   {
     kind:'realestate-house', label:'House / apartment', group:'Real estate', glyph:'◐', color:'var(--brand)',
-    fields:['neighbourhood'],
+    fields:['neighbourhood','upi'],
     rule: (a, today) => simpleGrowth(a, 0.04, today),
     note: '+4%/yr appreciation rule of thumb',
   },
   {
     kind:'vehicle', label:'Vehicle', group:'Vehicles', glyph:'⏵', color:'var(--clay)',
-    fields:['model'],
+    fields:['model','chassis'],
     rule: (a, today) => simpleGrowth(a, -0.15, today),
     note: '-15%/yr depreciation rule of thumb',
   },
