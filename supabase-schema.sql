@@ -182,5 +182,19 @@ create policy "Owners can delete invitations"
   using (public.user_has_portfolio_access(portfolio_id, 'owner'));
 
 -- ───── Realtime: broadcast portfolio changes ──────────────────
-alter publication supabase_realtime add table public.portfolios;
-alter publication supabase_realtime add table public.portfolio_members;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'portfolios'
+  ) then
+    alter publication supabase_realtime add table public.portfolios;
+  end if;
+
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'portfolio_members'
+  ) then
+    alter publication supabase_realtime add table public.portfolio_members;
+  end if;
+end $$;
