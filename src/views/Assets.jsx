@@ -1,14 +1,44 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { CLASSES, valueRWF, costRWF, fmtBase } from '../data.js';
 import AssetRow from '../components/AssetRow.jsx';
 import AssetEditor from '../components/AssetEditor.jsx';
+import { downloadAssetTemplate, parseAssetExcel } from '../excel.js';
 
 export default function AssetsView({ state, dispatch }) {
   const { assets, profile } = state;
   const [editing, setEditing] = useState(null);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [importResult, setImportResult] = useState(null);
+  const fileRef = useRef(null);
   const today = new Date();
+
+  const handleImport = async (file) => {
+    try {
+      const { assets: parsed, errors } = await parseAssetExcel(file);
+      if (parsed.length === 0 && errors.length === 0) {
+        setImportResult({ kind: 'error', message: 'No rows found in the spreadsheet.' });
+        return;
+      }
+      if (parsed.length === 0) {
+        setImportResult({ kind: 'error', message: `No valid rows. ${errors.length} error${errors.length === 1 ? '' : 's'} found.`, errors });
+        return;
+      }
+      const msg = `Import ${parsed.length} asset${parsed.length === 1 ? '' : 's'} into your portfolio?` +
+        (errors.length ? `\n\n${errors.length} row${errors.length === 1 ? ' was' : 's were'} skipped due to errors.` : '');
+      if (!confirm(msg)) return;
+      parsed.forEach(asset => dispatch({ type:'upsertAsset', asset }));
+      setImportResult({
+        kind: errors.length ? 'partial' : 'success',
+        message: `Imported ${parsed.length} asset${parsed.length === 1 ? '' : 's'}.` + (errors.length ? ` ${errors.length} row${errors.length === 1 ? '' : 's'} skipped.` : ''),
+        errors,
+      });
+    } catch (e) {
+      setImportResult({ kind: 'error', message: `Could not read the file: ${e.message}` });
+    } finally {
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   const groups = useMemo(() => {
     const out = {};
@@ -36,7 +66,7 @@ export default function AssetsView({ state, dispatch }) {
 
   return (
     <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)' }}>
-      <div className="row" style={{ gap: 10, marginBottom: 18 }}>
+      <div className="row" style={{ gap: 10, marginBottom: 12 }}>
         <div className="row" style={{ flex: 1, padding: '9px 12px', borderRadius: 9, background:'var(--paper)', border:'1px solid var(--line)', gap: 8 }}>
           <span className="muted">⌕</span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search assets…" style={{
@@ -49,8 +79,36 @@ export default function AssetsView({ state, dispatch }) {
           <option value="all">All classes</option>
           {Array.from(new Set(CLASSES.map(c => c.group))).map(g => <option key={g} value={g}>{g}</option>)}
         </select>
+        <button onClick={downloadAssetTemplate} className="btn btn-ghost" title="Download an Excel template for bulk import">↓ Template</button>
+        <button onClick={() => fileRef.current?.click()} className="btn btn-ghost" title="Import filled-in Excel template">↑ Import Excel</button>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display:'none' }}
+          onChange={e => e.target.files?.[0] && handleImport(e.target.files[0])} />
         <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add asset</button>
       </div>
+
+      {importResult && (
+        <div style={{
+          padding: '12px 16px', borderRadius: 10, marginBottom: 16,
+          background: importResult.kind === 'success' ? 'var(--up-soft)' : importResult.kind === 'partial' ? 'var(--gold-soft)' : 'var(--down-soft)',
+          color: importResult.kind === 'success' ? 'var(--up)' : importResult.kind === 'partial' ? 'var(--gold)' : 'var(--down)',
+          fontSize: 13, lineHeight: 1.5,
+        }}>
+          <div className="row" style={{ justifyContent:'space-between', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <strong>{importResult.message}</strong>
+              {importResult.errors?.length > 0 && (
+                <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 12 }}>
+                  {importResult.errors.slice(0, 8).map((e, i) => <li key={i}>{e}</li>)}
+                  {importResult.errors.length > 8 && <li>…and {importResult.errors.length - 8} more.</li>}
+                </ul>
+              )}
+            </div>
+            <button onClick={() => setImportResult(null)} style={{
+              width: 24, height: 24, borderRadius: 6, border: 0, background:'transparent', color:'inherit', cursor:'pointer', fontSize: 14,
+            }}>×</button>
+          </div>
+        </div>
+      )}
 
       {filtered.map(g => (
         <div key={g.group} className="card" style={{ marginBottom: 14, padding: 0 }}>
