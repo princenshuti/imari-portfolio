@@ -4,6 +4,7 @@ import { getApiKey, completeText } from '../ai.js';
 import { AreaChart } from '../components/charts.jsx';
 import { Donut } from '../components/charts.jsx';
 import { KPI, TrendCard } from '../components/Field.jsx';
+import AssetIcon from '../components/AssetIcon.jsx';
 
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
@@ -361,7 +362,7 @@ export default function DashboardView({ state, dispatch }) {
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
               >
                 <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-                  <span style={{ color: cls.color, fontSize: 15 }}>{cls.glyph}</span>
+                  <AssetIcon kind={m.kind} color={cls.color} size={28} />
                   <span style={{
                     fontSize: 12, fontWeight: 500, flex: 1,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',

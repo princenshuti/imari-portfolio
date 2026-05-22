@@ -1,4 +1,5 @@
 import { CLASSES, fmt, fmtBase, suggestValue, toBase, yearsBetween } from '../data.js';
+import AssetIcon from './AssetIcon.jsx';
 
 const iconBtnStyle = {
   width: 26, height: 26, borderRadius: 6, border: 0, background: 'transparent',
@@ -26,12 +27,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
         style={{ cursor: 'pointer', accentColor: 'var(--down)', margin: 0 }}
       />
       <div className="row" style={{ gap: 12, minWidth: 0 }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 10,
-          background:`color-mix(in oklab, ${cls.color} 18%, transparent)`,
-          color: cls.color, display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize: 18, fontWeight: 600, flexShrink: 0,
-        }}>{cls.glyph}</div>
+        <AssetIcon kind={asset.kind} color={cls.color} size={38} />
         <div className="col" style={{ minWidth: 0, gap: 2 }}>
           <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{asset.name}</div>
           <div className="muted" style={{ fontSize: 11 }}>

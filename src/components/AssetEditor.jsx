@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { CLASSES, CURRENCIES, suggestValue, fmt, id } from '../data.js';
 import { Field, Input, inputStyle } from './Field.jsx';
+import AssetIcon from './AssetIcon.jsx';
 
 export default function AssetEditor({ asset, onSave, onCancel }) {
   const isNew = !asset.id;
@@ -79,7 +80,7 @@ export default function AssetEditor({ asset, onSave, onCancel }) {
                 border: c.kind === a.kind ? '1px solid var(--brand)' : '1px solid transparent',
                 fontSize: 12, fontWeight: 500, display:'flex', alignItems:'center', gap: 8,
               }}>
-                <span style={{ color: c.color, fontSize: 14 }}>{c.glyph}</span>
+                <AssetIcon kind={c.kind} color={c.kind === a.kind ? 'var(--brand)' : c.color} size={22} />
                 <span>{c.label}</span>
               </div>
             ))}
