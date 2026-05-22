@@ -23,7 +23,7 @@ export function saveState(state) {
 
 export function defaultState() {
   return {
-    profile: { name: '', displayCurrency: 'RWF', createdAt: new Date().toISOString() },
+    profile: { name: '', displayCurrency: 'RWF', createdAt: new Date().toISOString(), phone: '', bio: '', location: '', avatar: null },
     assets:  SEED_ASSETS.slice(),
     fx:      { ...FX },
     chat:    [],

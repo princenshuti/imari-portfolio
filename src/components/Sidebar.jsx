@@ -149,12 +149,20 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
             <div className="row" style={{ gap: 9, alignItems: 'center', marginBottom: 10 }}>
               <div style={{
                 width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)',
+                background: profile.avatar
+                  ? 'transparent'
+                  : 'linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)',
                 color: 'var(--brand-ink)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11, fontWeight: 700,
                 boxShadow: 'var(--shadow-brand)',
-              }}>{initials || session.user.email?.[0]?.toUpperCase() || '?'}</div>
+                overflow: 'hidden',
+              }}>
+                {profile.avatar
+                  ? <img src={profile.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (initials || session.user.email?.[0]?.toUpperCase() || '?')
+                }
+              </div>
 
               <div className="col" style={{ minWidth: 0, flex: 1, gap: 1 }}>
                 <div style={{

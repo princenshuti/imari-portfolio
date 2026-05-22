@@ -6,6 +6,27 @@ import { listMembers, listInvitations, createInvitation, revokeInvitation, remov
 import { Field, inputStyle } from '../components/Field.jsx';
 import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
 
+/** Resize + center-crop an image File to a square JPEG data URI. */
+async function resizeAvatar(file, px = 160) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const side = Math.min(img.width, img.height);
+      const sx   = (img.width  - side) / 2;
+      const sy   = (img.height - side) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width  = px;
+      canvas.height = px;
+      canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, px, px);
+      resolve(canvas.toDataURL('image/jpeg', 0.84));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 function Section({ title, subtitle, children }) {
   return (
     <div style={{ marginBottom: 28 }}>
@@ -175,10 +196,28 @@ function MembersSection({ portfolioId, role, session }) {
 }
 
 export default function SettingsView({ state, dispatch, session, portfolioId, role, showToast, themePref, onThemeChange }) {
-  const fileRef = useRef(null);
-  const [fxLocal, setFxLocal] = useState(state.fx);
-  const [apiKey, setApiKeyLocal] = useState(getApiKey());
+  const fileRef   = useRef(null);
+  const avatarRef = useRef(null);
+  const [fxLocal, setFxLocal]         = useState(state.fx);
+  const [apiKey, setApiKeyLocal]      = useState(getApiKey());
   const [apiKeySaved, setApiKeySaved] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+
+  const handleAvatarFile = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast?.('Please choose an image file.', 'error'); return; }
+    setAvatarLoading(true);
+    try {
+      const dataUrl = await resizeAvatar(file, 160);
+      dispatch({ type: 'setProfile', patch: { avatar: dataUrl } });
+      showToast?.('Profile photo updated.', 'success');
+    } catch (e) {
+      showToast?.('Could not process the image: ' + e.message, 'error');
+    } finally {
+      setAvatarLoading(false);
+      if (avatarRef.current) avatarRef.current.value = '';
+    }
+  };
 
   const onImport = async (file) => {
     try {
@@ -232,17 +271,131 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         </div>
       </Section>
 
-      <Section title="Profile">
-        <Field label="Your name (used in greetings)">
-          <input value={state.profile.name} onChange={e => dispatch({ type:'setProfile', patch: { name: e.target.value } })}
-            placeholder="e.g. Prince" style={{ ...inputStyle }}/>
+      <Section
+        title="Profile"
+        subtitle="Your name, photo, and contact details. Stored with your portfolio — only visible to people you invite."
+      >
+        {/* ── Avatar + name row ── */}
+        <div className="row" style={{ gap: 20, alignItems: 'flex-start', marginBottom: 20 }}>
+          {/* Avatar circle */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div
+              onClick={() => avatarRef.current?.click()}
+              title="Click to change photo"
+              style={{
+                width: 80, height: 80, borderRadius: '50%', cursor: 'pointer',
+                background: state.profile.avatar
+                  ? 'transparent'
+                  : 'linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)',
+                border: '2px solid var(--line)',
+                overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 28, fontWeight: 700, color: 'var(--brand-ink)',
+                transition: 'opacity 0.15s',
+                boxShadow: 'var(--shadow-1)',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              {state.profile.avatar
+                ? <img src={state.profile.avatar} alt="Profile photo"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : ((state.profile.name || 'Y').split(' ').slice(0,2).map(s => s[0] || '').join('').toUpperCase().slice(0,2) || '?')
+              }
+            </div>
+            {/* Camera badge */}
+            <div onClick={() => avatarRef.current?.click()} style={{
+              position: 'absolute', bottom: 0, right: 0,
+              width: 24, height: 24, borderRadius: '50%',
+              background: 'var(--brand)', color: 'var(--brand-ink)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, cursor: 'pointer', border: '2px solid var(--paper)',
+              boxShadow: 'var(--shadow-1)',
+            }}>
+              {avatarLoading ? '…' : '📷'}
+            </div>
+            <input ref={avatarRef} type="file" accept="image/*" style={{ display:'none' }}
+              onChange={e => handleAvatarFile(e.target.files?.[0])} />
+          </div>
+
+          {/* Name + email stacked */}
+          <div className="col" style={{ flex: 1, gap: 4, minWidth: 0, justifyContent: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.2, color: 'var(--ink)' }}>
+              {state.profile.name || 'Your name'}
+            </div>
+            {session?.user?.email && (
+              <div className="muted" style={{ fontSize: 12 }}>{session.user.email}</div>
+            )}
+            {state.profile.bio && (
+              <div style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2, lineHeight: 1.45 }}>
+                {state.profile.bio}
+              </div>
+            )}
+            {state.profile.avatar && (
+              <button
+                onClick={() => { dispatch({ type:'setProfile', patch: { avatar: null } }); showToast?.('Photo removed.', 'success'); }}
+                style={{
+                  alignSelf: 'flex-start', marginTop: 4,
+                  padding: '3px 9px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
+                  border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down)',
+                }}
+              >
+                Remove photo
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Identity fields ── */}
+        <Field label="Display name">
+          <input value={state.profile.name}
+            onChange={e => dispatch({ type:'setProfile', patch: { name: e.target.value } })}
+            placeholder="e.g. Prince Nshuti" style={{ ...inputStyle }} />
         </Field>
+
         <Field label="Primary display currency" top={14}>
-          <select value={state.profile.displayCurrency} onChange={e => dispatch({ type:'setProfile', patch: { displayCurrency: e.target.value } })}
+          <select value={state.profile.displayCurrency}
+            onChange={e => dispatch({ type:'setProfile', patch: { displayCurrency: e.target.value } })}
             style={{ ...inputStyle }}>
             {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.label}</option>)}
           </select>
         </Field>
+
+        <Field label="Short bio" top={14}>
+          <textarea
+            value={state.profile.bio || ''}
+            onChange={e => dispatch({ type:'setProfile', patch: { bio: e.target.value } })}
+            placeholder="e.g. Entrepreneur & investor based in Kigali"
+            rows={2}
+            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', paddingTop: 8, lineHeight: 1.5 }}
+          />
+        </Field>
+
+        {/* ── Contact information ── */}
+        <div style={{ marginTop: 22, paddingTop: 18, borderTop: '0.5px solid var(--line)' }}>
+          <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: 14 }}>
+            Contact information
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <Field label="Phone number">
+              <input
+                type="tel"
+                value={state.profile.phone || ''}
+                onChange={e => dispatch({ type:'setProfile', patch: { phone: e.target.value } })}
+                placeholder="+250 7XX XXX XXX"
+                style={{ ...inputStyle }}
+              />
+            </Field>
+            <Field label="Location">
+              <input
+                value={state.profile.location || ''}
+                onChange={e => dispatch({ type:'setProfile', patch: { location: e.target.value } })}
+                placeholder="e.g. Kigali, Rwanda"
+                style={{ ...inputStyle }}
+              />
+            </Field>
+          </div>
+        </div>
       </Section>
 
       <MembersSection portfolioId={portfolioId} role={role} session={session} />

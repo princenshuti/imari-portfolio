@@ -62,13 +62,21 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
         {/* Avatar */}
         <div title={profile.name || 'You'} style={{
           width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)',
+          background: profile.avatar
+            ? 'transparent'
+            : 'linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)',
           color: 'var(--brand-ink)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontFamily: 'Geist, sans-serif', fontSize: 13, fontWeight: 700,
           boxShadow: 'var(--shadow-brand)',
+          overflow: 'hidden',
           cursor: 'default',
-        }}>{initials}</div>
+        }}>
+          {profile.avatar
+            ? <img src={profile.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : initials
+          }
+        </div>
       </div>
     </div>
   );
