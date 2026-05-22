@@ -121,7 +121,7 @@ export async function savePortfolio(portfolioId, state) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', portfolioId);
-  if (error) console.warn('savePortfolio failed', error);
+  if (error) throw error;
 }
 
 export function subscribePortfolio(portfolioId, onUpdate) {

@@ -11,11 +11,17 @@ const items = [
 ];
 
 export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role }) {
+  const gain   = netWorth - totalCost;
+  const gainPct = totalCost ? (gain / totalCost) * 100 : 0;
+  const up     = gain >= 0;
+
   return (
-    <div className="col" style={{
+    <aside className="col sidebar-desktop" style={{
       width: 240, padding: '22px 16px', background:'var(--paper)',
-      borderRight: '0.5px solid var(--line)', gap: 20, flexShrink: 0, height: '100vh', position:'sticky', top: 0,
+      borderRight: '0.5px solid var(--line)', gap: 20, flexShrink: 0,
+      height: '100vh', position:'sticky', top: 0, overflowY: 'auto',
     }}>
+      {/* Logo */}
       <div className="row" style={{ gap: 10, padding: '0 6px' }}>
         <div style={{
           width: 32, height: 32, borderRadius: 8, background:'var(--brand)', color:'var(--brand-ink)',
@@ -28,8 +34,15 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
         </div>
       </div>
 
-      <div className="col" style={{ padding: 14, borderRadius: 12, background:'var(--bg-2)', gap: 10 }}>
-        {/* Net worth */}
+      {/* Net worth + cost card — click navigates to dashboard */}
+      <button onClick={() => onNav('dashboard')} style={{
+        all: 'unset', display: 'block', padding: 14, borderRadius: 12,
+        background:'var(--bg-2)', gap: 4, cursor: 'pointer', width: '100%',
+        boxSizing: 'border-box', transition: 'background 0.12s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--brand-soft)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-2)'}
+      >
         <div className="col" style={{ gap: 2 }}>
           <div className="muted" style={{ fontSize: 10, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Net worth</div>
           <div className="font-serif" style={{ fontSize: 26, letterSpacing:'-0.02em', lineHeight: 1.1 }}>
@@ -37,9 +50,8 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           </div>
         </div>
 
-        <div style={{ height: '0.5px', background: 'var(--line)' }} />
+        <div style={{ height: '0.5px', background: 'var(--line)', margin: '10px 0' }} />
 
-        {/* Total cost */}
         <div className="col" style={{ gap: 2 }}>
           <div className="muted" style={{ fontSize: 10, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Total cost</div>
           <div className="num" style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink-2)' }}>
@@ -47,45 +59,40 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           </div>
         </div>
 
-        {/* Overall gain / loss */}
-        {totalCost > 0 && (() => {
-          const gain = netWorth - totalCost;
-          const pct  = (gain / totalCost) * 100;
-          const up   = gain >= 0;
-          return (
-            <div className="row" style={{ gap: 6, alignItems: 'center' }}>
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
-                background: up ? 'var(--up-soft)' : 'var(--down-soft)',
-                color: up ? 'var(--up)' : 'var(--down)',
-              }}>
-                {up ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
-              </span>
-              <span className="muted" style={{ fontSize: 10 }}>
-                {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })} overall
-              </span>
-            </div>
-          );
-        })()}
+        {totalCost > 0 && (
+          <div className="row" style={{ gap: 6, alignItems: 'center', marginTop: 8 }}>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+              background: up ? 'var(--up-soft)' : 'var(--down-soft)',
+              color: up ? 'var(--up)' : 'var(--down)',
+            }}>
+              {up ? '▲' : '▼'} {Math.abs(gainPct).toFixed(1)}%
+            </span>
+            <span className="muted" style={{ fontSize: 10 }}>
+              {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })} overall
+            </span>
+          </div>
+        )}
 
-        <div className="muted" style={{ fontSize: 11 }}>{displayCurrency} · {profile.name || 'You'}</div>
-      </div>
+        <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>{displayCurrency} · {profile.name || 'You'}</div>
+      </button>
 
-      <div className="col" style={{ gap: 1 }}>
+      {/* Nav */}
+      <nav className="col" style={{ gap: 1 }} aria-label="Main navigation">
         {items.map(it => (
-          <div key={it.id} onClick={() => onNav(it.id)} style={{
-            display:'flex', alignItems:'center', gap: 12, padding: '9px 11px', borderRadius: 9,
-            background: it.id === active ? 'var(--brand-soft)' : 'transparent',
-            color: it.id === active ? 'var(--brand)' : 'var(--ink-2)',
-            fontSize: 13.5, fontWeight: it.id === active ? 600 : 500, cursor:'pointer',
-            transition: 'background .12s',
-          }}>
+          <button
+            key={it.id}
+            className={`nav-btn${it.id === active ? ' active' : ''}`}
+            onClick={() => onNav(it.id)}
+            aria-current={it.id === active ? 'page' : undefined}
+          >
             <span style={{ width: 16, textAlign:'center', fontSize: 15 }}>{it.glyph}</span>
             <span>{it.label}</span>
-          </div>
+          </button>
         ))}
-      </div>
+      </nav>
 
+      {/* Footer */}
       <div className="col" style={{ marginTop:'auto', gap: 8 }}>
         {session?.user && (
           <div className="col" style={{ padding: 12, borderRadius: 10, background:'var(--bg-2)', gap: 6 }}>
@@ -116,6 +123,6 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           </div>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

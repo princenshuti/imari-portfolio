@@ -4,6 +4,8 @@ import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, sav
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
 import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
+import MobileTabBar from './components/MobileTabBar.jsx';
+import { useToast, ToastContainer } from './components/Toast.jsx';
 import DashboardView from './views/Dashboard.jsx';
 import AssetsView from './views/Assets.jsx';
 import AccountsView from './views/Accounts.jsx';
@@ -60,6 +62,17 @@ function greetingFor() {
   return 'Muraho';
 }
 
+// ─ Theme management ───────────────────────────────────────────
+function getThemePref() {
+  return localStorage.getItem('imari:theme') || 'auto';
+}
+function applyTheme(pref) {
+  const resolved = pref === 'auto'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : pref;
+  document.body.setAttribute('data-theme', resolved);
+}
+
 // Strip the invite token from the URL once handled.
 function getInviteTokenFromURL() {
   const params = new URLSearchParams(window.location.search);
@@ -90,6 +103,26 @@ export default function App() {
   const [role, setRole] = useState('owner');
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   const skipNextSave = useRef(false);
+
+  // ─ Theme ──────────────────────────────────────────────────────
+  const [themePref, setThemePref] = useState(getThemePref);
+  useEffect(() => {
+    applyTheme(themePref);
+    if (themePref === 'auto') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => applyTheme('auto');
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+  }, [themePref]);
+
+  const handleThemeChange = (pref) => {
+    localStorage.setItem('imari:theme', pref);
+    setThemePref(pref);
+  };
+
+  // ─ Toast ──────────────────────────────────────────────────────
+  const { toasts, showToast, dismiss } = useToast();
 
   // ─ Hash-based navigation (survives reload & enables back/fwd)
   function navigateTo(view) {
@@ -134,7 +167,7 @@ export default function App() {
         clearInviteFromURL();
       })
       .catch(e => {
-        alert('Could not accept invitation: ' + e.message);
+        showToast('Could not accept invitation: ' + e.message, 'error');
         setPendingInvite(null);
         clearInviteFromURL();
       })
@@ -153,7 +186,9 @@ export default function App() {
         setPortfolioId(portfolioId);
         setRole(role);
       })
-      .catch(e => { console.error(e); alert('Failed to load portfolio: ' + e.message); })
+      .catch(e => {
+        showToast('Failed to load portfolio: ' + e.message, 'error');
+      })
       .finally(() => setLoadingPortfolio(false));
   }, [session?.user?.id]);
 
@@ -175,7 +210,11 @@ export default function App() {
   useEffect(() => {
     if (skipNextSave.current) { skipNextSave.current = false; return; }
     if (portfolioId && role !== 'viewer') {
-      const t = setTimeout(() => savePortfolio(portfolioId, state), 350);
+      const t = setTimeout(() => {
+        savePortfolio(portfolioId, state).catch(e => {
+          showToast('Auto-save failed — ' + e.message, 'error');
+        });
+      }, 350);
       return () => clearTimeout(t);
     }
     saveLocal(state);
@@ -194,8 +233,6 @@ export default function App() {
       totalCost: state.assets.reduce((s, a) => s + costRWF(a), 0),
     };
   }, [state.assets]);
-
-  useEffect(() => { document.body.setAttribute('data-theme', 'light'); }, []);
 
   // ─ Render flow ────────────────────────────────────────────
   if (session === undefined) return null; // still checking
@@ -224,7 +261,7 @@ export default function App() {
   const guardedDispatch = (action) => {
     const writeActions = new Set(['upsertAsset','deleteAsset','clearAssets','reset','setFx','replaceAll','setProfile']);
     if (role === 'viewer' && writeActions.has(action.type)) {
-      alert('You have view-only access to this portfolio.');
+      showToast('You have view-only access to this portfolio.', 'warning');
       return;
     }
     dispatch(action);
@@ -233,10 +270,10 @@ export default function App() {
   const view = (() => {
     switch (nav) {
       case 'accounts': return <AccountsView state={state} dispatch={guardedDispatch} />;
-      case 'assets':   return <AssetsView   state={state} dispatch={guardedDispatch} />;
+      case 'assets':   return <AssetsView   state={state} dispatch={guardedDispatch} showToast={showToast} />;
       case 'trends':   return <TrendsView   state={state} dispatch={guardedDispatch} />;
       case 'advisor':  return <AdvisorView  state={state} dispatch={guardedDispatch} />;
-      case 'settings': return <SettingsView state={state} dispatch={guardedDispatch} session={session} portfolioId={portfolioId} role={role} />;
+      case 'settings': return <SettingsView state={state} dispatch={guardedDispatch} session={session} portfolioId={portfolioId} role={role} showToast={showToast} themePref={themePref} onThemeChange={handleThemeChange} />;
       default:         return <DashboardView state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} />;
     }
   })();
@@ -250,7 +287,7 @@ export default function App() {
         profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
         session={session} role={role}
       />
-      <div className="col" style={{ flex: 1, minWidth: 0 }}>
+      <div className="col main-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
         {showTopBar && (
           <TopBar
             title={titles[nav].title}
@@ -261,8 +298,12 @@ export default function App() {
             role={role}
           />
         )}
-        {view}
+        <div key={nav} className="page-view">
+          {view}
+        </div>
       </div>
+      <MobileTabBar active={nav} onNav={navigateTo} />
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
     </div>
   );
 }

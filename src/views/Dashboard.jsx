@@ -249,7 +249,7 @@ export default function DashboardView({ state, dispatch }) {
 
   return (
     <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)' }}>
-      <div style={{ display:'grid', gridTemplateColumns:'1.6fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="dash-grid-3">
         <div className="card" style={{ padding: 24 }}>
           <div className="row" style={{ justifyContent:'space-between', alignItems:'flex-start' }}>
             <div>
@@ -302,12 +302,14 @@ export default function DashboardView({ state, dispatch }) {
         </div>
       </div>
 
+      <DashboardInsight state={state} dispatch={dispatch} />
+
       <div className="card" style={{ padding: 24, marginBottom: 16 }}>
         <div className="row" style={{ justifyContent:'space-between', marginBottom: 14 }}>
           <div className="font-serif" style={{ fontSize: 20 }}>Top movers</div>
           <span className="muted" style={{ fontSize: 11 }}>Since purchase · biggest swings</span>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap: 12 }}>
+        <div className="dash-grid-4">
           {movers.map(m => {
             const cls = CLASSES.find(c => c.kind === m.kind);
             return (
@@ -332,11 +334,9 @@ export default function DashboardView({ state, dispatch }) {
         <div className="font-serif" style={{ fontSize: 20 }}>Markets you watch</div>
         <span onClick={() => dispatch({ type:'nav', to:'trends' })} style={{ fontSize: 12, color:'var(--brand)', cursor:'pointer' }}>See all trends →</span>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
+      <div className="dash-grid-4" style={{ marginBottom: 18 }}>
         {watchlist.map(d => <TrendCard key={d.id} d={d} />)}
       </div>
-
-      <DashboardInsight state={state} dispatch={dispatch} />
     </div>
   );
 }

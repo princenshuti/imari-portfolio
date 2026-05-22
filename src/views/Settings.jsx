@@ -173,7 +173,7 @@ function MembersSection({ portfolioId, role, session }) {
   );
 }
 
-export default function SettingsView({ state, dispatch, session, portfolioId, role }) {
+export default function SettingsView({ state, dispatch, session, portfolioId, role, showToast, themePref, onThemeChange }) {
   const fileRef = useRef(null);
   const [fxLocal, setFxLocal] = useState(state.fx);
   const [apiKey, setApiKeyLocal] = useState(getApiKey());
@@ -184,24 +184,53 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
       const obj = await importJSONFile(file);
       if (confirm(`Import will replace your current data (${state.assets.length} assets → ${obj.assets.length}). Continue?`)) {
         dispatch({ type:'replaceAll', state: obj });
+        showToast?.('Portfolio imported successfully.', 'success');
       }
     } catch (e) {
-      alert('Import failed: ' + e.message);
+      showToast?.('Import failed: ' + e.message, 'error');
     }
   };
 
   const handleSaveFx = () => {
     dispatch({ type:'setFx', fx: Object.fromEntries(Object.entries(fxLocal).map(([k,v]) => [k, +v || 1])) });
+    showToast?.('Exchange rates saved.', 'success');
   };
 
   const handleSaveApiKey = () => {
     setApiKey(apiKey);
     setApiKeySaved(true);
+    showToast?.('API key saved to this browser.', 'success');
     setTimeout(() => setApiKeySaved(false), 2000);
   };
 
   return (
     <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)', maxWidth: 820 }}>
+      <Section title="Appearance" subtitle="Choose how Imari looks. Auto follows your system setting.">
+        <div className="row" style={{ gap: 8 }}>
+          {[
+            { value: 'auto',  label: '⟳ Auto'  },
+            { value: 'light', label: '☀ Light' },
+            { value: 'dark',  label: '☽ Dark'  },
+          ].map(t => (
+            <button
+              key={t.value}
+              onClick={() => onThemeChange?.(t.value)}
+              className={`btn ${themePref === t.value ? 'btn-primary' : 'btn-ghost'}`}
+              style={{ minWidth: 90 }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
+          {themePref === 'auto'
+            ? 'Currently following your system preference.'
+            : themePref === 'dark'
+            ? 'Dark mode is active.'
+            : 'Light mode is active.'}
+        </div>
+      </Section>
+
       <Section title="Profile">
         <Field label="Your name (used in greetings)">
           <input value={state.profile.name} onChange={e => dispatch({ type:'setProfile', patch: { name: e.target.value } })}

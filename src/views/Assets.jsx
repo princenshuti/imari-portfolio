@@ -121,8 +121,8 @@ export default function AssetsView({ state, dispatch }) {
           <option value="all">All classes</option>
           {Array.from(new Set(CLASSES.map(c => c.group))).map(g => <option key={g} value={g}>{g}</option>)}
         </select>
-        <button onClick={downloadAssetTemplate} className="btn btn-ghost" title="Download an Excel template for bulk import">↓ Template</button>
-        <button onClick={() => fileRef.current?.click()} className="btn btn-ghost" title="Import filled-in Excel template">↑ Import Excel</button>
+        <button onClick={downloadAssetTemplate} className="btn btn-ghost" title="Download an Excel template for bulk import">↓ Download template</button>
+        <button onClick={() => fileRef.current?.click()} className="btn btn-ghost" title="Import filled-in Excel template">↑ Import from Excel</button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display:'none' }}
           onChange={e => e.target.files?.[0] && handleImport(e.target.files[0])} />
         <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add asset</button>
