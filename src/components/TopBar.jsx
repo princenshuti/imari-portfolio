@@ -1,6 +1,6 @@
 import { CURRENCIES } from '../data.js';
 
-export default function TopBar({ title, subtitle, profile, displayCurrency, onCurrency, right }) {
+export default function TopBar({ title, subtitle, profile, displayCurrency, onCurrency, right, role }) {
   return (
     <div className="row" style={{
       padding: '18px 28px', justifyContent:'space-between', alignItems:'center',
@@ -11,6 +11,12 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
         <div className="font-serif" style={{ fontSize: 26, lineHeight: 1.1, marginTop: 2 }}>{title}</div>
       </div>
       <div className="row" style={{ gap: 10 }}>
+        {role === 'viewer' && (
+          <span className="pill pill-gold" style={{ fontSize: 11 }}>View-only</span>
+        )}
+        {role === 'editor' && (
+          <span className="pill pill-brand" style={{ fontSize: 11 }}>Editor</span>
+        )}
         {right}
         <select value={displayCurrency} onChange={e => onCurrency(e.target.value)} style={{
           padding: '7px 10px', borderRadius: 8, border:'1px solid var(--line)', background:'var(--paper)',

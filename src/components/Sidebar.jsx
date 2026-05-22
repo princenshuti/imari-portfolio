@@ -1,5 +1,5 @@
-import { CURRENCIES } from '../data.js';
 import { fmtBase } from '../data.js';
+import { signOut } from '../cloud.js';
 
 const items = [
   { id:'dashboard', label:'Dashboard', glyph:'◐' },
@@ -10,7 +10,7 @@ const items = [
   { id:'settings',  label:'Settings',  glyph:'⚙' },
 ];
 
-export default function Sidebar({ active, onNav, profile, netWorth, displayCurrency }) {
+export default function Sidebar({ active, onNav, profile, netWorth, displayCurrency, session, role }) {
   return (
     <div className="col" style={{
       width: 240, padding: '22px 16px', background:'var(--paper)',
@@ -51,12 +51,35 @@ export default function Sidebar({ active, onNav, profile, netWorth, displayCurre
         ))}
       </div>
 
-      <div className="col" style={{ marginTop:'auto', gap: 6, padding: 12, borderRadius: 10, background:'var(--bg-2)', fontSize: 11, color:'var(--ink-3)', lineHeight: 1.5 }}>
-        <div className="row" style={{ gap: 6 }}>
-          <span style={{ width:6, height:6, borderRadius:999, background:'var(--up)' }}/>
-          <span>Saved locally · this browser</span>
+      <div className="col" style={{ marginTop:'auto', gap: 8 }}>
+        {session?.user && (
+          <div className="col" style={{ padding: 12, borderRadius: 10, background:'var(--bg-2)', gap: 6 }}>
+            <div className="row" style={{ gap: 8, alignItems:'center' }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: 999, background:'var(--brand)', color:'var(--brand-ink)',
+                display:'flex', alignItems:'center', justifyContent:'center', fontSize: 11, fontWeight: 600,
+              }}>{session.user.email?.[0]?.toUpperCase() || '?'}</div>
+              <div className="col" style={{ minWidth: 0, flex: 1, gap: 2 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {session.user.email}
+                </div>
+                <div className="muted" style={{ fontSize: 10, textTransform:'capitalize' }}>{role || 'owner'} access</div>
+              </div>
+            </div>
+            <button onClick={() => signOut()} style={{
+              padding:'6px 8px', borderRadius: 7, border:'1px solid var(--line)',
+              background:'var(--paper)', cursor:'pointer', fontSize: 11, fontFamily:'inherit', color:'var(--ink-2)',
+            }}>
+              Sign out
+            </button>
+          </div>
+        )}
+        <div className="col" style={{ gap: 4, padding: 10, borderRadius: 10, background:'var(--bg-2)', fontSize: 10.5, color:'var(--ink-3)', lineHeight: 1.5 }}>
+          <div className="row" style={{ gap: 6 }}>
+            <span style={{ width:6, height:6, borderRadius:999, background:'var(--up)' }}/>
+            <span>{session ? 'Synced to cloud' : 'Saved locally'}</span>
+          </div>
         </div>
-        <div className="muted" style={{ fontSize: 10 }}>Use Settings to back up to JSON</div>
       </div>
     </div>
   );
