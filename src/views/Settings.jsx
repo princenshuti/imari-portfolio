@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { CURRENCIES } from '../data.js';
+import { CURRENCIES, MILESTONES } from '../data.js';
 import { exportJSON, importJSONFile } from '../store.js';
 import { getApiKey, setApiKey } from '../ai.js';
 import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, isConfigured } from '../cloud.js';
@@ -191,6 +191,76 @@ function MembersSection({ portfolioId, role, session }) {
           )}
         </>
       )}
+    </Section>
+  );
+}
+
+function MilestoneSection({ profile, dispatch }) {
+  const current = profile.milestones?.length ? profile.milestones : MILESTONES;
+  const [inputVal, setInputVal] = useState('');
+
+  const save = (list) => dispatch({ type: 'setProfile', patch: { milestones: list } });
+
+  const remove = (m) => save(current.filter(x => x !== m));
+
+  const add = () => {
+    const raw = inputVal.replace(/[, ]/g, '');
+    // Accept bare numbers (e.g. 50000000) or shorthand like 50M, 10m
+    const match = raw.match(/^([\d.]+)\s*([mMbBkK]?)$/);
+    if (!match) return;
+    let val = parseFloat(match[1]);
+    const suffix = match[2].toLowerCase();
+    if (suffix === 'm') val *= 1_000_000;
+    else if (suffix === 'b') val *= 1_000_000_000;
+    else if (suffix === 'k') val *= 1_000;
+    val = Math.round(val);
+    if (!val || val <= 0) return;
+    if (current.includes(val)) { setInputVal(''); return; }
+    save([...current, val].sort((a, b) => a - b));
+    setInputVal('');
+  };
+
+  const reset = () => save(MILESTONES.slice());
+
+  const fmt = (n) => n >= 1e9 ? (n / 1e9).toFixed(n % 1e9 === 0 ? 0 : 1) + 'B'
+    : n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1) + 'M'
+    : n >= 1e3 ? (n / 1e3).toFixed(n % 1e3 === 0 ? 0 : 1) + 'K'
+    : String(n);
+
+  return (
+    <Section title="Net Worth Milestones" subtitle="Celebrate when your net worth crosses these RWF thresholds.">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+        {current.map(m => (
+          <div key={m} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '5px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+            background: 'var(--up-soft)', color: 'var(--up)', border: '1px solid var(--up-soft)',
+          }}>
+            {fmt(m)}
+            <button onClick={() => remove(m)} style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--up)',
+              fontSize: 14, lineHeight: 1, padding: 0, marginTop: -1,
+            }}>×</button>
+          </div>
+        ))}
+      </div>
+      <div className="row" style={{ gap: 8 }}>
+        <input
+          value={inputVal}
+          onChange={e => setInputVal(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && add()}
+          placeholder="e.g. 500M or 500000000"
+          style={{ ...inputStyle, flex: 1 }}
+        />
+        <button onClick={add} className="btn" style={{
+          background: 'var(--up)', color: '#fff', border: 0,
+          padding: '8px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+        }}>Add</button>
+        <button onClick={reset} className="btn btn-ghost" style={{ fontSize: 12 }}>Reset defaults</button>
+      </div>
+      <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+        Enter shorthand like <strong>10M</strong>, <strong>250M</strong>, <strong>1B</strong> or full numbers. Press Enter or click Add.
+      </div>
     </Section>
   );
 }
@@ -440,6 +510,8 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
             onChange={e => e.target.files?.[0] && onImport(e.target.files[0])} />
         </div>
       </Section>
+
+      <MilestoneSection profile={state.profile} dispatch={dispatch} />
 
       <Section title="Tax & Reporting" subtitle="View your estimated Rwanda tax liability and capital gains breakdown.">
         <div className="row" style={{ gap: 10 }}>

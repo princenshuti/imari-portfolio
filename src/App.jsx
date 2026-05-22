@@ -1,5 +1,5 @@
 import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense } from 'react';
-import { FX, valueRWF, costRWF, toBase, MILESTONES } from './data.js';
+import { FX, valueRWF, costRWF, toBase, fmtBase, MILESTONES } from './data.js';
 import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
 import { addSnapshot, seedHistory } from './services/snapshots.js';
@@ -140,6 +140,10 @@ export default function App() {
   const [portfolioId, setPortfolioId] = useState(null);
   const [role, setRole] = useState('owner');
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
+  // true once the authoritative state (cloud or confirmed-local) has been loaded.
+  // Milestone alerts are gated on this so they never fire before reachedMilestones
+  // is populated from the server.
+  const [stateReady, setStateReady] = useState(false);
   const skipNextSave = useRef(false);
 
   // ─ Theme ──────────────────────────────────────────────────────
@@ -177,10 +181,17 @@ export default function App() {
   useEffect(() => {
     if (!isConfigured) {
       setSession(null);
+      setStateReady(true); // no cloud — local state is authoritative immediately
       return;
     }
-    getSession().then(setSession);
-    const unsub = onAuthStateChange(setSession);
+    getSession().then(s => {
+      setSession(s);
+      if (!s) setStateReady(true); // logged out — local state is authoritative
+    });
+    const unsub = onAuthStateChange(s => {
+      setSession(s);
+      if (!s) setStateReady(true);
+    });
     return unsub;
   }, []);
 
@@ -223,6 +234,7 @@ export default function App() {
         dispatch({ type: 'replaceAll', state: cloudState });
         setPortfolioId(portfolioId);
         setRole(role);
+        setStateReady(true); // cloud state loaded — safe to evaluate milestones now
       })
       .catch(e => {
         showToast('Failed to load portfolio: ' + e.message, 'error');
@@ -291,18 +303,19 @@ export default function App() {
   }, [state.profile.name]);
 
   // ─ Net-worth milestone alerts ─────────────────────────────
-  // Uses a persisted set (state.reachedMilestones) so each milestone
-  // is celebrated exactly once — never on app reload or snapshot init.
+  // Gated on stateReady so it never fires before reachedMilestones is
+  // loaded from the cloud (which would fire all milestones every reload).
   useEffect(() => {
-    if (!state.profile.name || netWorth <= 0) return;
+    if (!stateReady || !state.profile.name || netWorth <= 0) return;
+    const thresholds = (state.profile.milestones?.length ? state.profile.milestones : MILESTONES);
     const reached = new Set(state.reachedMilestones || []);
-    MILESTONES.forEach(m => {
+    thresholds.forEach(m => {
       if (!reached.has(m) && netWorth >= m) {
-        showToast(`🎉 Milestone reached: ${Math.round(m / 1e6)}M RWF net worth!`, 'success');
+        showToast(`🎉 Milestone reached: ${fmtBase(m, state.profile.displayCurrency, { compact: true })} net worth!`, 'success');
         dispatch({ type: 'reachMilestone', value: m });
       }
     });
-  }, [netWorth]);
+  }, [netWorth, stateReady]);
 
   // ─ Asset maturity / overdue alerts ────────────────────────
   useEffect(() => {
