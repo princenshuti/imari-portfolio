@@ -111,21 +111,23 @@ ${JSON.stringify(snapshot, null, 2)}`;
   const bullets = insight?.content ? insight.content.split(/\n+/).filter(l => l.trim()) : [];
 
   return (
-    <div className="card" style={{
-      marginTop: 8, padding: 24,
-      background: 'linear-gradient(135deg, var(--paper) 0%, var(--brand-soft) 140%)',
-      border: '1px solid var(--brand-soft)',
+    <div style={{
+      marginBottom: 16, padding: 24, borderRadius: 'var(--r-xl)',
+      background: 'linear-gradient(135deg, var(--paper) 0%, var(--brand-softer) 120%)',
+      border: '0.5px solid var(--brand-soft)',
+      boxShadow: 'var(--shadow-2)',
     }}>
-      <div className="row" style={{ justifyContent:'space-between', alignItems:'flex-start', marginBottom: 14 }}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div className="row" style={{ gap: 12 }}>
           <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background:'linear-gradient(135deg, var(--brand), var(--brand-2))',
-            color:'var(--brand-ink)', display:'flex', alignItems:'center', justifyContent:'center',
-            fontFamily:'Instrument Serif, serif', fontSize: 20,
+            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+            background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
+            color: 'var(--brand-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'Instrument Serif, serif', fontSize: 22,
+            boxShadow: 'var(--shadow-brand)',
           }}>✦</div>
           <div>
-            <div className="font-serif" style={{ fontSize: 20, lineHeight: 1.1 }}>What I'm seeing in your portfolio</div>
+            <div className="font-serif" style={{ fontSize: 19, lineHeight: 1.1 }}>What I'm seeing in your portfolio</div>
             <div className="muted" style={{ fontSize: 11, marginTop: 3 }}>
               Imari Advisor · auto-generated from your {assets.length} assets
               {insight?.generatedAt && !pending && !stale && ` · ${timeAgo(insight.generatedAt)}`}
@@ -133,20 +135,22 @@ ${JSON.stringify(snapshot, null, 2)}`;
             </div>
           </div>
         </div>
-        <div className="row" style={{ gap: 6 }}>
+        <div className="row" style={{ gap: 6, flexShrink: 0 }}>
           <button onClick={generate} disabled={pending} title="Regenerate"
-            style={{ padding:'7px 12px', borderRadius: 999, border:'1px solid var(--line)',
-              background:'var(--paper)', cursor: pending ? 'default' : 'pointer',
-              fontSize: 11, color:'var(--ink-3)', fontFamily:'inherit',
-              opacity: pending ? 0.5 : 1 }}>
-            ↻ Refresh
-          </button>
+            style={{
+              padding: '7px 12px', borderRadius: 'var(--r-pill)',
+              border: '0.5px solid var(--line-strong)',
+              background: 'var(--paper)', cursor: pending ? 'default' : 'pointer',
+              fontSize: 11, color: 'var(--ink-3)', fontFamily: 'inherit',
+              opacity: pending ? 0.5 : 1, transition: 'all 0.14s',
+            }}>↻ Refresh</button>
           <button onClick={() => dispatch({ type:'nav', to:'advisor' })}
-            style={{ padding:'7px 12px', borderRadius: 999, border:0,
-              background:'var(--brand)', color:'var(--brand-ink)',
-              cursor:'pointer', fontSize: 11, fontFamily:'inherit' }}>
-            Open chat →
-          </button>
+            style={{
+              padding: '7px 14px', borderRadius: 'var(--r-pill)',
+              border: 0, background: 'var(--brand)', color: 'var(--brand-ink)',
+              cursor: 'pointer', fontSize: 11, fontFamily: 'inherit',
+              boxShadow: 'var(--shadow-brand)',
+            }}>Open chat →</button>
         </div>
       </div>
 
@@ -154,7 +158,7 @@ ${JSON.stringify(snapshot, null, 2)}`;
         <div className="col" style={{ gap: 10 }}>
           {[0, 1, 2].map(i => (
             <div key={i} className="row" style={{ gap: 10 }}>
-              <span style={{ color:'var(--brand)', fontSize: 14, opacity: 0.4 }}>•</span>
+              <span style={{ color: 'var(--brand)', fontSize: 14, opacity: 0.4 }}>•</span>
               <div style={{
                 flex: 1, height: 14, borderRadius: 4,
                 background: 'linear-gradient(90deg, var(--bg-2) 0%, var(--brand-soft) 50%, var(--bg-2) 100%)',
@@ -167,8 +171,14 @@ ${JSON.stringify(snapshot, null, 2)}`;
       )}
 
       {!pending && error && (
-        <div style={{ padding: 14, borderRadius: 10, background:'var(--down-soft)', color:'var(--down)', fontSize: 12.5, lineHeight: 1.5 }}>
-          {error} {error.includes('Settings') ? null : <span onClick={generate} style={{ textDecoration:'underline', cursor:'pointer' }}>Try again</span>}
+        <div style={{
+          padding: 14, borderRadius: 'var(--r-md)',
+          background: 'var(--down-soft)', color: 'var(--down)', fontSize: 12.5, lineHeight: 1.5,
+        }}>
+          {error}{' '}
+          {!error.includes('Settings') && (
+            <span onClick={generate} style={{ textDecoration: 'underline', cursor: 'pointer' }}>Try again</span>
+          )}
         </div>
       )}
 
@@ -177,15 +187,15 @@ ${JSON.stringify(snapshot, null, 2)}`;
           {bullets.map((line, i) => {
             const text = line.replace(/^[•\-\*]\s*/, '');
             return (
-              <div key={i} className="row" style={{ gap: 12, alignItems:'flex-start' }}>
+              <div key={i} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
                 <span style={{
                   flexShrink: 0, marginTop: 2,
-                  width: 22, height: 22, borderRadius: 999,
+                  width: 22, height: 22, borderRadius: '50%',
                   background: 'var(--brand-soft)', color: 'var(--brand)',
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  fontFamily:'Geist Mono', fontSize: 11, fontWeight: 600,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'Geist Mono', fontSize: 11, fontWeight: 700,
                 }}>{i + 1}</span>
-                <div style={{ flex: 1, fontSize: 13.5, lineHeight: 1.55, color:'var(--ink)' }}
+                <div style={{ flex: 1, fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)' }}
                   dangerouslySetInnerHTML={{ __html: renderMD(text) }} />
               </div>
             );
@@ -207,12 +217,12 @@ export default function DashboardView({ state, dispatch }) {
       const v = valueRWF(a, today);
       const c = costRWF(a);
       totalValue += v;
-      totalCost += c;
+      totalCost  += c;
       const cls = CLASSES.find(x => x.kind === a.kind) || CLASSES[CLASSES.length-1];
       const g = cls.group;
       if (!byGroup[g]) byGroup[g] = { group: g, value: 0, cost: 0, count: 0, color: cls.color };
       byGroup[g].value += v;
-      byGroup[g].cost += c;
+      byGroup[g].cost  += c;
       byGroup[g].count += 1;
     });
     return {
@@ -248,81 +258,124 @@ export default function DashboardView({ state, dispatch }) {
   const watchlist = TREND_DOMAINS.slice(0, 4);
 
   return (
-    <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)' }}>
+    <div style={{ padding: 28, paddingTop: 24, background: 'var(--bg)', minHeight: 'calc(100vh - 64px)' }}>
+
+      {/* ── AI Insight (above the fold) ──────────────────────── */}
+      <DashboardInsight state={state} dispatch={dispatch} />
+
+      {/* ── Bento hero row ───────────────────────────────────── */}
       <div className="dash-grid-3">
-        <div className="card" style={{ padding: 24 }}>
-          <div className="row" style={{ justifyContent:'space-between', alignItems:'flex-start' }}>
-            <div>
-              <div className="muted" style={{ fontSize: 11, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Net worth</div>
-              <div className="font-serif" style={{ fontSize: 50, lineHeight: 1, marginTop: 6, letterSpacing:'-0.02em' }}>
-                {fmtBase(stats.totalValue, profile.displayCurrency, { compact: stats.totalValue > 1e8 })}
-              </div>
-              <div className="row" style={{ gap: 10, marginTop: 8 }}>
-                <span className={`pill ${stats.gain >= 0 ? 'pill-up' : 'pill-down'}`}>
-                  {stats.gain >= 0 ? '▲' : '▼'} {Math.abs(stats.gainPct).toFixed(1)}% all-time
-                </span>
-                <span className="num muted" style={{ fontSize: 12 }}>
-                  {stats.gain >= 0 ? '+' : ''}{fmtBase(stats.gain, profile.displayCurrency, { compact: true })} vs. cost basis
-                </span>
-              </div>
-            </div>
+        {/* Net Worth hero card */}
+        <div className="card-hero" style={{ padding: 28 }}>
+          {/* Decorative gradient blob */}
+          <div style={{
+            position: 'absolute', top: -40, right: -40,
+            width: 160, height: 160, borderRadius: '50%',
+            background: 'radial-gradient(circle, var(--brand-softer) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}/>
+          <div className="muted" style={{
+            fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6,
+          }}>Net worth</div>
+          <div className="font-serif" style={{
+            fontSize: 52, lineHeight: 1, letterSpacing: '-0.025em',
+          }}>
+            {fmtBase(stats.totalValue, profile.displayCurrency, { compact: stats.totalValue > 1e8 })}
           </div>
-          <div style={{ marginTop: 18, color:'var(--brand)' }}>
-            <AreaChart data={trend} w={680} h={170} stroke="var(--brand)" accent="var(--brand)" />
+          <div className="row" style={{ gap: 10, marginTop: 10 }}>
+            <span className={`pill ${stats.gain >= 0 ? 'pill-up' : 'pill-down'}`}>
+              {stats.gain >= 0 ? '▲' : '▼'} {Math.abs(stats.gainPct).toFixed(1)}% all-time
+            </span>
+            <span className="num muted" style={{ fontSize: 12 }}>
+              {stats.gain >= 0 ? '+' : ''}{fmtBase(stats.gain, profile.displayCurrency, { compact: true })} vs. cost
+            </span>
           </div>
-          <div className="row" style={{ justifyContent:'space-between', fontSize: 10, color:'var(--ink-4)', paddingTop: 4 }}>
+          <div style={{ marginTop: 20, color: 'var(--brand)' }}>
+            <AreaChart data={trend} w={680} h={156} stroke="var(--brand)" accent="var(--brand)" />
+          </div>
+          <div className="row" style={{
+            justifyContent: 'space-between', fontSize: 9.5,
+            color: 'var(--ink-4)', paddingTop: 4, letterSpacing: '0.02em',
+          }}>
             <span>24m ago</span><span>18m</span><span>12m</span><span>6m</span><span>Today</span>
           </div>
         </div>
 
+        {/* Composition donut */}
         <div className="card" style={{ padding: 22 }}>
-          <div className="font-serif" style={{ fontSize: 18, marginBottom: 14 }}>Composition</div>
-          <div className="row" style={{ gap: 16, alignItems:'center' }}>
-            <Donut size={120} thickness={16}
+          <div className="font-serif" style={{ fontSize: 17, marginBottom: 16, letterSpacing: '-0.01em' }}>Composition</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <Donut size={110} thickness={14}
               slices={stats.groups.map(g => ({ value: g.value, color: g.color }))} />
-            <div className="col" style={{ flex: 1, gap: 8 }}>
-              {stats.groups.map(g => (
-                <div key={g.group} className="row" style={{ gap: 8, fontSize: 12, justifyContent:'space-between' }}>
-                  <div className="row" style={{ gap: 8, minWidth: 0 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 999, background: g.color, flexShrink: 0 }}/>
-                    <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{g.group}</span>
-                  </div>
-                  <span className="num" style={{ color:'var(--ink-2)', fontWeight: 500 }}>
-                    {(g.value / stats.totalValue * 100).toFixed(0)}%
-                  </span>
+          </div>
+          <div className="col" style={{ gap: 8 }}>
+            {stats.groups.map(g => (
+              <div key={g.group} className="row" style={{ gap: 8, fontSize: 12, justifyContent: 'space-between' }}>
+                <div className="row" style={{ gap: 8, minWidth: 0 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0 }}/>
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink-2)' }}>{g.group}</span>
                 </div>
-              ))}
-            </div>
+                <span className="num" style={{ color: 'var(--ink)', fontWeight: 600, fontSize: 11 }}>
+                  {(g.value / stats.totalValue * 100).toFixed(0)}%
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="col" style={{ gap: 16 }}>
-          <KPI label="Cost basis" value={fmtBase(stats.totalCost, profile.displayCurrency, { compact:true })} sub={`${assets.length} assets`} accent="var(--ink)" />
-          <KPI label="Unrealised P/L" value={`${stats.gain >= 0 ? '+' : ''}${fmtBase(stats.gain, profile.displayCurrency, { compact:true })}`} sub={`${stats.gainPct.toFixed(1)}% vs cost`} accent={stats.gain >= 0 ? 'var(--up)' : 'var(--down)'} />
+        {/* KPI stack */}
+        <div className="col" style={{ gap: 12 }}>
+          <KPI
+            label="Cost basis"
+            value={fmtBase(stats.totalCost, profile.displayCurrency, { compact: true })}
+            sub={`${assets.length} asset${assets.length === 1 ? '' : 's'} tracked`}
+            accent="var(--gold)"
+          />
+          <KPI
+            label="Unrealised P/L"
+            value={`${stats.gain >= 0 ? '+' : ''}${fmtBase(stats.gain, profile.displayCurrency, { compact: true })}`}
+            sub={`${stats.gainPct >= 0 ? '+' : ''}${stats.gainPct.toFixed(1)}% vs cost basis`}
+            accent={stats.gain >= 0 ? 'var(--up)' : 'var(--down)'}
+          />
         </div>
       </div>
 
-      <DashboardInsight state={state} dispatch={dispatch} />
-
+      {/* ── Top movers ───────────────────────────────────────── */}
       <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-        <div className="row" style={{ justifyContent:'space-between', marginBottom: 14 }}>
-          <div className="font-serif" style={{ fontSize: 20 }}>Top movers</div>
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
+          <div className="font-serif" style={{ fontSize: 19, letterSpacing: '-0.01em' }}>Top movers</div>
           <span className="muted" style={{ fontSize: 11 }}>Since purchase · biggest swings</span>
         </div>
         <div className="dash-grid-4">
           {movers.map(m => {
             const cls = CLASSES.find(c => c.kind === m.kind);
+            const isUp = m._pct >= 0;
             return (
-              <div key={m.id} style={{ padding: 14, borderRadius: 10, background:'var(--bg-2)' }}>
-                <div className="row" style={{ gap: 8, marginBottom: 8 }}>
-                  <span style={{ color: cls.color, fontSize: 16 }}>{cls.glyph}</span>
-                  <span style={{ fontSize: 12, fontWeight: 500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex: 1 }}>{m.name}</span>
+              <div key={m.id} style={{
+                padding: '16px 14px', borderRadius: 'var(--r-md)',
+                background: 'var(--bg-2)',
+                border: '0.5px solid var(--line-soft)',
+                transition: 'box-shadow 0.16s, transform 0.16s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-2)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+                  <span style={{ color: cls.color, fontSize: 15 }}>{cls.glyph}</span>
+                  <span style={{
+                    fontSize: 12, fontWeight: 500, flex: 1,
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    color: 'var(--ink)',
+                  }}>{m.name}</span>
                 </div>
-                <div className="num" style={{ fontSize: 18, fontWeight: 600, color: m._pct >= 0 ? 'var(--up)' : 'var(--down)' }}>
-                  {m._pct >= 0 ? '+' : ''}{m._pct.toFixed(1)}%
+                <div className="num" style={{
+                  fontSize: 20, fontWeight: 700,
+                  color: isUp ? 'var(--up)' : 'var(--down)',
+                }}>
+                  {isUp ? '+' : ''}{m._pct.toFixed(1)}%
                 </div>
-                <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>
-                  {m._pct >= 0 ? '+' : ''}{fmt(m._gain, m.currency, { compact: true })}
+                <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>
+                  {isUp ? '+' : ''}{fmt(m._gain, m.currency, { compact: true })}
                 </div>
               </div>
             );
@@ -330,11 +383,16 @@ export default function DashboardView({ state, dispatch }) {
         </div>
       </div>
 
-      <div className="row" style={{ justifyContent:'space-between', marginBottom: 12 }}>
-        <div className="font-serif" style={{ fontSize: 20 }}>Markets you watch</div>
-        <span onClick={() => dispatch({ type:'nav', to:'trends' })} style={{ fontSize: 12, color:'var(--brand)', cursor:'pointer' }}>See all trends →</span>
+      {/* ── Markets you watch ────────────────────────────────── */}
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+        <div className="font-serif" style={{ fontSize: 19, letterSpacing: '-0.01em' }}>Markets you watch</div>
+        <button onClick={() => dispatch({ type:'nav', to:'trends' })}
+          style={{
+            border: 0, background: 'transparent', cursor: 'pointer',
+            fontSize: 12, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
+          }}>See all trends →</button>
       </div>
-      <div className="dash-grid-4" style={{ marginBottom: 18 }}>
+      <div className="dash-grid-4" style={{ marginBottom: 24 }}>
         {watchlist.map(d => <TrendCard key={d.id} d={d} />)}
       </div>
     </div>

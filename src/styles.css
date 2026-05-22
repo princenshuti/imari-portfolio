@@ -1,109 +1,263 @@
-/* Imari — Rwanda-grounded wealth platform */
+/* Imari — Rwanda-grounded wealth platform · v2 design system */
 
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
 
+/* ── Light theme ─────────────────────────────────────────────── */
 :root,
 body[data-theme="light"] {
-  --bg: #F6F2EA;
-  --bg-2: #EFEAE0;
-  --paper: #FBF9F4;
-  --paper-2: #FFFFFF;
-  --line: rgba(26, 26, 23, 0.10);
-  --line-soft: rgba(26, 26, 23, 0.06);
+  /* Surfaces */
+  --bg:       #F2EDE2;
+  --bg-2:     #E8E2D4;
+  --paper:    #FEFCF7;
+  --paper-2:  #FFFFFF;
 
-  --ink: #1A1A17;
-  --ink-2: #3D3D38;
-  --ink-3: #6B6B63;
-  --ink-4: #9C9C92;
+  /* Lines */
+  --line:        rgba(26, 22, 14, 0.09);
+  --line-soft:   rgba(26, 22, 14, 0.05);
+  --line-strong: rgba(26, 22, 14, 0.15);
 
-  --brand: #0F4F3F;
-  --brand-2: #1A6E4F;
-  --brand-soft: #D7E4DD;
-  --brand-ink: #FBF9F4;
+  /* Ink */
+  --ink:   #1A170E;
+  --ink-2: #3D3826;
+  --ink-3: #6B6452;
+  --ink-4: #9C9485;
 
-  --gold: #C99A2E;
-  --gold-soft: #F2E5C2;
-  --up: #1F8A5B;
-  --up-soft: #D6EBDC;
-  --down: #B33A2C;
-  --down-soft: #F0D6D1;
-  --sky: #4A7EC9;
+  /* Brand — Rwanda forest green */
+  --brand:        #0D4B3A;
+  --brand-2:      #1A6E4F;
+  --brand-soft:   #CCE0D8;
+  --brand-softer: #E5F0EC;
+  --brand-ink:    #FEFCF7;
+
+  /* Gold — premium accent */
+  --gold:        #C4932A;
+  --gold-2:      #A67C1E;
+  --gold-soft:   #EFE2BC;
+  --gold-softer: #FAF4E2;
+
+  /* Up / Down */
+  --up:        #1A7A52;
+  --up-soft:   #D0E9DD;
+  --down:      #B03428;
+  --down-soft: #EDD4D0;
+
+  /* Extra palette */
+  --sky:  #4274B8;
   --plum: #6B4B7A;
-  --clay: #C77845;
+  --clay: #C07040;
 
-  --shadow-1: 0 1px 0 rgba(26,26,23,0.04), 0 1px 2px rgba(26,26,23,0.04);
-  --shadow-2: 0 1px 0 rgba(26,26,23,0.04), 0 8px 24px rgba(26,26,23,0.06);
-  --shadow-pop: 0 12px 40px rgba(26,26,23,0.16);
+  /* Glass */
+  --glass-bg:     rgba(254, 252, 247, 0.78);
+  --glass-border: rgba(26, 22, 14, 0.07);
+
+  /* Shadows — 4-level depth system */
+  --shadow-0:   0 1px 2px rgba(26,22,14,0.04);
+  --shadow-1:   0 1px 3px rgba(26,22,14,0.04), 0 2px 8px rgba(26,22,14,0.04);
+  --shadow-2:   0 2px 6px rgba(26,22,14,0.05), 0 6px 24px rgba(26,22,14,0.07);
+  --shadow-3:   0 4px 12px rgba(26,22,14,0.07), 0 16px 48px rgba(26,22,14,0.10);
+  --shadow-pop: 0 8px 24px rgba(26,22,14,0.12), 0 24px 64px rgba(26,22,14,0.12);
+  --shadow-brand: 0 4px 16px rgba(13, 75, 58, 0.22);
+
+  /* Radius tokens */
+  --r-sm:   8px;
+  --r-md:   12px;
+  --r-lg:   18px;
+  --r-xl:   24px;
+  --r-pill: 999px;
 }
 
+/* ── Dark theme ──────────────────────────────────────────────── */
 body[data-theme="dark"] {
-  --bg: #14181A;
-  --bg-2: #1B2123;
-  --paper: #1E2426;
-  --paper-2: #252C2F;
-  --line: rgba(255,255,255,0.10);
-  --line-soft: rgba(255,255,255,0.06);
+  --bg:      #0D1117;
+  --bg-2:    #161B22;
+  --paper:   #1C2128;
+  --paper-2: #222830;
 
-  --ink: #F0EDE6;
-  --ink-2: #C9C7C1;
-  --ink-3: #8E8D88;
-  --ink-4: #5F5F5A;
+  --line:        rgba(240, 237, 228, 0.08);
+  --line-soft:   rgba(240, 237, 228, 0.05);
+  --line-strong: rgba(240, 237, 228, 0.13);
 
-  --brand: #4FB991;
-  --brand-2: #66CDA5;
-  --brand-soft: rgba(79, 185, 145, 0.18);
-  --brand-ink: #0B1614;
+  --ink:   #E8E4D8;
+  --ink-2: #BDB8A8;
+  --ink-3: #8A8676;
+  --ink-4: #5A5748;
 
-  --gold: #E5BC55;
-  --gold-soft: rgba(229, 188, 85, 0.18);
-  --up: #4FB991;
-  --up-soft: rgba(79, 185, 145, 0.18);
-  --down: #E68A7C;
-  --down-soft: rgba(230, 138, 124, 0.18);
-  --sky: #7BA8E8;
+  --brand:        #3FB889;
+  --brand-2:      #56CDAB;
+  --brand-soft:   rgba(63, 184, 137, 0.18);
+  --brand-softer: rgba(63, 184, 137, 0.09);
+  --brand-ink:    #0B1614;
+
+  --gold:        #E5BC55;
+  --gold-2:      #F0CE70;
+  --gold-soft:   rgba(229, 188, 85, 0.18);
+  --gold-softer: rgba(229, 188, 85, 0.09);
+
+  --up:        #3FB889;
+  --up-soft:   rgba(63, 184, 137, 0.18);
+  --down:      #E07870;
+  --down-soft: rgba(224, 120, 112, 0.18);
+
+  --sky:  #7BA8E8;
   --plum: #B59ACC;
   --clay: #E0986A;
 
-  --shadow-1: 0 1px 0 rgba(0,0,0,0.2);
-  --shadow-2: 0 8px 24px rgba(0,0,0,0.35);
-  --shadow-pop: 0 12px 40px rgba(0,0,0,0.5);
+  --glass-bg:     rgba(28, 33, 40, 0.72);
+  --glass-border: rgba(240, 237, 228, 0.07);
+
+  --shadow-0:   0 1px 2px rgba(0,0,0,0.25);
+  --shadow-1:   0 1px 3px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.20);
+  --shadow-2:   0 2px 6px rgba(0,0,0,0.30), 0 6px 24px rgba(0,0,0,0.25);
+  --shadow-3:   0 4px 12px rgba(0,0,0,0.35), 0 16px 48px rgba(0,0,0,0.40);
+  --shadow-pop: 0 8px 24px rgba(0,0,0,0.50), 0 24px 64px rgba(0,0,0,0.45);
+  --shadow-brand: 0 4px 16px rgba(63, 184, 137, 0.25);
 }
 
+/* ── Auto dark mode ───────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"]) {
+    --bg: #0D1117; --bg-2: #161B22; --paper: #1C2128; --paper-2: #222830;
+    --line: rgba(240,237,228,0.08); --line-soft: rgba(240,237,228,0.05); --line-strong: rgba(240,237,228,0.13);
+    --ink: #E8E4D8; --ink-2: #BDB8A8; --ink-3: #8A8676; --ink-4: #5A5748;
+    --brand: #3FB889; --brand-2: #56CDAB;
+    --brand-soft: rgba(63,184,137,0.18); --brand-softer: rgba(63,184,137,0.09); --brand-ink: #0B1614;
+    --gold: #E5BC55; --gold-2: #F0CE70;
+    --gold-soft: rgba(229,188,85,0.18); --gold-softer: rgba(229,188,85,0.09);
+    --up: #3FB889; --up-soft: rgba(63,184,137,0.18);
+    --down: #E07870; --down-soft: rgba(224,120,112,0.18);
+    --sky: #7BA8E8; --plum: #B59ACC; --clay: #E0986A;
+    --glass-bg: rgba(28,33,40,0.72); --glass-border: rgba(240,237,228,0.07);
+    --shadow-0: 0 1px 2px rgba(0,0,0,0.25);
+    --shadow-1: 0 1px 3px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.20);
+    --shadow-2: 0 2px 6px rgba(0,0,0,0.30), 0 6px 24px rgba(0,0,0,0.25);
+    --shadow-3: 0 4px 12px rgba(0,0,0,0.35), 0 16px 48px rgba(0,0,0,0.40);
+    --shadow-pop: 0 8px 24px rgba(0,0,0,0.50), 0 24px 64px rgba(0,0,0,0.45);
+    --shadow-brand: 0 4px 16px rgba(63,184,137,0.25);
+  }
+}
+
+/* ── Typography ──────────────────────────────────────────────── */
 .font-serif { font-family: 'Instrument Serif', 'Iowan Old Style', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
 .font-sans  { font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif; }
 .font-mono  { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; }
-.num { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.num { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
+/* ── Reset & base ─────────────────────────────────────────────── */
 * { box-sizing: border-box; }
-body { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: var(--ink); background: var(--bg); margin: 0; }
+body {
+  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-.card { background: var(--paper); border-radius: 16px; box-shadow: var(--shadow-1); border: 0.5px solid var(--line-soft); }
+/* ── Card system ──────────────────────────────────────────────── */
+.card {
+  background: var(--paper);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-2);
+  border: 0.5px solid var(--line-soft);
+}
+
+/* Glass card — frosted surface */
+.card-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 0.5px solid var(--glass-border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-2);
+}
+
+/* Stat card — interactive KPI tile with accent top border */
+.card-stat {
+  background: var(--paper);
+  border-radius: var(--r-lg);
+  border: 0.5px solid var(--line-soft);
+  box-shadow: var(--shadow-2);
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+.card-stat:hover {
+  box-shadow: var(--shadow-3);
+  transform: translateY(-2px);
+}
+.card-stat::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2.5px;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--stat-accent, var(--brand));
+}
+
+/* ── HR & utils ───────────────────────────────────────────────── */
 .hr { height: 1px; background: var(--line); border: 0; margin: 0; }
 
-.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; letter-spacing: 0.01em; }
-.pill-up   { background: var(--up-soft);   color: var(--up); }
-.pill-down { background: var(--down-soft); color: var(--down); }
-.pill-soft { background: var(--bg-2);      color: var(--ink-3); }
-.pill-brand{ background: var(--brand-soft);color: var(--brand); }
-.pill-gold { background: var(--gold-soft); color: var(--gold); }
+/* ── Pills ────────────────────────────────────────────────────── */
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: var(--r-pill);
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em;
+}
+.pill-up    { background: var(--up-soft);    color: var(--up); }
+.pill-down  { background: var(--down-soft);  color: var(--down); }
+.pill-soft  { background: var(--bg-2);       color: var(--ink-3); }
+.pill-brand { background: var(--brand-soft); color: var(--brand); }
+.pill-gold  { background: var(--gold-soft);  color: var(--gold); }
 
+/* ── Spark ────────────────────────────────────────────────────── */
 .spark { stroke-width: 1.5; fill: none; }
 
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; border-radius: 10px; font: 500 13px/1 'Geist', system-ui; border: 0; cursor: pointer; transition: transform .08s, box-shadow .12s; }
-.btn-primary { background: var(--brand); color: var(--brand-ink); }
-.btn-primary:hover { box-shadow: 0 6px 16px rgba(15,79,63,0.25); }
-.btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+/* ── Buttons ──────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 16px; border-radius: var(--r-md);
+  font: 500 13px/1 'Geist', system-ui; border: 0; cursor: pointer;
+  transition: all 0.15s ease; white-space: nowrap;
+}
+.btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: var(--bg-2); color: var(--ink-2); font-size: 12px; }
+.btn-primary {
+  background: var(--brand);
+  color: var(--brand-ink);
+  box-shadow: var(--shadow-brand);
+}
+.btn-primary:hover {
+  background: var(--brand-2);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-brand), 0 8px 24px rgba(13,79,63,0.18);
+}
+.btn-primary:active { transform: translateY(0); }
 
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2);
+  border: 1px solid var(--line-strong);
+}
+.btn-ghost:hover {
+  background: var(--bg-2);
+  color: var(--ink);
+}
+
+/* ── Chip ─────────────────────────────────────────────────────── */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--r-pill); background: var(--bg-2); color: var(--ink-2); font-size: 12px; }
+
+/* ── Flex layout helpers ──────────────────────────────────────── */
 .row { display: flex; align-items: center; }
 .col { display: flex; flex-direction: column; }
 .muted { color: var(--ink-3); }
-.t-up { color: var(--up); }
-.t-down { color: var(--down); }
+.t-up    { color: var(--up); }
+.t-down  { color: var(--down); }
 .t-brand { color: var(--brand); }
-.t-gold { color: var(--gold); }
+.t-gold  { color: var(--gold); }
 
+/* ── Keyframe animations ──────────────────────────────────────── */
 @keyframes imari-dot {
   0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-3px); }
@@ -114,50 +268,53 @@ body { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: var(--
   100% { background-position: -200% 0; }
 }
 
-/* ── Auto dark mode ───────────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-  body:not([data-theme="light"]) {
-    --bg: #14181A; --bg-2: #1B2123; --paper: #1E2426; --paper-2: #252C2F;
-    --line: rgba(255,255,255,0.10); --line-soft: rgba(255,255,255,0.06);
-    --ink: #F0EDE6; --ink-2: #C9C7C1; --ink-3: #8E8D88; --ink-4: #5F5F5A;
-    --brand: #4FB991; --brand-2: #66CDA5; --brand-soft: rgba(79,185,145,0.18); --brand-ink: #0B1614;
-    --gold: #E5BC55; --gold-soft: rgba(229,188,85,0.18);
-    --up: #4FB991; --up-soft: rgba(79,185,145,0.18);
-    --down: #E68A7C; --down-soft: rgba(230,138,124,0.18);
-    --sky: #7BA8E8; --plum: #B59ACC; --clay: #E0986A;
-    --shadow-1: 0 1px 0 rgba(0,0,0,0.2);
-    --shadow-2: 0 8px 24px rgba(0,0,0,0.35);
-    --shadow-pop: 0 12px 40px rgba(0,0,0,0.5);
-  }
-}
-
-/* ── Page transition ──────────────────────────────────────── */
 @keyframes page-fade {
-  from { opacity: 0; transform: translateY(5px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.page-view { animation: page-fade 0.15s ease; }
 
-/* ── Toast ───────────────────────────────────────────────── */
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(10px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)    scale(1); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.toast-item { animation: toast-in 0.18s ease; }
 
-/* ── Sidebar nav buttons ─────────────────────────────────── */
-.nav-btn {
-  display: flex; align-items: center; gap: 12px;
-  width: 100%; padding: 9px 11px; border-radius: 9px;
-  border: 0; background: transparent; color: var(--ink-2);
-  font: 500 13.5px/1 'Geist', system-ui; cursor: pointer;
-  transition: background 0.12s, color 0.12s; text-align: left;
+@keyframes num-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.nav-btn:hover  { background: var(--bg-2); }
-.nav-btn.active { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+
+/* ── Page transition ──────────────────────────────────────────── */
+.page-view { animation: page-fade 0.18s ease; }
+
+/* ── Toast ────────────────────────────────────────────────────── */
+.toast-item { animation: toast-in 0.2s ease; }
+
+/* ── Sidebar nav buttons ──────────────────────────────────────── */
+.nav-btn {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%; padding: 10px 12px; border-radius: var(--r-md);
+  border: 0; background: transparent; color: var(--ink-3);
+  font: 500 13.5px/1 'Geist', system-ui; cursor: pointer;
+  transition: background 0.14s, color 0.14s; text-align: left;
+  position: relative;
+}
+.nav-btn:hover  { background: var(--bg-2); color: var(--ink-2); }
+.nav-btn.active {
+  background: var(--brand-softer);
+  color: var(--brand);
+  font-weight: 600;
+}
+.nav-btn.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 22%; bottom: 22%;
+  width: 3px;
+  background: var(--brand);
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+}
 .nav-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
 
-/* ── Skeleton loader ─────────────────────────────────────── */
+/* ── Skeleton loader ──────────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(90deg, var(--bg-2) 0%, var(--line) 50%, var(--bg-2) 100%);
   background-size: 200% 100%;
@@ -165,11 +322,28 @@ body { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: var(--
   border-radius: 6px;
 }
 
-/* ── Responsive dashboard grids ──────────────────────────── */
+/* ── Hover lift ───────────────────────────────────────────────── */
+.hover-lift {
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+.hover-lift:hover {
+  box-shadow: var(--shadow-3);
+  transform: translateY(-2px);
+}
+
+/* ── Form focus ───────────────────────────────────────────────── */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px var(--brand-soft) !important;
+}
+
+/* ── Dashboard grids ──────────────────────────────────────────── */
 .dash-grid-3 {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr;
-  gap: 16px; margin-bottom: 16px;
+  grid-template-columns: 1.65fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 @media (max-width: 1200px) {
   .dash-grid-3 { grid-template-columns: 1fr 1fr; }
@@ -188,30 +362,33 @@ body { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: var(--
 @media (max-width: 960px)  { .dash-grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px)  { .dash-grid-4 { grid-template-columns: 1fr 1fr; } }
 
-/* ── Mobile sidebar hide / tab bar show ──────────────────── */
+/* ── Mobile layout ────────────────────────────────────────────── */
 .sidebar-desktop { display: flex; }
 .mobile-tab-bar  { display: none; }
 
 @media (max-width: 768px) {
   .sidebar-desktop { display: none !important; }
   .mobile-tab-bar  { display: flex !important; }
-  .main-scroll     { padding-bottom: 72px; }
+  .main-scroll     { padding-bottom: 80px; }
 }
 
-/* ── Mobile tab bar ──────────────────────────────────────── */
+/* ── Mobile tab bar ───────────────────────────────────────────── */
 .mobile-tab-bar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-  background: var(--paper); border-top: 0.5px solid var(--line);
-  padding: 6px 4px env(safe-area-inset-bottom, 6px);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 0.5px solid var(--line);
+  padding: 8px 8px env(safe-area-inset-bottom, 8px);
   justify-content: space-around; align-items: flex-end;
 }
 .tab-btn {
   display: flex; flex-direction: column; align-items: center;
-  gap: 3px; padding: 6px 12px; border-radius: 10px;
+  gap: 3px; padding: 7px 14px; border-radius: var(--r-md);
   border: 0; background: transparent; cursor: pointer;
-  color: var(--ink-3); font: 500 10px/1 'Geist', system-ui;
-  transition: color 0.12s, background 0.12s; min-width: 52px;
+  color: var(--ink-4); font: 500 10px/1 'Geist', system-ui;
+  transition: color 0.12s, background 0.12s; min-width: 54px;
 }
-.tab-btn.active { color: var(--brand); background: var(--brand-soft); }
+.tab-btn.active { color: var(--brand); background: var(--brand-softer); }
 .tab-btn:focus-visible { outline: 2px solid var(--brand); }
 .tab-btn span.glyph { font-size: 18px; }

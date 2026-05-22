@@ -11,74 +11,106 @@ const items = [
 ];
 
 export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role }) {
-  const gain   = netWorth - totalCost;
+  const gain    = netWorth - totalCost;
   const gainPct = totalCost ? (gain / totalCost) * 100 : 0;
-  const up     = gain >= 0;
+  const up      = gain >= 0;
+  const initials = (profile.name || 'You').split(' ').slice(0,2).map(s => s[0] || '').join('').toUpperCase().slice(0,2);
 
   return (
     <aside className="col sidebar-desktop" style={{
-      width: 240, padding: '22px 16px', background:'var(--paper)',
-      borderRight: '0.5px solid var(--line)', gap: 20, flexShrink: 0,
-      height: '100vh', position:'sticky', top: 0, overflowY: 'auto',
+      width: 244, padding: '20px 14px',
+      background: 'var(--paper)',
+      borderRight: '0.5px solid var(--line)',
+      gap: 18, flexShrink: 0,
+      height: '100vh', position: 'sticky', top: 0, overflowY: 'auto',
     }}>
-      {/* Logo */}
-      <div className="row" style={{ gap: 10, padding: '0 6px' }}>
+
+      {/* ── Brand mark ──────────────────────────────────────── */}
+      <div className="row" style={{ gap: 10, padding: '2px 6px' }}>
         <div style={{
-          width: 32, height: 32, borderRadius: 8, background:'var(--brand)', color:'var(--brand-ink)',
-          display:'flex', alignItems:'center', justifyContent:'center',
-          fontFamily:'Instrument Serif, serif', fontSize: 20,
+          width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+          background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)',
+          color: 'var(--brand-ink)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'Instrument Serif, serif', fontSize: 19,
+          boxShadow: 'var(--shadow-brand)',
         }}>●</div>
         <div>
-          <div className="font-serif" style={{ fontSize: 19, lineHeight: 1 }}>Imari</div>
-          <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Personal Portfolio</div>
+          <div className="font-serif" style={{ fontSize: 19, lineHeight: 1, letterSpacing: '-0.02em' }}>Imari</div>
+          <div className="muted" style={{ fontSize: 9.5, marginTop: 2, letterSpacing: '0.04em' }}>Personal Portfolio</div>
         </div>
       </div>
 
-      {/* Net worth + cost card — click navigates to dashboard */}
+      {/* ── Net worth card ──────────────────────────────────── */}
       <button onClick={() => onNav('dashboard')} style={{
-        all: 'unset', display: 'block', padding: 14, borderRadius: 12,
-        background:'var(--bg-2)', gap: 4, cursor: 'pointer', width: '100%',
-        boxSizing: 'border-box', transition: 'background 0.12s',
+        all: 'unset', display: 'block', cursor: 'pointer',
+        padding: 16, borderRadius: 'var(--r-lg)',
+        background: 'linear-gradient(145deg, var(--brand-softer) 0%, var(--bg-2) 100%)',
+        border: '0.5px solid var(--brand-soft)',
+        boxSizing: 'border-box', width: '100%',
+        transition: 'box-shadow 0.16s ease, transform 0.16s ease',
+        boxShadow: 'var(--shadow-1)',
       }}
-        onMouseEnter={e => e.currentTarget.style.background = 'var(--brand-soft)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-2)'}
+        onMouseEnter={e => {
+          e.currentTarget.style.boxShadow = 'var(--shadow-3)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.boxShadow = 'var(--shadow-1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
       >
-        <div className="col" style={{ gap: 2 }}>
-          <div className="muted" style={{ fontSize: 10, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Net worth</div>
-          <div className="font-serif" style={{ fontSize: 26, letterSpacing:'-0.02em', lineHeight: 1.1 }}>
+        <div className="col" style={{ gap: 1 }}>
+          <div className="muted" style={{
+            fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700,
+          }}>Net worth</div>
+          <div className="font-serif" style={{
+            fontSize: 27, letterSpacing: '-0.025em', lineHeight: 1.1, marginTop: 2,
+            color: 'var(--ink)',
+          }}>
             {fmtBase(netWorth, displayCurrency, { compact: true })}
           </div>
         </div>
 
-        <div style={{ height: '0.5px', background: 'var(--line)', margin: '10px 0' }} />
+        <div style={{ height: '0.5px', background: 'var(--line)', margin: '12px 0' }} />
 
-        <div className="col" style={{ gap: 2 }}>
-          <div className="muted" style={{ fontSize: 10, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Total cost</div>
-          <div className="num" style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink-2)' }}>
+        <div className="col" style={{ gap: 1 }}>
+          <div className="muted" style={{
+            fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700,
+          }}>Cost basis</div>
+          <div className="num" style={{
+            fontSize: 15, fontWeight: 600, color: 'var(--ink-2)', marginTop: 2,
+          }}>
             {fmtBase(totalCost, displayCurrency, { compact: true })}
           </div>
         </div>
 
         {totalCost > 0 && (
-          <div className="row" style={{ gap: 6, alignItems: 'center', marginTop: 8 }}>
+          <div className="row" style={{ gap: 7, alignItems: 'center', marginTop: 10 }}>
             <span style={{
-              fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+              fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-pill)',
               background: up ? 'var(--up-soft)' : 'var(--down-soft)',
               color: up ? 'var(--up)' : 'var(--down)',
             }}>
               {up ? '▲' : '▼'} {Math.abs(gainPct).toFixed(1)}%
             </span>
             <span className="muted" style={{ fontSize: 10 }}>
-              {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })} overall
+              {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })}
             </span>
           </div>
         )}
 
-        <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>{displayCurrency} · {profile.name || 'You'}</div>
+        <div className="muted" style={{ fontSize: 10.5, marginTop: 8 }}>
+          {displayCurrency} · {profile.name || 'You'}
+        </div>
       </button>
 
-      {/* Nav */}
-      <nav className="col" style={{ gap: 1 }} aria-label="Main navigation">
+      {/* ── Nav ─────────────────────────────────────────────── */}
+      <nav className="col" style={{ gap: 2 }} aria-label="Main navigation">
+        <div className="muted" style={{
+          fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700,
+          padding: '0 12px', marginBottom: 4,
+        }}>Menu</div>
         {items.map(it => (
           <button
             key={it.id}
@@ -86,42 +118,74 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
             onClick={() => onNav(it.id)}
             aria-current={it.id === active ? 'page' : undefined}
           >
-            <span style={{ width: 16, textAlign:'center', fontSize: 15 }}>{it.glyph}</span>
+            <span style={{
+              width: 18, textAlign: 'center', fontSize: 14,
+              opacity: it.id === active ? 1 : 0.65,
+            }}>{it.glyph}</span>
             <span>{it.label}</span>
           </button>
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="col" style={{ marginTop:'auto', gap: 8 }}>
+      {/* ── Footer ──────────────────────────────────────────── */}
+      <div className="col" style={{ marginTop: 'auto', gap: 8 }}>
+        <div style={{
+          padding: '8px 12px', borderRadius: 'var(--r-md)',
+          background: 'var(--bg-2)', fontSize: 10.5,
+        }}>
+          <div className="row" style={{ gap: 6 }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+              background: session ? 'var(--up)' : 'var(--gold)',
+              boxShadow: session ? '0 0 0 2px var(--up-soft)' : '0 0 0 2px var(--gold-soft)',
+            }}/>
+            <span className="muted">{session ? 'Synced to cloud' : 'Saved locally'}</span>
+          </div>
+        </div>
+
         {session?.user && (
-          <div className="col" style={{ padding: 12, borderRadius: 10, background:'var(--bg-2)', gap: 6 }}>
-            <div className="row" style={{ gap: 8, alignItems:'center' }}>
+          <div style={{
+            padding: 12, borderRadius: 'var(--r-md)',
+            background: 'var(--bg-2)',
+            border: '0.5px solid var(--line)',
+          }}>
+            <div className="row" style={{ gap: 9, alignItems: 'center', marginBottom: 10 }}>
               <div style={{
-                width: 24, height: 24, borderRadius: 999, background:'var(--brand)', color:'var(--brand-ink)',
-                display:'flex', alignItems:'center', justifyContent:'center', fontSize: 11, fontWeight: 600,
-              }}>{session.user.email?.[0]?.toUpperCase() || '?'}</div>
-              <div className="col" style={{ minWidth: 0, flex: 1, gap: 2 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)',
+                color: 'var(--brand-ink)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700,
+                boxShadow: 'var(--shadow-brand)',
+              }}>{initials || session.user.email?.[0]?.toUpperCase() || '?'}</div>
+
+              <div className="col" style={{ minWidth: 0, flex: 1, gap: 1 }}>
+                <div style={{
+                  fontSize: 11.5, fontWeight: 500,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
                   {session.user.email}
                 </div>
-                <div className="muted" style={{ fontSize: 10, textTransform:'capitalize' }}>{role || 'owner'} access</div>
+                <div className="muted" style={{ fontSize: 10, textTransform: 'capitalize' }}>
+                  {role || 'owner'} access
+                </div>
               </div>
             </div>
+
             <button onClick={() => signOut()} style={{
-              padding:'6px 8px', borderRadius: 7, border:'1px solid var(--line)',
-              background:'var(--paper)', cursor:'pointer', fontSize: 11, fontFamily:'inherit', color:'var(--ink-2)',
-            }}>
+              width: '100%', padding: '7px 10px', borderRadius: 'var(--r-sm)',
+              border: '0.5px solid var(--line-strong)',
+              background: 'var(--paper)', cursor: 'pointer',
+              fontSize: 11, fontFamily: 'inherit', color: 'var(--ink-3)',
+              transition: 'background 0.12s, color 0.12s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--down-soft)'; e.currentTarget.style.color = 'var(--down)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--paper)'; e.currentTarget.style.color = 'var(--ink-3)'; }}
+            >
               Sign out
             </button>
           </div>
         )}
-        <div className="col" style={{ gap: 4, padding: 10, borderRadius: 10, background:'var(--bg-2)', fontSize: 10.5, color:'var(--ink-3)', lineHeight: 1.5 }}>
-          <div className="row" style={{ gap: 6 }}>
-            <span style={{ width:6, height:6, borderRadius:999, background:'var(--up)' }}/>
-            <span>{session ? 'Synced to cloud' : 'Saved locally'}</span>
-          </div>
-        </div>
       </div>
     </aside>
   );
