@@ -216,6 +216,67 @@ export const MOMO_PROVIDERS = [
 
 export function id() { return Math.random().toString(36).slice(2, 9); }
 
+// ───── Liability types ─────────────────────────────────────────
+export const LIABILITY_TYPES = [
+  { kind:'mortgage',       label:'Mortgage / Property loan', group:'Secured', color:'var(--down)' },
+  { kind:'car-loan',       label:'Vehicle loan',             group:'Secured', color:'var(--clay)' },
+  { kind:'personal-loan',  label:'Personal loan',            group:'Unsecured', color:'var(--down)' },
+  { kind:'sacco',          label:'SACCO / Cooperative loan', group:'Unsecured', color:'var(--gold)' },
+  { kind:'business-loan',  label:'Business loan',            group:'Business', color:'var(--plum)' },
+  { kind:'credit',         label:'Credit / Overdraft',       group:'Revolving', color:'var(--down)' },
+  { kind:'other-debt',     label:'Other debt',               group:'Other', color:'var(--ink-3)' },
+];
+
+// ───── Cash-flow categories ────────────────────────────────────
+export const INCOME_CATEGORIES = [
+  { id:'salary',      label:'Salary / Wages',      color:'var(--up)' },
+  { id:'rental',      label:'Rental income',        color:'var(--brand)' },
+  { id:'dividends',   label:'Dividends',            color:'var(--gold)' },
+  { id:'bond-int',    label:'Bond interest',        color:'var(--gold)' },
+  { id:'business',    label:'Business income',      color:'var(--brand)' },
+  { id:'freelance',   label:'Freelance / Side gig', color:'var(--sky)' },
+  { id:'other-inc',   label:'Other income',         color:'var(--ink-3)' },
+];
+export const EXPENSE_CATEGORIES = [
+  { id:'loan-repay',  label:'Loan repayment',       color:'var(--down)' },
+  { id:'sacco-cont',  label:'SACCO contribution',   color:'var(--gold)' },
+  { id:'insurance',   label:'Insurance premium',    color:'var(--clay)' },
+  { id:'school-fees', label:'School fees',          color:'var(--plum)' },
+  { id:'utilities',   label:'Utilities / Bills',    color:'var(--ink-3)' },
+  { id:'other-exp',   label:'Other expense',        color:'var(--ink-3)' },
+];
+
+// ───── Goal categories ─────────────────────────────────────────
+export const GOAL_CATEGORIES = [
+  { id:'emergency',   label:'Emergency fund',    icon:'🛡' },
+  { id:'house',       label:'Buy a house',       icon:'🏠' },
+  { id:'land',        label:'Buy land',          icon:'📐' },
+  { id:'vehicle',     label:'Buy a vehicle',     icon:'🚗' },
+  { id:'education',   label:'Education',         icon:'🎓' },
+  { id:'retirement',  label:'Retirement',        icon:'🌅' },
+  { id:'business',    label:'Start a business',  icon:'💼' },
+  { id:'investment',  label:'Investment target',  icon:'📈' },
+  { id:'travel',      label:'Travel',            icon:'✈' },
+  { id:'other-goal',  label:'Other goal',        icon:'⭐' },
+];
+
+// ───── Net-worth milestone thresholds (in RWF) ────────────────
+export const MILESTONES = [
+  10_000_000, 25_000_000, 50_000_000, 100_000_000,
+  250_000_000, 500_000_000, 1_000_000_000,
+];
+
+// ───── Rwanda CGT / tax rates by asset class ──────────────────
+export const TAX_RULES = {
+  'realestate-land':  { rate: 0.05, label: 'Land CGT 5%',   withholding: false },
+  'realestate-house': { rate: 0.05, label: 'Property CGT 5%', withholding: false },
+  'rse-equity':       { rate: 0.05, label: 'RSE CGT 5%',     withholding: true, wRate: 0.15 },
+  'foreign-equity':   { rate: 0.05, label: 'Capital gain 5%', withholding: true, wRate: 0.15 },
+  'bond':             { rate: 0,    label: 'Tax-exempt',      withholding: true, wRate: 0.15 },
+  'crypto':           { rate: 0.05, label: 'Capital gain 5%', withholding: false },
+  'other':            { rate: 0.05, label: 'Capital gain 5%', withholding: false },
+};
+
 export const SEED_ASSETS = [
   { id: id(), kind:'realestate-land', name:'Plot in Kabuga',           currency:'RWF', purchasePrice: 150_000_000, purchaseDate:'2022-06-15', neighbourhood:'Kabuga', currentValue: '' },
   { id: id(), kind:'rse-equity',      name:'Bank of Kigali shares',     currency:'RWF', purchasePrice: 56_000,      purchaseDate:'2023-03-10', ticker:'BOK',  shares:200, lastPrice:320, currentValue: '' },

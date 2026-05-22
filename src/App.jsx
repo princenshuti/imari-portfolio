@@ -1,7 +1,8 @@
 import { useState, useEffect, useReducer, useMemo, useRef } from 'react';
-import { FX, valueRWF, costRWF } from './data.js';
+import { FX, valueRWF, costRWF, toBase, MILESTONES } from './data.js';
 import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
+import { addSnapshot, seedHistory } from './services/snapshots.js';
 import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
@@ -12,19 +13,26 @@ import AccountsView from './views/Accounts.jsx';
 import TrendsView from './views/Trends.jsx';
 import AdvisorView from './views/Advisor.jsx';
 import SettingsView from './views/Settings.jsx';
+import LiabilitiesView from './views/Liabilities.jsx';
+import GoalsView from './views/Goals.jsx';
+import CashFlowView from './views/CashFlow.jsx';
+import TaxReportView from './views/TaxReport.jsx';
 import NamePrompt from './views/NamePrompt.jsx';
 import Login from './views/Login.jsx';
+
+function upsert(arr, item, key = 'id') {
+  const i = arr.findIndex(x => x[key] === item[key]);
+  return i >= 0 ? arr.map((x, idx) => idx === i ? item : x) : [...arr, item];
+}
 
 function reducer(state, action) {
   switch (action.type) {
     case 'setProfile':
       return { ...state, profile: { ...state.profile, ...action.patch } };
+
+    // ── Assets ──────────────────────────────────────────────────
     case 'upsertAsset': {
-      const existing = state.assets.findIndex(a => a.id === action.asset.id);
-      const assets = existing >= 0
-        ? state.assets.map(a => a.id === action.asset.id ? action.asset : a)
-        : [...state.assets, action.asset];
-      return { ...state, assets };
+      return { ...state, assets: upsert(state.assets, action.asset) };
     }
     case 'deleteAsset':
       return { ...state, assets: state.assets.filter(a => a.id !== action.id) };
@@ -34,6 +42,32 @@ function reducer(state, action) {
       return { ...state, assets: [] };
     case 'reset':
       return { ...defaultState(), profile: state.profile };
+
+    // ── Liabilities ─────────────────────────────────────────────
+    case 'upsertLiability':
+      return { ...state, liabilities: upsert(state.liabilities || [], action.liability) };
+    case 'deleteLiability':
+      return { ...state, liabilities: (state.liabilities || []).filter(l => l.id !== action.id) };
+
+    // ── Goals ───────────────────────────────────────────────────
+    case 'upsertGoal':
+      return { ...state, goals: upsert(state.goals || [], action.goal) };
+    case 'deleteGoal':
+      return { ...state, goals: (state.goals || []).filter(g => g.id !== action.id) };
+
+    // ── Cash flows ──────────────────────────────────────────────
+    case 'upsertCashflow':
+      return { ...state, cashflows: upsert(state.cashflows || [], action.entry) };
+    case 'deleteCashflow':
+      return { ...state, cashflows: (state.cashflows || []).filter(c => c.id !== action.id) };
+
+    // ── Snapshots ────────────────────────────────────────────────
+    case 'addSnapshot':
+      return { ...state, snapshots: addSnapshot(state.snapshots || [], action.netWorth, action.costBasis) };
+    case 'seedSnapshots':
+      return { ...state, snapshots: action.snapshots };
+
+    // ── FX / Chat / Insight ──────────────────────────────────────
     case 'setFx': {
       Object.assign(FX, action.fx);
       return { ...state, fx: action.fx };
@@ -93,7 +127,7 @@ export default function App() {
     if (saved && saved.fx) Object.assign(FX, saved.fx);
     return saved || defaultState();
   });
-  const VALID_VIEWS = new Set(['dashboard','accounts','assets','trends','advisor','settings']);
+  const VALID_VIEWS = new Set(['dashboard','accounts','assets','trends','advisor','settings','liabilities','goals','cashflow','tax']);
   function hashToNav() {
     const h = window.location.hash.replace('#', '');
     return VALID_VIEWS.has(h) ? h : 'dashboard';
@@ -228,11 +262,58 @@ export default function App() {
   // ─ Net worth & total cost ─────────────────────────────────
   const { netWorth, totalCost } = useMemo(() => {
     const today = new Date();
+    const gross = state.assets.reduce((s, a) => s + valueRWF(a, today), 0);
+    const debt  = (state.liabilities || []).reduce((s, l) => s + toBase(l.remainingAmount || 0, l.currency || 'RWF'), 0);
     return {
-      netWorth:  state.assets.reduce((s, a) => s + valueRWF(a, today), 0),
+      netWorth:  gross - debt,
       totalCost: state.assets.reduce((s, a) => s + costRWF(a), 0),
     };
-  }, [state.assets]);
+  }, [state.assets, state.liabilities]);
+
+  // ─ Daily snapshot ─────────────────────────────────────────
+  useEffect(() => {
+    if (!state.profile.name) return;
+    const snaps = state.snapshots || [];
+    const today = new Date().toISOString().slice(0, 10);
+    const hasToday = snaps.some(s => s.date === today);
+    if (hasToday) return;
+    // Seed synthetic history on first run (< 2 snapshots)
+    if (snaps.length < 2 && netWorth > 0) {
+      const seeded = seedHistory(netWorth, totalCost, 60);
+      dispatch({ type: 'seedSnapshots', snapshots: seeded });
+    } else {
+      dispatch({ type: 'addSnapshot', netWorth, costBasis: totalCost });
+    }
+  }, [state.profile.name]);
+
+  // ─ Net-worth milestone alerts ─────────────────────────────
+  useEffect(() => {
+    if (!state.profile.name || netWorth <= 0) return;
+    const prev = (state.snapshots || []).slice(-2, -1)[0]?.netWorth || 0;
+    MILESTONES.forEach(m => {
+      if (prev < m && netWorth >= m) {
+        showToast(`🎉 Milestone reached: ${Math.round(m / 1e6)}M RWF net worth!`, 'success');
+      }
+    });
+  }, [netWorth]);
+
+  // ─ Asset maturity / overdue alerts ────────────────────────
+  useEffect(() => {
+    if (!state.profile.name) return;
+    const today = new Date();
+    const WARN_DAYS = 30;
+    state.assets.forEach(a => {
+      const checkDate = (dateStr, label) => {
+        if (!dateStr) return;
+        const d = new Date(dateStr);
+        const days = Math.ceil((d - today) / 86400000);
+        if (days < 0) showToast(`⚠ "${a.name}" ${label} ${Math.abs(days)} days ago`, 'warning');
+        else if (days <= WARN_DAYS) showToast(`⏰ "${a.name}" ${label} in ${days} days`, 'info');
+      };
+      if (a.kind === 'bond')        checkDate(a.maturity, 'matures');
+      if (a.kind === 'receivable')  checkDate(a.dueDate,  'was due');
+    });
+  }, [state.profile.name]);
 
   // ─ Render flow ────────────────────────────────────────────
   if (session === undefined) return null; // still checking
@@ -249,12 +330,16 @@ export default function App() {
 
   const accountCount = state.assets.filter(a => a.kind === 'savings' || a.kind === 'momo-cash').length;
   const titles = {
-    dashboard: { title: `${greetingFor()}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
-    accounts:  { title: 'Accounts', subtitle: `${accountCount} bank / mobile money` },
-    assets:    { title: 'Your assets', subtitle: `${state.assets.length} positions tracked` },
-    trends:    { title: 'Markets & trends', subtitle: 'Domains you watch' },
-    advisor:   { title: 'AI Advisor', subtitle: 'Grounded in your portfolio' },
-    settings:  { title: 'Settings', subtitle: 'Profile · FX · members · backup' },
+    dashboard:   { title: `${greetingFor()}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
+    accounts:    { title: 'Accounts', subtitle: `${accountCount} bank / mobile money` },
+    assets:      { title: 'Your assets', subtitle: `${state.assets.length} positions tracked` },
+    trends:      { title: 'Markets & trends', subtitle: 'Domains you watch' },
+    advisor:     { title: 'AI Advisor', subtitle: 'Grounded in your portfolio' },
+    settings:    { title: 'Settings', subtitle: 'Profile · FX · members · backup' },
+    liabilities: { title: 'Liabilities', subtitle: `${(state.liabilities||[]).length} debts tracked` },
+    goals:       { title: 'Goals', subtitle: `${(state.goals||[]).filter(g=>!g.achieved).length} active goals` },
+    cashflow:    { title: 'Cash Flow', subtitle: 'Income · Expenses · Savings rate' },
+    tax:         { title: 'Tax Report', subtitle: `${new Date().getFullYear()} · Rwanda RRA estimate` },
   };
 
   // Wrap dispatch in a read-only guard for viewers
@@ -269,12 +354,16 @@ export default function App() {
 
   const view = (() => {
     switch (nav) {
-      case 'accounts': return <AccountsView state={state} dispatch={guardedDispatch} />;
-      case 'assets':   return <AssetsView   state={state} dispatch={guardedDispatch} showToast={showToast} />;
-      case 'trends':   return <TrendsView   state={state} dispatch={guardedDispatch} />;
-      case 'advisor':  return <AdvisorView  state={state} dispatch={guardedDispatch} />;
-      case 'settings': return <SettingsView state={state} dispatch={guardedDispatch} session={session} portfolioId={portfolioId} role={role} showToast={showToast} themePref={themePref} onThemeChange={handleThemeChange} />;
-      default:         return <DashboardView state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} />;
+      case 'accounts':    return <AccountsView    state={state} dispatch={guardedDispatch} />;
+      case 'assets':      return <AssetsView      state={state} dispatch={guardedDispatch} showToast={showToast} />;
+      case 'trends':      return <TrendsView      state={state} dispatch={guardedDispatch} />;
+      case 'advisor':     return <AdvisorView     state={state} dispatch={guardedDispatch} />;
+      case 'settings':    return <SettingsView    state={state} dispatch={guardedDispatch} session={session} portfolioId={portfolioId} role={role} showToast={showToast} themePref={themePref} onThemeChange={handleThemeChange} onNav={navigateTo} />;
+      case 'liabilities': return <LiabilitiesView state={state} dispatch={guardedDispatch} />;
+      case 'goals':       return <GoalsView       state={state} dispatch={guardedDispatch} />;
+      case 'cashflow':    return <CashFlowView    state={state} dispatch={guardedDispatch} />;
+      case 'tax':         return <TaxReportView   state={state} />;
+      default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} />;
     }
   })();
 
@@ -285,7 +374,7 @@ export default function App() {
       <Sidebar
         active={nav} onNav={navigateTo}
         profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
-        session={session} role={role}
+        session={session} role={role} liabilities={state.liabilities || []}
       />
       <div className="col main-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
         {showTopBar && (

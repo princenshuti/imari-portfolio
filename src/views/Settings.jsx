@@ -441,6 +441,15 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         </div>
       </Section>
 
+      <Section title="Tax & Reporting" subtitle="View your estimated Rwanda tax liability and capital gains breakdown.">
+        <div className="row" style={{ gap: 10 }}>
+          <button onClick={() => onNav?.('tax')} className="btn btn-ghost">§ Open Tax Report</button>
+        </div>
+        <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
+          Calculates estimated CGT and withholding tax per asset using Rwanda RRA rules. Printable as PDF.
+        </div>
+      </Section>
+
       <Section title="Danger zone">
         <button onClick={() => {
           if (confirm('Reset to seed assets? Your current data will be replaced.')) dispatch({ type:'reset' });

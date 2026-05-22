@@ -99,11 +99,15 @@ export async function loadOrCreatePortfolio(user) {
     portfolioId,
     role: myRole,
     state: {
-      profile: data.profile || { name: '', displayCurrency: 'RWF', email: user.email },
-      assets:  data.assets  || [],
-      fx:      data.fx      || { ...FX },
-      chat:    data.chat    || [],
-      insight: data.insight,
+      profile:     data.profile     || { name: '', displayCurrency: 'RWF', email: user.email },
+      assets:      data.assets      || [],
+      liabilities: data.liabilities || [],
+      goals:       data.goals       || [],
+      cashflows:   data.cashflows   || [],
+      snapshots:   data.snapshots   || [],
+      fx:          data.fx          || { ...FX },
+      chat:        data.chat        || [],
+      insight:     data.insight,
     },
   };
 }
@@ -113,12 +117,16 @@ export async function savePortfolio(portfolioId, state) {
   const { error } = await supabase
     .from('portfolios')
     .update({
-      profile: state.profile,
-      assets:  state.assets,
-      fx:      state.fx,
-      chat:    state.chat,
-      insight: state.insight,
-      updated_at: new Date().toISOString(),
+      profile:     state.profile,
+      assets:      state.assets,
+      liabilities: state.liabilities || [],
+      goals:       state.goals       || [],
+      cashflows:   state.cashflows   || [],
+      snapshots:   state.snapshots   || [],
+      fx:          state.fx,
+      chat:        state.chat,
+      insight:     state.insight,
+      updated_at:  new Date().toISOString(),
     })
     .eq('id', portfolioId);
   if (error) throw error;

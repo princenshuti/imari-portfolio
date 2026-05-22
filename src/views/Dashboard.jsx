@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { CLASSES, TREND_DOMAINS, valueRWF, costRWF, suggestValue, toBase, fmtBase, fmt } from '../data.js';
+import { CLASSES, TREND_DOMAINS, valueRWF, costRWF, suggestValue, toBase, fmtBase, fmt, GOAL_CATEGORIES } from '../data.js';
 import { getApiKey, completeText } from '../ai.js';
-import { AreaChart } from '../components/charts.jsx';
+import { AreaChart, PortfolioChart, BenchmarkBar } from '../components/charts.jsx';
 import { Donut } from '../components/charts.jsx';
 import { KPI, TrendCard } from '../components/Field.jsx';
 import AssetIcon from '../components/AssetIcon.jsx';
+import { filterByRange, calcReturn } from '../services/snapshots.js';
 
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
@@ -208,7 +209,7 @@ ${JSON.stringify(snapshot, null, 2)}`;
 }
 
 export default function DashboardView({ state, dispatch }) {
-  const { profile, assets } = state;
+  const { profile, assets, snapshots = [], goals = [], liabilities = [] } = state;
   const today = new Date();
 
   const stats = useMemo(() => {
@@ -255,6 +256,23 @@ export default function DashboardView({ state, dispatch }) {
     }
     return arr;
   }, [assets]);
+
+  const [chartRange, setChartRange] = useState('3M');
+  const chartSnaps = useMemo(() => filterByRange(snapshots, chartRange), [snapshots, chartRange]);
+  const portfolioReturn = useMemo(() => calcReturn(chartSnaps), [chartSnaps]);
+
+  // Benchmark returns (synthetic, illustrative)
+  const benchmarks = [
+    { label: 'USD/RWF appreciation', ret: 1.2 },
+    { label: 'Rwanda CPI (inflation)', ret: 4.8 },
+    { label: 'RSE All-Share Index',   ret: 6.2 },
+    { label: 'BNR T-bond (13.5%/yr)', ret: chartRange === '1Y' ? 13.5 : chartRange === '6M' ? 6.75 : chartRange === '3M' ? 3.375 : 1.125 },
+  ];
+
+  const totalDebt = useMemo(() => liabilities.reduce((s, l) => s + toBase(l.remainingAmount || 0, l.currency || 'RWF'), 0), [liabilities]);
+  const trueNetWorth = stats.totalValue - totalDebt;
+
+  const activeGoals = useMemo(() => goals.filter(g => !g.achieved).slice(0, 3), [goals]);
 
   const watchlist = TREND_DOMAINS.slice(0, 4);
 
@@ -339,6 +357,114 @@ export default function DashboardView({ state, dispatch }) {
             accent={stats.gain >= 0 ? 'var(--up)' : 'var(--down)'}
           />
         </div>
+      </div>
+
+      {/* ── Portfolio Growth Chart ───────────────────────────── */}
+      <div className="card" style={{ padding: '22px 24px', marginBottom: 16 }}>
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+          <div>
+            <div className="font-serif" style={{ fontSize: 19 }}>Portfolio growth</div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+              Net worth over time · {portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(1)}% this period
+            </div>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            {['1M','3M','6M','1Y','ALL'].map(r => (
+              <button key={r} onClick={() => setChartRange(r)} style={{
+                padding: '5px 10px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
+                background: chartRange === r ? 'var(--brand)' : 'var(--bg-2)',
+                color: chartRange === r ? 'var(--brand-ink)' : 'var(--ink-2)',
+                border: 0, fontFamily: 'inherit', fontWeight: chartRange === r ? 600 : 400,
+                transition: 'all 0.15s',
+              }}>{r}</button>
+            ))}
+          </div>
+        </div>
+        <PortfolioChart snapshots={chartSnaps} displayCurrency={profile.displayCurrency} height={200} />
+      </div>
+
+      {/* ── Benchmark + Goals row ─────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: liabilities.length > 0 || activeGoals.length > 0 ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
+
+        {/* Benchmark comparison */}
+        <div className="card" style={{ padding: '20px 22px' }}>
+          <div className="font-serif" style={{ fontSize: 17, marginBottom: 4 }}>vs. Benchmarks</div>
+          <div className="muted" style={{ fontSize: 11, marginBottom: 16 }}>
+            Your <strong style={{ color: portfolioReturn >= 0 ? 'var(--up)' : 'var(--down)' }}>
+              {portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(1)}%
+            </strong> this period compared to:
+          </div>
+          {benchmarks.map(b => (
+            <BenchmarkBar key={b.label} label={b.label}
+              portfolioReturn={portfolioReturn} benchmarkReturn={b.ret} />
+          ))}
+          <div className="muted" style={{ fontSize: 9.5, marginTop: 12, lineHeight: 1.5 }}>
+            Benchmark figures are illustrative. Your portfolio bar shows the {chartRange} return.
+          </div>
+        </div>
+
+        {/* Goals snapshot — only if goals exist */}
+        {activeGoals.length > 0 && (
+          <div className="card" style={{ padding: '20px 22px' }}>
+            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
+              <div className="font-serif" style={{ fontSize: 17 }}>Goals progress</div>
+              <button onClick={() => dispatch({ type: 'nav', to: 'goals' })} style={{
+                border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit',
+              }}>See all →</button>
+            </div>
+            <div className="col" style={{ gap: 14 }}>
+              {activeGoals.map(g => {
+                const cat = GOAL_CATEGORIES.find(c => c.id === g.category) || GOAL_CATEGORIES[0];
+                const targetRWF = toBase(g.targetAmount || 0, g.currency || 'RWF');
+                const pct = targetRWF > 0 ? Math.min((trueNetWorth / targetRWF) * 100, 100) : 0;
+                const daysLeft = g.deadline ? Math.ceil((new Date(g.deadline) - today) / 86400000) : null;
+                return (
+                  <div key={g.id}>
+                    <div className="row" style={{ justifyContent: 'space-between', marginBottom: 5 }}>
+                      <div className="row" style={{ gap: 6 }}>
+                        <span>{cat.icon}</span>
+                        <span style={{ fontSize: 12, fontWeight: 500 }}>{g.title}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span className="num" style={{ fontSize: 11, color: 'var(--ink-2)' }}>{pct.toFixed(0)}%</span>
+                        {daysLeft !== null && (
+                          <span className="muted" style={{ fontSize: 10, color: daysLeft < 90 ? 'var(--gold)' : 'var(--ink-4)' }}>
+                            {daysLeft}d
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ height: 5, background: 'var(--bg-2)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: pct + '%', background: 'var(--brand)', borderRadius: 3 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {goals.length > 3 && (
+              <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>
+                +{goals.length - 3} more goal{goals.length - 3 === 1 ? '' : 's'}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* True net worth card — show when liabilities exist */}
+        {liabilities.length > 0 && activeGoals.length === 0 && (
+          <div className="card" style={{ padding: '20px 22px' }}>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>True net worth</div>
+            <div className="font-serif" style={{ fontSize: 36, marginBottom: 8 }}>
+              {fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })}
+            </div>
+            <div className="muted" style={{ fontSize: 12 }}>
+              {fmtBase(stats.totalValue, profile.displayCurrency, { compact: true })} assets
+              − {fmtBase(totalDebt, profile.displayCurrency, { compact: true })} debt
+            </div>
+            <button onClick={() => dispatch({ type: 'nav', to: 'liabilities' })} style={{
+              marginTop: 16, border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
+            }}>Manage liabilities →</button>
+          </div>
+        )}
       </div>
 
       {/* ── Top movers ───────────────────────────────────────── */}
