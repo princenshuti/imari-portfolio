@@ -9,12 +9,22 @@ create table if not exists public.portfolios (
   name        text default 'My Portfolio',
   profile     jsonb not null default '{}'::jsonb,
   assets      jsonb not null default '[]'::jsonb,
+  liabilities jsonb not null default '[]'::jsonb,
+  goals       jsonb not null default '[]'::jsonb,
+  cashflows   jsonb not null default '[]'::jsonb,
+  snapshots   jsonb not null default '[]'::jsonb,
   fx          jsonb not null default '{}'::jsonb,
   chat        jsonb not null default '[]'::jsonb,
   insight     jsonb,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- Idempotent column additions for existing databases
+alter table public.portfolios add column if not exists liabilities jsonb not null default '[]'::jsonb;
+alter table public.portfolios add column if not exists goals       jsonb not null default '[]'::jsonb;
+alter table public.portfolios add column if not exists cashflows   jsonb not null default '[]'::jsonb;
+alter table public.portfolios add column if not exists snapshots   jsonb not null default '[]'::jsonb;
 
 create table if not exists public.portfolio_members (
   id            uuid primary key default gen_random_uuid(),
