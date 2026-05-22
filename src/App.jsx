@@ -80,6 +80,8 @@ function reducer(state, action) {
       return { ...state, chat: [] };
     case 'setInsight':
       return { ...state, insight: action.insight };
+    case 'reachMilestone':
+      return { ...state, reachedMilestones: [...(state.reachedMilestones || []), action.value] };
     case 'replaceAll':
       if (action.state.fx) Object.assign(FX, action.state.fx);
       return { ...action.state };
@@ -289,12 +291,15 @@ export default function App() {
   }, [state.profile.name]);
 
   // ─ Net-worth milestone alerts ─────────────────────────────
+  // Uses a persisted set (state.reachedMilestones) so each milestone
+  // is celebrated exactly once — never on app reload or snapshot init.
   useEffect(() => {
     if (!state.profile.name || netWorth <= 0) return;
-    const prev = (state.snapshots || []).slice(-2, -1)[0]?.netWorth || 0;
+    const reached = new Set(state.reachedMilestones || []);
     MILESTONES.forEach(m => {
-      if (prev < m && netWorth >= m) {
+      if (!reached.has(m) && netWorth >= m) {
         showToast(`🎉 Milestone reached: ${Math.round(m / 1e6)}M RWF net worth!`, 'success');
+        dispatch({ type: 'reachMilestone', value: m });
       }
     });
   }, [netWorth]);

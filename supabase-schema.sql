@@ -12,7 +12,8 @@ create table if not exists public.portfolios (
   liabilities jsonb not null default '[]'::jsonb,
   goals       jsonb not null default '[]'::jsonb,
   cashflows   jsonb not null default '[]'::jsonb,
-  snapshots   jsonb not null default '[]'::jsonb,
+  snapshots          jsonb not null default '[]'::jsonb,
+  reachedmilestones  jsonb not null default '[]'::jsonb,
   fx          jsonb not null default '{}'::jsonb,
   chat        jsonb not null default '[]'::jsonb,
   insight     jsonb,
@@ -24,7 +25,8 @@ create table if not exists public.portfolios (
 alter table public.portfolios add column if not exists liabilities jsonb not null default '[]'::jsonb;
 alter table public.portfolios add column if not exists goals       jsonb not null default '[]'::jsonb;
 alter table public.portfolios add column if not exists cashflows   jsonb not null default '[]'::jsonb;
-alter table public.portfolios add column if not exists snapshots   jsonb not null default '[]'::jsonb;
+alter table public.portfolios add column if not exists snapshots         jsonb not null default '[]'::jsonb;
+alter table public.portfolios add column if not exists reachedmilestones jsonb not null default '[]'::jsonb;
 
 create table if not exists public.portfolio_members (
   id            uuid primary key default gen_random_uuid(),

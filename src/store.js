@@ -28,7 +28,8 @@ export function defaultState() {
     liabilities: [],
     goals:       [],
     cashflows:   [],
-    snapshots:   [],
+    snapshots:       [],
+    reachedMilestones: [],   // milestone values (numbers) already celebrated
     fx:          { ...FX },
     chat:        [],
     seeded:      true,
