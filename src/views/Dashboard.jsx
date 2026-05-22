@@ -571,9 +571,6 @@ export default function DashboardView({ state, dispatch }) {
         .dash-btn-range:active { transform: scale(0.97); }
       `}</style>
 
-      {/* ── AI Insight ─────────────────────────────────────────── */}
-      <DashboardInsight state={state} dispatch={dispatch} />
-
       {/* ── Executive KPI Strip ────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 16 }}>
         <KpiTile
@@ -720,6 +717,9 @@ export default function DashboardView({ state, dispatch }) {
           </div>
         </div>
       </div>
+
+      {/* ── AI Insight ─────────────────────────────────────────── */}
+      <DashboardInsight state={state} dispatch={dispatch} />
 
       {/* ── Portfolio Growth Chart ──────────────────────────────── */}
       <div className="card" style={{ padding: '22px 24px', marginBottom: 16 }}>
