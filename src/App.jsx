@@ -1,5 +1,5 @@
 import { useState, useEffect, useReducer, useMemo, useRef } from 'react';
-import { FX, valueRWF } from './data.js';
+import { FX, valueRWF, costRWF } from './data.js';
 import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
 import Sidebar from './components/Sidebar.jsx';
@@ -170,10 +170,13 @@ export default function App() {
     if (state._nav) { setNav(state._nav); dispatch({ type:'nav', to: null }); }
   }, [state._nav]);
 
-  // ─ Net worth ──────────────────────────────────────────────
-  const netWorth = useMemo(() => {
+  // ─ Net worth & total cost ─────────────────────────────────
+  const { netWorth, totalCost } = useMemo(() => {
     const today = new Date();
-    return state.assets.reduce((s, a) => s + valueRWF(a, today), 0);
+    return {
+      netWorth:  state.assets.reduce((s, a) => s + valueRWF(a, today), 0),
+      totalCost: state.assets.reduce((s, a) => s + costRWF(a), 0),
+    };
   }, [state.assets]);
 
   useEffect(() => { document.body.setAttribute('data-theme', 'light'); }, []);
@@ -228,7 +231,7 @@ export default function App() {
     <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
       <Sidebar
         active={nav} onNav={setNav}
-        profile={state.profile} netWorth={netWorth} displayCurrency={state.profile.displayCurrency}
+        profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
         session={session} role={role}
       />
       <div className="col" style={{ flex: 1, minWidth: 0 }}>

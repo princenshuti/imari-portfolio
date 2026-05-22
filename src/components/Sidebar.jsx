@@ -10,7 +10,7 @@ const items = [
   { id:'settings',  label:'Settings',  glyph:'⚙' },
 ];
 
-export default function Sidebar({ active, onNav, profile, netWorth, displayCurrency, session, role }) {
+export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role }) {
   return (
     <div className="col" style={{
       width: 240, padding: '22px 16px', background:'var(--paper)',
@@ -28,11 +28,46 @@ export default function Sidebar({ active, onNav, profile, netWorth, displayCurre
         </div>
       </div>
 
-      <div className="col" style={{ padding: 14, borderRadius: 12, background:'var(--bg-2)', gap: 4 }}>
-        <div className="muted" style={{ fontSize: 10, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Net worth</div>
-        <div className="font-serif" style={{ fontSize: 26, letterSpacing:'-0.02em', lineHeight: 1.1 }}>
-          {fmtBase(netWorth, displayCurrency, { compact: true })}
+      <div className="col" style={{ padding: 14, borderRadius: 12, background:'var(--bg-2)', gap: 10 }}>
+        {/* Net worth */}
+        <div className="col" style={{ gap: 2 }}>
+          <div className="muted" style={{ fontSize: 10, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Net worth</div>
+          <div className="font-serif" style={{ fontSize: 26, letterSpacing:'-0.02em', lineHeight: 1.1 }}>
+            {fmtBase(netWorth, displayCurrency, { compact: true })}
+          </div>
         </div>
+
+        <div style={{ height: '0.5px', background: 'var(--line)' }} />
+
+        {/* Total cost */}
+        <div className="col" style={{ gap: 2 }}>
+          <div className="muted" style={{ fontSize: 10, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Total cost</div>
+          <div className="num" style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink-2)' }}>
+            {fmtBase(totalCost, displayCurrency, { compact: true })}
+          </div>
+        </div>
+
+        {/* Overall gain / loss */}
+        {totalCost > 0 && (() => {
+          const gain = netWorth - totalCost;
+          const pct  = (gain / totalCost) * 100;
+          const up   = gain >= 0;
+          return (
+            <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+                background: up ? 'var(--up-soft)' : 'var(--down-soft)',
+                color: up ? 'var(--up)' : 'var(--down)',
+              }}>
+                {up ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
+              </span>
+              <span className="muted" style={{ fontSize: 10 }}>
+                {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })} overall
+              </span>
+            </div>
+          );
+        })()}
+
         <div className="muted" style={{ fontSize: 11 }}>{displayCurrency} · {profile.name || 'You'}</div>
       </div>
 
