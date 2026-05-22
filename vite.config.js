@@ -45,4 +45,14 @@ export default defineConfig({
     }),
   ],
   base: '/imari-portfolio/',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'supabase': ['@supabase/supabase-js'],
+        },
+      },
+    },
+  },
 });

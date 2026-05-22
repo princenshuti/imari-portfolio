@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx';
+// excel.js — all XLSX operations use dynamic import so SheetJS is only
+// loaded when the user actually downloads a template or imports a file.
 import { CLASSES, CURRENCIES, id } from './data.js';
 
 // All possible asset fields, in the order they appear in the template
@@ -41,7 +42,7 @@ const SAMPLE_ROWS = [
   { kind: 'savings',         name: 'BK savings account',   currency: 'RWF', purchasePrice: 1200000,   purchaseDate: '2023-08-12', bank: 'Bank of Kigali', yieldPct: 5 },
 ];
 
-function excelDateToISO(value) {
+function excelDateToISO(XLSX, value) {
   if (value == null || value === '') return '';
   if (typeof value === 'number') {
     const d = XLSX.SSF.parse_date_code(value);
@@ -55,7 +56,8 @@ function excelDateToISO(value) {
   return s;
 }
 
-export function downloadAssetTemplate() {
+export async function downloadAssetTemplate() {
+  const XLSX = (await import('xlsx')).default || (await import('xlsx'));
   const wb = XLSX.utils.book_new();
 
   // Sheet 1: Assets (header row + sample rows + 20 blank rows for users to fill)
@@ -141,8 +143,9 @@ export function findExistingByNaturalKey(parsed, existingAssets) {
 export function parseAssetExcel(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = async e => {
       try {
+        const XLSX = (await import('xlsx')).default || (await import('xlsx'));
         const wb = XLSX.read(e.target.result, { type: 'array' });
         const sheetName = wb.SheetNames.find(n => n.toLowerCase() === 'assets') || wb.SheetNames[0];
         const sheet = wb.Sheets[sheetName];
@@ -182,7 +185,7 @@ export function parseAssetExcel(file) {
               }
               v = n;
             } else if (DATE_FIELDS.has(col.key)) {
-              v = excelDateToISO(v);
+              v = excelDateToISO(XLSX, v);
             } else {
               v = String(v).trim();
             }

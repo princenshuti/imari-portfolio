@@ -1,4 +1,4 @@
-import { useState, useEffect, useReducer, useMemo, useRef } from 'react';
+import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense } from 'react';
 import { FX, valueRWF, costRWF, toBase, MILESTONES } from './data.js';
 import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
@@ -7,18 +7,20 @@ import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
 import { useToast, ToastContainer } from './components/Toast.jsx';
-import DashboardView from './views/Dashboard.jsx';
-import AssetsView from './views/Assets.jsx';
-import AccountsView from './views/Accounts.jsx';
-import TrendsView from './views/Trends.jsx';
-import AdvisorView from './views/Advisor.jsx';
-import SettingsView from './views/Settings.jsx';
-import LiabilitiesView from './views/Liabilities.jsx';
-import GoalsView from './views/Goals.jsx';
-import CashFlowView from './views/CashFlow.jsx';
-import TaxReportView from './views/TaxReport.jsx';
-import NamePrompt from './views/NamePrompt.jsx';
+// Always-needed auth/onboarding screens (tiny, no lazy needed)
 import Login from './views/Login.jsx';
+import NamePrompt from './views/NamePrompt.jsx';
+// All views — lazy loaded on first navigation
+const DashboardView   = lazy(() => import('./views/Dashboard.jsx'));
+const AssetsView      = lazy(() => import('./views/Assets.jsx'));
+const AccountsView    = lazy(() => import('./views/Accounts.jsx'));
+const TrendsView      = lazy(() => import('./views/Trends.jsx'));
+const AdvisorView     = lazy(() => import('./views/Advisor.jsx'));
+const SettingsView    = lazy(() => import('./views/Settings.jsx'));
+const LiabilitiesView = lazy(() => import('./views/Liabilities.jsx'));
+const GoalsView       = lazy(() => import('./views/Goals.jsx'));
+const CashFlowView    = lazy(() => import('./views/CashFlow.jsx'));
+const TaxReportView   = lazy(() => import('./views/TaxReport.jsx'));
 
 function upsert(arr, item, key = 'id') {
   const i = arr.findIndex(x => x[key] === item[key]);
@@ -388,7 +390,13 @@ export default function App() {
           />
         )}
         <div key={nav} className="page-view">
-          {view}
+          <Suspense fallback={
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:300, color:'var(--ink-3)', fontSize:13 }}>
+              Loading…
+            </div>
+          }>
+            {view}
+          </Suspense>
         </div>
       </div>
       <MobileTabBar active={nav} onNav={navigateTo} />
