@@ -80,11 +80,27 @@ export default function App() {
     if (saved && saved.fx) Object.assign(FX, saved.fx);
     return saved || defaultState();
   });
-  const [nav, setNav] = useState('dashboard');
+  const VALID_VIEWS = new Set(['dashboard','accounts','assets','trends','advisor','settings']);
+  function hashToNav() {
+    const h = window.location.hash.replace('#', '');
+    return VALID_VIEWS.has(h) ? h : 'dashboard';
+  }
+  const [nav, setNav] = useState(hashToNav);
   const [portfolioId, setPortfolioId] = useState(null);
   const [role, setRole] = useState('owner');
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   const skipNextSave = useRef(false);
+
+  // ─ Hash-based navigation (survives reload & enables back/fwd)
+  function navigateTo(view) {
+    window.location.hash = view;
+    setNav(view);
+  }
+  useEffect(() => {
+    const onHash = () => setNav(hashToNav());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
 
   // ─ Auth lifecycle ─────────────────────────────────────────
   useEffect(() => {
@@ -167,7 +183,7 @@ export default function App() {
 
   // ─ Respect router intent from inside views ────────────────
   useEffect(() => {
-    if (state._nav) { setNav(state._nav); dispatch({ type:'nav', to: null }); }
+    if (state._nav) { navigateTo(state._nav); dispatch({ type:'nav', to: null }); }
   }, [state._nav]);
 
   // ─ Net worth & total cost ─────────────────────────────────
@@ -221,7 +237,7 @@ export default function App() {
       case 'trends':   return <TrendsView   state={state} dispatch={guardedDispatch} />;
       case 'advisor':  return <AdvisorView  state={state} dispatch={guardedDispatch} />;
       case 'settings': return <SettingsView state={state} dispatch={guardedDispatch} session={session} portfolioId={portfolioId} role={role} />;
-      default:         return <DashboardView state={state} dispatch={(a) => { if (a.type === 'nav') setNav(a.to); else guardedDispatch(a); }} />;
+      default:         return <DashboardView state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} />;
     }
   })();
 
@@ -230,7 +246,7 @@ export default function App() {
   return (
     <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
       <Sidebar
-        active={nav} onNav={setNav}
+        active={nav} onNav={navigateTo}
         profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
         session={session} role={role}
       />
