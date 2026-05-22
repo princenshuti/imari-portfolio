@@ -26,6 +26,8 @@ function reducer(state, action) {
     }
     case 'deleteAsset':
       return { ...state, assets: state.assets.filter(a => a.id !== action.id) };
+    case 'bulkDeleteAssets':
+      return { ...state, assets: state.assets.filter(a => !action.ids.has(a.id)) };
     case 'clearAssets':
       return { ...state, assets: [] };
     case 'reset':

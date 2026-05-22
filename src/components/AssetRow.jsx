@@ -5,7 +5,7 @@ const iconBtnStyle = {
   color: 'var(--ink-3)', cursor: 'pointer', fontSize: 14, padding: 0,
 };
 
-export default function AssetRow({ asset, displayCurrency, onEdit, onDelete }) {
+export default function AssetRow({ asset, displayCurrency, isSelected, onToggle, onEdit, onDelete }) {
   const cls = CLASSES.find(c => c.kind === asset.kind) || CLASSES[CLASSES.length - 1];
   const suggested = suggestValue(asset);
   const current = asset.currentValue !== '' && asset.currentValue != null ? asset.currentValue : suggested;
@@ -15,7 +15,16 @@ export default function AssetRow({ asset, displayCurrency, onEdit, onDelete }) {
   const yrs = yearsBetween(asset.purchaseDate, new Date());
 
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'2.3fr 1fr 1.2fr 1.2fr 0.9fr 60px', alignItems:'center', padding: '14px 22px', gap: 12 }}>
+    <div style={{
+      display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 60px',
+      alignItems:'center', padding: '14px 22px', gap: 12,
+      background: isSelected ? 'color-mix(in oklab, var(--down) 6%, transparent)' : 'transparent',
+      transition: 'background 0.15s',
+    }}>
+      <input type="checkbox" checked={!!isSelected} onChange={onToggle}
+        onClick={e => e.stopPropagation()}
+        style={{ cursor: 'pointer', accentColor: 'var(--down)', margin: 0 }}
+      />
       <div className="row" style={{ gap: 12, minWidth: 0 }}>
         <div style={{
           width: 38, height: 38, borderRadius: 10,

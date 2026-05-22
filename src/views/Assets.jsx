@@ -10,8 +10,23 @@ export default function AssetsView({ state, dispatch }) {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [importResult, setImportResult] = useState(null);
+  const [selected, setSelected] = useState(new Set());
   const fileRef = useRef(null);
   const today = new Date();
+
+  function toggleOne(id) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function handleBulkDelete() {
+    if (!confirm(`Permanently delete ${selected.size} asset${selected.size === 1 ? '' : 's'}?`)) return;
+    dispatch({ type: 'bulkDeleteAssets', ids: selected });
+    setSelected(new Set());
+  }
 
   const handleImport = async (file) => {
     try {
@@ -64,6 +79,15 @@ export default function AssetsView({ state, dispatch }) {
       .filter(g => g.items.length > 0);
   }, [groups, filter, search]);
 
+  const visibleIds = useMemo(() => {
+    const ids = new Set();
+    filtered.forEach(g => g.items.forEach(a => ids.add(a.id)));
+    return ids;
+  }, [filtered]);
+
+  const allVisibleSelected = visibleIds.size > 0 && [...visibleIds].every(id => selected.has(id));
+  const someSelected = selected.size > 0;
+
   return (
     <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)' }}>
       <div className="row" style={{ gap: 10, marginBottom: 12 }}>
@@ -85,6 +109,26 @@ export default function AssetsView({ state, dispatch }) {
           onChange={e => e.target.files?.[0] && handleImport(e.target.files[0])} />
         <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add asset</button>
       </div>
+
+      {someSelected && (
+        <div className="row" style={{
+          padding: '10px 16px', borderRadius: 10, marginBottom: 12,
+          background: 'var(--down-soft)', gap: 12, alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 13, color: 'var(--down)', fontWeight: 500, flex: 1 }}>
+            {selected.size} asset{selected.size === 1 ? '' : 's'} selected
+          </span>
+          <button onClick={() => setSelected(new Set())} className="btn btn-ghost" style={{ fontSize: 12 }}>
+            Deselect all
+          </button>
+          <button onClick={handleBulkDelete} className="btn" style={{
+            fontSize: 12, background: 'var(--down)', color: '#fff', border: 0,
+            padding: '6px 14px', borderRadius: 7, cursor: 'pointer',
+          }}>
+            Delete {selected.size} asset{selected.size === 1 ? '' : 's'}
+          </button>
+        </div>
+      )}
 
       {importResult && (
         <div style={{
@@ -128,9 +172,21 @@ export default function AssetsView({ state, dispatch }) {
           </div>
           <div className="hr"/>
           <div className="row muted" style={{
-            display:'grid', gridTemplateColumns:'2.3fr 1fr 1.2fr 1.2fr 0.9fr 60px',
-            padding:'8px 22px', fontSize: 10, fontWeight: 600, letterSpacing:'0.06em', textTransform:'uppercase', gap: 12,
+            display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 60px',
+            padding:'8px 22px', fontSize: 10, fontWeight: 600, letterSpacing:'0.06em', textTransform:'uppercase', gap: 12, alignItems: 'center',
           }}>
+            <input type="checkbox"
+              checked={allVisibleSelected}
+              onChange={() => {
+                if (allVisibleSelected) {
+                  setSelected(prev => { const next = new Set(prev); visibleIds.forEach(id => next.delete(id)); return next; });
+                } else {
+                  setSelected(prev => new Set([...prev, ...visibleIds]));
+                }
+              }}
+              title={allVisibleSelected ? 'Deselect all' : 'Select all visible'}
+              style={{ cursor: 'pointer', accentColor: 'var(--down)', margin: 0 }}
+            />
             <span>Name</span><span>Bought</span><span>Today's value</span><span>In {profile.displayCurrency}</span><span style={{ textAlign:'right' }}>P/L</span><span></span>
           </div>
           <div className="hr"/>
@@ -138,6 +194,8 @@ export default function AssetsView({ state, dispatch }) {
             <React.Fragment key={a.id}>
               {i > 0 && <div className="hr" style={{ margin: '0 22px' }}/>}
               <AssetRow asset={a} displayCurrency={profile.displayCurrency}
+                isSelected={selected.has(a.id)}
+                onToggle={() => toggleOne(a.id)}
                 onEdit={asset => setEditing(asset)}
                 onDelete={asset => {
                   if (confirm(`Delete "${asset.name}"?`)) dispatch({ type:'deleteAsset', id: asset.id });
