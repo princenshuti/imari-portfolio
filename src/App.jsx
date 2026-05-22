@@ -251,8 +251,16 @@ export default function App() {
       skipNextSave.current = true;
       if (newRow.fx) Object.assign(FX, newRow.fx);
       dispatch({ type: 'replaceAll', state: {
-        profile: newRow.profile, assets: newRow.assets, fx: newRow.fx,
-        chat: newRow.chat, insight: newRow.insight,
+        profile:           newRow.profile,
+        assets:            newRow.assets            || [],
+        liabilities:       newRow.liabilities       || [],
+        goals:             newRow.goals             || [],
+        cashflows:         newRow.cashflows         || [],
+        snapshots:         newRow.snapshots         || [],
+        reachedMilestones: newRow.reachedmilestones || [],
+        fx:                newRow.fx,
+        chat:              newRow.chat,
+        insight:           newRow.insight,
       }});
     });
   }, [portfolioId]);
