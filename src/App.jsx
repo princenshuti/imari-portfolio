@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
 import { useToast, ToastContainer } from './components/Toast.jsx';
+import FloatingAdvisor from './components/FloatingAdvisor.jsx';
 // Always-needed auth/onboarding screens (tiny, no lazy needed)
 import Login from './views/Login.jsx';
 import NamePrompt from './views/NamePrompt.jsx';
@@ -537,6 +538,7 @@ export default function App() {
         </div>
         <MobileTabBar active={nav} onNav={navigateTo} />
         <ToastContainer toasts={toasts} dismiss={dismiss} />
+        <FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} />
       </div>
     </ErrorBoundary>
   );
