@@ -1,5 +1,6 @@
 import { fmtBase } from '../data.js';
 import { signOut } from '../cloud.js';
+import { MaxventuresIcon } from './MaxventuresLogo.jsx';
 
 const items = [
   { id:'dashboard', label:'Dashboard', glyph:'◐' },
@@ -26,18 +27,14 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
     }}>
 
       {/* ── Brand mark ──────────────────────────────────────── */}
-      <div className="row" style={{ gap: 10, padding: '2px 6px' }}>
-        <div style={{
-          width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-          background: 'linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%)',
-          color: 'var(--brand-ink)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'Instrument Serif, serif', fontSize: 19,
-          boxShadow: 'var(--shadow-brand)',
-        }}>●</div>
-        <div>
-          <div className="font-serif" style={{ fontSize: 19, lineHeight: 1, letterSpacing: '-0.02em' }}>Imari</div>
-          <div className="muted" style={{ fontSize: 9.5, marginTop: 2, letterSpacing: '0.04em' }}>Personal Portfolio</div>
+      <div className="col" style={{ gap: 6, padding: '2px 6px' }}>
+        {/* Top row: Maxventures icon + "Imari" name */}
+        <div className="row" style={{ gap: 10 }}>
+          <MaxventuresIcon size={38} id="sidebar-mv" />
+          <div>
+            <div className="font-serif" style={{ fontSize: 21, lineHeight: 1, letterSpacing: '-0.02em' }}>Imari</div>
+            <div className="muted" style={{ fontSize: 9.5, marginTop: 2, letterSpacing: '0.03em' }}>by Maxventures</div>
+          </div>
         </div>
       </div>
 

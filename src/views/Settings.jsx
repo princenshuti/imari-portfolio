@@ -4,6 +4,7 @@ import { exportJSON, importJSONFile } from '../store.js';
 import { getApiKey, setApiKey } from '../ai.js';
 import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, isConfigured } from '../cloud.js';
 import { Field, inputStyle } from '../components/Field.jsx';
+import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
 
 function Section({ title, subtitle, children }) {
   return (
@@ -296,8 +297,22 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         }} className="btn btn-ghost" style={{ marginLeft: 8, color:'var(--down)', borderColor:'var(--down-soft)' }}>✕ Delete all assets</button>
       </Section>
 
-      <div className="muted" style={{ fontSize: 11, marginTop: 30, padding: 16, background:'var(--bg-2)', borderRadius: 10, lineHeight: 1.55 }}>
-        <strong>About Imari Portfolio.</strong> A personal asset & wealth tracker built for Rwanda. When signed in, your data is stored in a Supabase Postgres database protected by Row Level Security, accessible only to you and the members you invite. Passwords are hashed with bcrypt by Supabase Auth.
+      {/* About / brand footer */}
+      <div style={{ marginTop: 30, padding: 20, background: 'var(--bg-2)', borderRadius: 'var(--r-lg)', lineHeight: 1.55 }}>
+        {/* Maxventures badge */}
+        <div style={{ marginBottom: 14 }}>
+          <MaxventuresBadge height={32} />
+        </div>
+        <div style={{ height: '0.5px', background: 'var(--line)', marginBottom: 14 }} />
+        <p style={{ margin: 0, fontSize: 11, color: 'var(--ink-3)' }}>
+          <strong style={{ color: 'var(--ink-2)' }}>Imari</strong> is a personal asset &amp; wealth tracker built for Rwanda,
+          by <strong style={{ color: 'var(--ink-2)' }}>Maxventures</strong> — Innovative Solutions, Limitless Possibilities.
+          When signed in, your data is stored in a Supabase Postgres database protected by Row Level Security,
+          accessible only to you and the members you invite.
+        </p>
+        <p style={{ margin: '10px 0 0', fontSize: 10.5, color: 'var(--ink-4)' }}>
+          © {new Date().getFullYear()} Maxventures · All rights reserved
+        </p>
       </div>
     </div>
   );
