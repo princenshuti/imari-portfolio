@@ -1,0 +1,134 @@
+/* Imari — Rwanda-grounded wealth platform
+   Tokens are referenced by data attribute on <body> so Tweaks can swap them. */
+
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+
+:root,
+body[data-theme="light"] {
+  /* Surfaces */
+  --bg: #F6F2EA;
+  --bg-2: #EFEAE0;
+  --paper: #FBF9F4;
+  --paper-2: #FFFFFF;
+  --line: rgba(26, 26, 23, 0.10);
+  --line-soft: rgba(26, 26, 23, 0.06);
+
+  /* Ink */
+  --ink: #1A1A17;
+  --ink-2: #3D3D38;
+  --ink-3: #6B6B63;
+  --ink-4: #9C9C92;
+
+  /* Brand */
+  --brand: #0F4F3F;       /* deep emerald — "thousand hills" */
+  --brand-2: #1A6E4F;
+  --brand-soft: #D7E4DD;
+  --brand-ink: #FBF9F4;
+
+  /* Accents */
+  --gold: #C99A2E;
+  --gold-soft: #F2E5C2;
+  --up: #1F8A5B;
+  --up-soft: #D6EBDC;
+  --down: #B33A2C;
+  --down-soft: #F0D6D1;
+  --sky: #4A7EC9;
+  --plum: #6B4B7A;
+  --clay: #C77845;
+
+  /* Shadows */
+  --shadow-1: 0 1px 0 rgba(26,26,23,0.04), 0 1px 2px rgba(26,26,23,0.04);
+  --shadow-2: 0 1px 0 rgba(26,26,23,0.04), 0 8px 24px rgba(26,26,23,0.06);
+  --shadow-pop: 0 12px 40px rgba(26,26,23,0.16);
+}
+
+body[data-theme="dark"] {
+  --bg: #14181A;
+  --bg-2: #1B2123;
+  --paper: #1E2426;
+  --paper-2: #252C2F;
+  --line: rgba(255,255,255,0.10);
+  --line-soft: rgba(255,255,255,0.06);
+
+  --ink: #F0EDE6;
+  --ink-2: #C9C7C1;
+  --ink-3: #8E8D88;
+  --ink-4: #5F5F5A;
+
+  --brand: #4FB991;
+  --brand-2: #66CDA5;
+  --brand-soft: rgba(79, 185, 145, 0.18);
+  --brand-ink: #0B1614;
+
+  --gold: #E5BC55;
+  --gold-soft: rgba(229, 188, 85, 0.18);
+  --up: #4FB991;
+  --up-soft: rgba(79, 185, 145, 0.18);
+  --down: #E68A7C;
+  --down-soft: rgba(230, 138, 124, 0.18);
+  --sky: #7BA8E8;
+  --plum: #B59ACC;
+  --clay: #E0986A;
+
+  --shadow-1: 0 1px 0 rgba(0,0,0,0.2);
+  --shadow-2: 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-pop: 0 12px 40px rgba(0,0,0,0.5);
+}
+
+/* ───── Type ───── */
+.font-serif { font-family: 'Instrument Serif', 'Iowan Old Style', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+.font-sans  { font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif; }
+.font-mono  { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+/* All numbers should be tabular by default to look financial */
+.num { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+/* ───── Resets ───── */
+* { box-sizing: border-box; }
+body { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: var(--ink); background: var(--bg); margin: 0; }
+
+/* Card */
+.card { background: var(--paper); border-radius: 16px; box-shadow: var(--shadow-1); border: 0.5px solid var(--line-soft); }
+
+/* Hairlines */
+.hr { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+/* Pills */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; letter-spacing: 0.01em; }
+.pill-up   { background: var(--up-soft);   color: var(--up); }
+.pill-down { background: var(--down-soft); color: var(--down); }
+.pill-soft { background: var(--bg-2);      color: var(--ink-3); }
+.pill-brand{ background: var(--brand-soft);color: var(--brand); }
+.pill-gold { background: var(--gold-soft); color: var(--gold); }
+
+/* Sparkline */
+.spark { stroke-width: 1.5; fill: none; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; border-radius: 10px; font: 500 13px/1 'Geist', system-ui; border: 0; cursor: pointer; transition: transform .08s, box-shadow .12s; }
+.btn-primary { background: var(--brand); color: var(--brand-ink); }
+.btn-primary:hover { box-shadow: 0 6px 16px rgba(15,79,63,0.25); }
+.btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+
+/* Tag chip used a lot */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: var(--bg-2); color: var(--ink-2); font-size: 12px; }
+
+/* Misc */
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.muted { color: var(--ink-3); }
+.t-up { color: var(--up); }
+.t-down { color: var(--down); }
+.t-brand { color: var(--brand); }
+.t-gold { color: var(--gold); }
+
+/* Animations */
+@keyframes imari-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+@keyframes imari-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
