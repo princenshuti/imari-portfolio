@@ -144,6 +144,7 @@ export default function App() {
   // Milestone alerts are gated on this so they never fire before reachedMilestones
   // is populated from the server.
   const [stateReady, setStateReady] = useState(false);
+  const prevNetWorthRef = useRef(null); // tracks last known net worth for crossed-threshold detection
   const skipNextSave = useRef(false);
 
   // ─ Theme ──────────────────────────────────────────────────────
@@ -303,14 +304,28 @@ export default function App() {
   }, [state.profile.name]);
 
   // ─ Net-worth milestone alerts ─────────────────────────────
-  // Gated on stateReady so it never fires before reachedMilestones is
-  // loaded from the cloud (which would fire all milestones every reload).
+  // Only fires when net worth actually crosses a threshold this session.
+  // On first evaluation (prev === null): silently marks already-exceeded
+  // milestones as reached so history is clean — no retroactive toasts.
   useEffect(() => {
     if (!stateReady || !state.profile.name || netWorth <= 0) return;
-    const thresholds = (state.profile.milestones?.length ? state.profile.milestones : MILESTONES);
+    const thresholds = state.profile.milestones?.length ? state.profile.milestones : MILESTONES;
     const reached = new Set(state.reachedMilestones || []);
+    const prev = prevNetWorthRef.current;
+    prevNetWorthRef.current = netWorth;
+
+    if (prev === null) {
+      // First run after state loads — silently mark anything already exceeded,
+      // no toast, so we don't celebrate milestones crossed in a previous session.
+      thresholds.forEach(m => {
+        if (!reached.has(m) && netWorth >= m) dispatch({ type: 'reachMilestone', value: m });
+      });
+      return;
+    }
+
+    // Subsequent runs — only toast milestones genuinely crossed right now.
     thresholds.forEach(m => {
-      if (!reached.has(m) && netWorth >= m) {
+      if (!reached.has(m) && prev < m && netWorth >= m) {
         showToast(`🎉 Milestone reached: ${fmtBase(m, state.profile.displayCurrency, { compact: true })} net worth!`, 'success');
         dispatch({ type: 'reachMilestone', value: m });
       }
