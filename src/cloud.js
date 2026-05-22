@@ -63,11 +63,18 @@ export async function loadOrCreatePortfolio(user) {
 
   if (!portfolioId) {
     // 3. Create a fresh portfolio for new user.
-    const seed = emptyPortfolio(user.email);
+    // Use getUser() (server-validated) instead of the cached session user to ensure
+    // the JWT is active — a stale getSession() result causes auth.uid() to be null
+    // in the DB, which violates the INSERT RLS policy (auth.uid() = owner_id).
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    if (authErr || !authData?.user) throw new Error('Session expired. Please sign in again.');
+    const verifiedUser = authData.user;
+
+    const seed = emptyPortfolio(verifiedUser.email || user.email);
     const { data: created, error } = await supabase
       .from('portfolios')
-      .insert({ owner_id: user.id, ...seed })
-      .select()
+      .insert({ owner_id: verifiedUser.id, ...seed })
+      .select('id')
       .single();
     if (error) throw error;
     portfolioId = created.id;

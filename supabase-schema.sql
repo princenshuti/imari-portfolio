@@ -51,7 +51,7 @@ language plpgsql security definer set search_path = public
 as $$
 begin
   insert into public.portfolio_members (portfolio_id, user_id, role, email)
-  values (new.id, new.owner_id, 'owner', (select email from auth.users where id = new.owner_id))
+  values (new.id, new.owner_id, 'owner', coalesce((select email from auth.users where id = new.owner_id), ''))
   on conflict (portfolio_id, user_id) do nothing;
   return new;
 end;
