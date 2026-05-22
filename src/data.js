@@ -189,6 +189,31 @@ export const KIGALI_NEIGHBOURHOODS = [
   { name:'Gisozi',        pricePerSqm: 180_000, change:+1.2 },
 ];
 
+// ───── Rwandan banks + MoMo providers ─────────────────────────
+export const RWANDA_BANKS = [
+  'Bank of Kigali (BK)',
+  'I&M Bank Rwanda',
+  'Equity Bank Rwanda',
+  'KCB Bank Rwanda',
+  'Cogebanque',
+  'Banque Populaire du Rwanda (BPR / Atlas Mara)',
+  'GT Bank Rwanda',
+  'Access Bank Rwanda',
+  'Ecobank Rwanda',
+  'NCBA Bank Rwanda',
+  'Development Bank of Rwanda (BRD)',
+  'Bank of Africa Rwanda',
+  'Unguka Bank',
+  'AB Bank Rwanda',
+  'Zigama CSS',
+  'Urwego Opportunity Bank',
+];
+
+export const MOMO_PROVIDERS = [
+  'MTN MoMo',
+  'Airtel Money',
+];
+
 export function id() { return Math.random().toString(36).slice(2, 9); }
 
 export const SEED_ASSETS = [

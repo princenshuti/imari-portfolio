@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import DashboardView from './views/Dashboard.jsx';
 import AssetsView from './views/Assets.jsx';
+import AccountsView from './views/Accounts.jsx';
 import TrendsView from './views/Trends.jsx';
 import AdvisorView from './views/Advisor.jsx';
 import SettingsView from './views/Settings.jsx';
@@ -83,8 +84,10 @@ export default function App() {
     return <NamePrompt onSubmit={name => dispatch({ type:'setProfile', patch: { name } })} />;
   }
 
+  const accountCount = state.assets.filter(a => a.kind === 'savings' || a.kind === 'momo-cash').length;
   const titles = {
     dashboard: { title: `${greetingFor()}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
+    accounts:  { title: 'Accounts', subtitle: `${accountCount} bank / mobile money` },
     assets:    { title: 'Your assets', subtitle: `${state.assets.length} positions tracked` },
     trends:    { title: 'Markets & trends', subtitle: 'Domains you watch' },
     advisor:   { title: 'AI Advisor', subtitle: 'Grounded in your portfolio' },
@@ -93,6 +96,7 @@ export default function App() {
 
   const view = (() => {
     switch (nav) {
+      case 'accounts': return <AccountsView state={state} dispatch={dispatch} />;
       case 'assets':   return <AssetsView   state={state} dispatch={dispatch} />;
       case 'trends':   return <TrendsView   state={state} dispatch={dispatch} />;
       case 'advisor':  return <AdvisorView  state={state} dispatch={dispatch} />;

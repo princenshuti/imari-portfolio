@@ -3,6 +3,7 @@ import { fmtBase } from '../data.js';
 
 const items = [
   { id:'dashboard', label:'Dashboard', glyph:'◐' },
+  { id:'accounts',  label:'Accounts',  glyph:'⌬' },
   { id:'assets',    label:'Assets',    glyph:'◆' },
   { id:'trends',    label:'Trends',    glyph:'↗' },
   { id:'advisor',   label:'AI Advisor',glyph:'✦' },
