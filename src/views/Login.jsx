@@ -24,7 +24,20 @@ export default function Login({ pendingInvite }) {
         }
       }
     } catch (err) {
-      setError(err.message);
+      // Map raw Supabase errors to user-friendly messages
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('email rate')) {
+        setError('Too many sign-up attempts right now. Please try again in a few minutes, or contact the admin to add you manually.');
+      } else if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
+        setError('Incorrect email or password. Please check your details and try again.');
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        setError('Please confirm your email first — check your inbox for a link from Imari.');
+      } else if (msg.toLowerCase().includes('user already registered')) {
+        setError('An account with this email already exists. Try signing in instead.');
+        setMode('signin');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
