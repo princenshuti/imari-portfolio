@@ -123,24 +123,32 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
           </Field>
         </div>
 
-        {/* Account selector */}
-        {accounts.length > 0 && (
-          <Field label="Account (optional)" top={14}>
-            <select value={e.accountId || ''} onChange={ev => u('accountId', ev.target.value || null)} style={inputStyle}>
-              <option value="">— No account linked</option>
-              {accounts.map(a => (
-                <option key={a.id} value={a.id}>
-                  {a.bank || a.wallet || a.name} ({a.currency})
-                </option>
-              ))}
-            </select>
-            {e.accountId && e.recurring !== 'once' && (
-              <div className="muted" style={{ fontSize: 11, marginTop: 4, color: 'var(--gold)' }}>
-                ⚠ Only one-off entries update the account balance. Set Frequency to "Once" for this to affect the linked account.
-              </div>
-            )}
-          </Field>
-        )}
+        {/* Account selector — always visible */}
+        <Field label="Account (optional)" top={14}>
+          {accounts.length > 0 ? (
+            <>
+              <select value={e.accountId || ''} onChange={ev => u('accountId', ev.target.value || null)} style={inputStyle}>
+                <option value="">— No account linked</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.bank || a.wallet || a.name} ({a.currency})
+                  </option>
+                ))}
+              </select>
+              {e.accountId && e.recurring !== 'once' && (
+                <div className="muted" style={{ fontSize: 11, marginTop: 5, padding: '6px 10px', background: 'color-mix(in oklab, var(--gold) 12%, transparent)', borderRadius: 6 }}>
+                  ⚠ Only <strong>Once</strong> entries update the linked account balance.
+                  Change Frequency to "Once" if this transaction should move the balance.
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="muted" style={{ fontSize: 12, padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8, lineHeight: 1.5 }}>
+              No bank or mobile money accounts yet.{' '}
+              Go to <strong>Accounts</strong> and add one — then you can link transactions here to keep your balance up to date automatically.
+            </div>
+          )}
+        </Field>
 
         <Field label="Notes" top={14}>
           <input value={e.notes} onChange={ev => u('notes', ev.target.value)} placeholder="optional" style={inputStyle} />

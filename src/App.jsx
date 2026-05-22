@@ -1,5 +1,5 @@
 import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense, Component } from 'react';
-import { FX, valueRWF, costRWF, toBase, fmtBase, MILESTONES } from './data.js';
+import { FX, valueRWF, costRWF, toBase, fromBase, fmtBase, MILESTONES } from './data.js';
 import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
 import { addSnapshot, seedHistory } from './services/snapshots.js';
@@ -72,21 +72,24 @@ function upsert(arr, item, key = 'id') {
 
 // Recompute an account's currentValue from its purchasePrice (opening balance)
 // plus the net of all one-time cashflows linked to it.
-// This is called any time a cashflow referencing an account is added/edited/deleted,
-// and also when the account itself is saved (so manual balance edits stay consistent).
+// Each cashflow amount is converted to the account's own currency via the RWF
+// base rate so cross-currency entries (e.g. a USD cashflow on an RWF account)
+// are handled correctly.
 function syncAccountBalance(assets, cashflows, accountId) {
   if (!accountId) return assets;
+  const account = assets.find(a => a.id === accountId);
+  if (!account) return assets;
+  const acctCurrency = account.currency || 'RWF';
   const linked = (cashflows || []).filter(
     c => c.accountId === accountId && c.recurring === 'once'
   );
   const delta = linked.reduce((sum, c) => {
-    return sum + (c.type === 'income' ? (c.amount || 0) : -(c.amount || 0));
+    // Convert cashflow amount → RWF → account currency
+    const inAcctCcy = fromBase(toBase(c.amount || 0, c.currency || 'RWF'), acctCurrency);
+    return sum + (c.type === 'income' ? inAcctCcy : -inAcctCcy);
   }, 0);
-  return assets.map(a => {
-    if (a.id !== accountId) return a;
-    const base = typeof a.purchasePrice === 'number' ? a.purchasePrice : 0;
-    return { ...a, currentValue: base + delta };
-  });
+  const base = typeof account.purchasePrice === 'number' ? account.purchasePrice : 0;
+  return assets.map(a => a.id !== accountId ? a : { ...a, currentValue: base + delta });
 }
 
 function reducer(state, action) {
