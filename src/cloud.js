@@ -71,13 +71,19 @@ export async function loadOrCreatePortfolio(user) {
     const verifiedUser = authData.user;
 
     const seed = emptyPortfolio(verifiedUser.email || user.email);
-    const { data: created, error } = await supabase
-      .from('portfolios')
-      .insert({ owner_id: verifiedUser.id, ...seed })
-      .select('id')
-      .single();
+    // Use a security-definer RPC so the INSERT bypasses RLS and no RETURNING
+    // clause is needed — avoids PostgREST evaluating the SELECT policy before
+    // the on_portfolio_created trigger populates portfolio_members.
+    const newId = crypto.randomUUID();
+    const { error } = await supabase.rpc('create_portfolio_for_user', {
+      p_id:      newId,
+      p_profile: seed.profile,
+      p_assets:  seed.assets,
+      p_fx:      seed.fx,
+      p_chat:    seed.chat,
+    });
     if (error) throw error;
-    portfolioId = created.id;
+    portfolioId = newId;
   }
 
   const { data, error } = await supabase

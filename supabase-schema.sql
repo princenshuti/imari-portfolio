@@ -121,6 +121,33 @@ $$;
 grant execute on function public.peek_invitation(text) to anon, authenticated;
 grant execute on function public.accept_invitation(text) to authenticated;
 
+-- Create a new portfolio for the calling user, bypassing RLS.
+-- This avoids PostgREST evaluating the SELECT policy on RETURNING before
+-- the on_portfolio_created trigger has populated portfolio_members.
+create or replace function public.create_portfolio_for_user(
+  p_id      uuid    default gen_random_uuid(),
+  p_profile jsonb   default '{}'::jsonb,
+  p_assets  jsonb   default '[]'::jsonb,
+  p_fx      jsonb   default '{}'::jsonb,
+  p_chat    jsonb   default '[]'::jsonb
+)
+returns uuid
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  insert into public.portfolios (id, owner_id, profile, assets, fx, chat)
+  values (p_id, auth.uid(), p_profile, p_assets, p_fx, p_chat);
+
+  return p_id;
+end;
+$$;
+
+grant execute on function public.create_portfolio_for_user(uuid, jsonb, jsonb, jsonb, jsonb) to authenticated;
+
 -- ───── Row Level Security ─────────────────────────────────────
 alter table public.portfolios               enable row level security;
 alter table public.portfolio_members        enable row level security;
