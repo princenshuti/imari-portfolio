@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   CLASSES, TREND_DOMAINS, valueRWF, costRWF, suggestValue,
   toBase, fmtBase, fmt, GOAL_CATEGORIES,
@@ -16,11 +16,19 @@ const LIQUID_KINDS = new Set(['savings', 'momo-cash']);
 const MAINT_KINDS  = new Set(['realestate-house', 'realestate-land', 'vehicle', 'livestock']);
 
 function isIncomeGenerating(a) {
+  if (a.incomeGenerates) return true; // explicit user flag from AssetEditor
   if (a.kind === 'bond') return true;
   if ((a.kind === 'savings' || a.kind === 'receivable') && (a.yieldPct || 0) > 0) return true;
   if (a.kind === 'rse-equity' || a.kind === 'foreign-equity') return true;
   if (a.kind === 'realestate-house') return true; // assumed rental
   return false;
+}
+
+/** Return monthly income in RWF from an asset's incomeAmount/Frequency fields */
+function assetMonthlyIncomeRWF(a) {
+  if (!a.incomeGenerates || !a.incomeAmount || isNaN(+a.incomeAmount)) return 0;
+  const base = toBase(+a.incomeAmount, a.incomeCurrency || a.currency || 'RWF');
+  return a.incomeFrequency === 'annually' ? base / 12 : base;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -401,17 +409,18 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
 
 // ─── Dashboard layout: drag-to-reorder + hideable sections ────────────────
 const SECTION_META = {
-  kpi:        { label: 'KPI Strip',            canHide: false },
-  hero:       { label: 'Portfolio Overview',    canHide: false },
-  insight:    { label: 'AI Insight',            canHide: true  },
-  chart:      { label: 'Net Worth Timeline',    canHide: true  },
-  category:   { label: 'Category Performance',  canHide: true  },
-  movers:     { label: 'Top Movers',            canHide: true  },
-  alerts:     { label: 'Alerts',                canHide: true  },
-  benchmarks: { label: 'Benchmarks & Goals',    canHide: true  },
-  markets:    { label: 'Markets Watchlist',     canHide: true  },
+  kpi:        { label: 'KPI Strip',              canHide: false },
+  hero:       { label: 'Portfolio Overview',      canHide: false },
+  insight:    { label: 'AI Insight',              canHide: true  },
+  financials: { label: 'Financial Monitoring',    canHide: true  },
+  chart:      { label: 'Net Worth Timeline',      canHide: true  },
+  category:   { label: 'Category Performance',    canHide: true  },
+  movers:     { label: 'Top Movers',              canHide: true  },
+  alerts:     { label: 'Alerts',                  canHide: true  },
+  benchmarks: { label: 'Benchmarks & Goals',      canHide: true  },
+  markets:    { label: 'Markets Watchlist',       canHide: true  },
 };
-const DEFAULT_SECTION_ORDER = ['kpi','hero','insight','chart','category','movers','alerts','benchmarks','markets'];
+const DEFAULT_SECTION_ORDER = ['kpi','hero','insight','financials','chart','category','movers','alerts','benchmarks','markets'];
 
 function useDashboardLayout() {
   const [order, setOrder] = useState(() => {
@@ -610,6 +619,103 @@ export default function DashboardView({ state, dispatch }) {
   const totInc6M = incomeTrend.reduce((s, m) => s + m.inc, 0);
   const totExp6M = incomeTrend.reduce((s, m) => s + m.exp, 0);
   const savingsRate = totInc6M > 0 ? ((totInc6M - totExp6M) / totInc6M * 100) : null;
+
+  // ── Financial Monitoring calculations ─────────────────────────
+  const financialStats = useMemo(() => {
+    // ① Monthly income by source — from recurring cashflows
+    const incomeByCategory = {};
+    cashflows.forEach(cf => {
+      if (cf.type !== 'income') return;
+      let monthly = 0;
+      if (cf.recurring === 'monthly')        monthly = toBase(cf.amount || 0, cf.currency || 'RWF');
+      else if (cf.recurring === 'quarterly') monthly = toBase(cf.amount || 0, cf.currency || 'RWF') / 3;
+      else if (cf.recurring === 'annually')  monthly = toBase(cf.amount || 0, cf.currency || 'RWF') / 12;
+      else return; // skip one-time cashflows from monthly income
+      const cat = cf.category || 'other-inc';
+      incomeByCategory[cat] = (incomeByCategory[cat] || 0) + monthly;
+    });
+
+    // ② Asset-derived income (from the new incomeGenerates field)
+    let assetIncomeMonthly = 0;
+    let passiveIncomeMonthly = 0;
+    const assetIncomeByKind = {};
+    assets.forEach(a => {
+      const mo = assetMonthlyIncomeRWF(a);
+      if (mo > 0) {
+        assetIncomeMonthly += mo;
+        const kindLabel = CLASSES.find(c => c.kind === a.kind)?.group || 'Other';
+        assetIncomeByKind[kindLabel] = (assetIncomeByKind[kindLabel] || 0) + mo;
+        // Passive = not salary/freelance
+        passiveIncomeMonthly += mo;
+      }
+    });
+
+    // Passive from cashflows (rental, dividends, bond-int)
+    const passiveCfCats = new Set(['rental','dividends','bond-int']);
+    Object.entries(incomeByCategory).forEach(([cat, mo]) => {
+      if (passiveCfCats.has(cat)) passiveIncomeMonthly += mo;
+    });
+
+    const activeCfMonthly = Object.values(incomeByCategory).reduce((s, v) => s + v, 0);
+    const totalMonthlyIncome = activeCfMonthly + assetIncomeMonthly;
+
+    // Deduplicate: if an asset is both in cashflows (rental) AND incomeGenerates, don't double-count
+    // For now, show them as separate sources with labels
+
+    // ③ Passive income ratio
+    const passiveIncomeRatio = totalMonthlyIncome > 0
+      ? (passiveIncomeMonthly / totalMonthlyIncome * 100)
+      : 0;
+
+    // ④ Asset utilization rate — income-generating assets / total assets (by value)
+    let utilizingValue = 0;
+    assets.forEach(a => {
+      if (isIncomeGenerating(a)) utilizingValue += valueRWF(a, today);
+    });
+    const assetUtilizationRate = stats.totalValue > 0
+      ? (utilizingValue / stats.totalValue * 100)
+      : 0;
+
+    // ⑤ Return by asset class (annualized, value-weighted)
+    const returnByClass = {};
+    assets.forEach(a => {
+      const cls = CLASSES.find(c => c.kind === a.kind) || CLASSES[CLASSES.length - 1];
+      const v = valueRWF(a, today);
+      const c = costRWF(a);
+      if (!returnByClass[cls.group]) returnByClass[cls.group] = { value: 0, cost: 0, color: cls.color };
+      returnByClass[cls.group].value += v;
+      returnByClass[cls.group].cost  += c;
+    });
+
+    // ⑥ Maintenance obligations (assets with upkeep)
+    const maintenanceCount = assets.filter(a => MAINT_KINDS.has(a.kind)).length;
+
+    // ⑦ Monthly obligations from liabilities
+    const monthlyObligations = liabilities.reduce((s, l) => {
+      return s + toBase(l.monthlyPayment || 0, l.currency || 'RWF');
+    }, 0);
+
+    // ⑧ Net cash position
+    const liquidRWF = assets
+      .filter(a => LIQUID_KINDS.has(a.kind))
+      .reduce((s, a) => s + valueRWF(a, today), 0);
+    const netCashMonthly = totalMonthlyIncome - (totExp6M / 6);
+
+    return {
+      incomeByCategory,
+      assetIncomeMonthly,
+      assetIncomeByKind,
+      totalMonthlyIncome,
+      passiveIncomeMonthly,
+      passiveIncomeRatio,
+      assetUtilizationRate,
+      returnByClass,
+      maintenanceCount,
+      monthlyObligations,
+      liquidRWF,
+      netCashMonthly,
+    };
+  }, [assets, cashflows, liabilities, stats.totalValue, totExp6M]);
 
   // ── Gainers & losers ──────────────────────────────────────────
   const moversAll = useMemo(() => assets.map(a => {
@@ -852,6 +958,207 @@ export default function DashboardView({ state, dispatch }) {
     ),
 
     insight: <DashboardInsight state={state} dispatch={dispatch} />,
+
+    financials: (assets.length > 0 || cashflows.length > 0) ? (() => {
+      const fs = financialStats;
+      const INCOME_LABEL = {
+        salary:    'Salary / Wages', rental:   'Rental income',
+        dividends: 'Dividends',      'bond-int':'Bond interest',
+        business:  'Business income','freelance':'Freelance',
+        'other-inc':'Other income',
+      };
+      const INCOME_COLOR = {
+        salary:    'var(--sky)',    rental:    'var(--brand)',
+        dividends: 'var(--gold)',   'bond-int':'var(--gold)',
+        business:  'var(--up)',     freelance: 'var(--plum)',
+        'other-inc':'var(--ink-3)',
+      };
+      const allIncomeSources = [
+        ...Object.entries(fs.incomeByCategory).map(([cat, mo]) => ({
+          label: INCOME_LABEL[cat] || cat, color: INCOME_COLOR[cat] || 'var(--ink-3)', monthly: mo, source: 'cashflow',
+        })),
+        ...Object.entries(fs.assetIncomeByKind).map(([group, mo]) => ({
+          label: `${group} (asset income)`, color: 'var(--brand)', monthly: mo, source: 'asset',
+        })),
+      ].sort((a, b) => b.monthly - a.monthly);
+      const hasIncome = fs.totalMonthlyIncome > 0;
+      return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+
+          {/* Income by source */}
+          <div className="card" style={{ padding: '20px 22px' }}>
+            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
+              <div>
+                <div className="font-serif" style={{ fontSize: 17 }}>Monthly income</div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>By source · recurring + asset income</div>
+              </div>
+              <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} style={{
+                border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11,
+                color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
+              }}>Add →</button>
+            </div>
+            {hasIncome ? (
+              <div className="col" style={{ gap: 11 }}>
+                {allIncomeSources.map((src, i) => {
+                  const pct = fs.totalMonthlyIncome > 0 ? (src.monthly / fs.totalMonthlyIncome * 100) : 0;
+                  return (
+                    <div key={i}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: src.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{src.label}</span>
+                        </div>
+                        <div className="row" style={{ gap: 10 }}>
+                          <span className="num" style={{ fontSize: 12, fontWeight: 700, color: 'var(--up)' }}>
+                            {fmtBase(src.monthly, profile.displayCurrency, { compact: true })}
+                          </span>
+                          <span className="muted" style={{ fontSize: 10, minWidth: 30, textAlign: 'right' }}>{pct.toFixed(0)}%</span>
+                        </div>
+                      </div>
+                      <div style={{ height: 4, background: 'var(--bg-2)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', width: pct + '%', background: src.color, borderRadius: 2,
+                          transition: 'width 0.85s cubic-bezier(0.23,1,0.32,1)',
+                        }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ paddingTop: 10, borderTop: '0.5px solid var(--line-soft)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="muted" style={{ fontSize: 11, fontWeight: 600 }}>Total / month</span>
+                  <span className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--up)' }}>
+                    {fmtBase(fs.totalMonthlyIncome, profile.displayCurrency, { compact: true })}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="muted" style={{ fontSize: 12, lineHeight: 1.6, padding: '8px 0' }}>
+                No recurring income recorded yet. Add cashflows or set income generation on assets to see breakdown.
+              </div>
+            )}
+          </div>
+
+          {/* Key financial ratios */}
+          <div className="card" style={{ padding: '20px 22px' }}>
+            <div className="font-serif" style={{ fontSize: 17, marginBottom: 14 }}>Financial ratios</div>
+            <div className="col" style={{ gap: 15 }}>
+
+              <RatioBar
+                label="Passive income ratio"
+                value={fs.passiveIncomeRatio}
+                color={fs.passiveIncomeRatio > 50 ? 'var(--up)' : fs.passiveIncomeRatio > 25 ? 'var(--gold)' : 'var(--down)'}
+                hint={fs.passiveIncomeRatio > 50 ? 'Majority of income is passive' : 'Grow passive income to build financial freedom'}
+              />
+              <RatioBar
+                label="Asset utilization rate"
+                value={fs.assetUtilizationRate}
+                color={fs.assetUtilizationRate > 60 ? 'var(--up)' : fs.assetUtilizationRate > 30 ? 'var(--gold)' : 'var(--down)'}
+                hint="Share of total assets actively generating returns"
+              />
+              <RatioBar
+                label="Debt-to-asset ratio"
+                value={debtToAsset}
+                color={debtToAsset < 30 ? 'var(--up)' : debtToAsset < 60 ? 'var(--gold)' : 'var(--down)'}
+                hint={liabilities.length === 0 ? 'No liabilities recorded' : `${fmtBase(totalDebt, profile.displayCurrency, { compact: true })} total debt`}
+              />
+              {totInc6M > 0 && savingsRate !== null && (
+                <RatioBar
+                  label="Savings rate (6M avg)"
+                  value={savingsRate}
+                  color={savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)'}
+                  hint="Income saved after all expenses"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Liquidity & obligations */}
+          <div className="card" style={{ padding: '20px 22px' }}>
+            <div className="font-serif" style={{ fontSize: 17, marginBottom: 14 }}>Liquidity position</div>
+            <div className="col" style={{ gap: 14 }}>
+              <div>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Liquid balance</div>
+                <div className="num" style={{ fontSize: 26, fontWeight: 700 }}>
+                  {fmtBase(fs.liquidRWF, profile.displayCurrency, { compact: fs.liquidRWF > 1e8 })}
+                </div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Cash + mobile money + bank savings</div>
+              </div>
+              {fs.monthlyObligations > 0 && (
+                <div>
+                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Monthly obligations</div>
+                  <div className="num" style={{ fontSize: 20, fontWeight: 600, color: 'var(--down)' }}>
+                    {fmtBase(fs.monthlyObligations, profile.displayCurrency, { compact: true })}
+                  </div>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Loan repayments</div>
+                </div>
+              )}
+              {fs.maintenanceCount > 0 && (
+                <div style={{ padding: '10px 12px', borderRadius: 8, background: 'color-mix(in oklab, var(--clay) 8%, var(--bg-2))' }}>
+                  <span style={{ color: 'var(--clay)', fontSize: 12, fontWeight: 600 }}>
+                    {fs.maintenanceCount} maintenance asset{fs.maintenanceCount === 1 ? '' : 's'}
+                  </span>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+                    Properties, vehicles, and livestock require ongoing upkeep.
+                  </div>
+                </div>
+              )}
+              {fs.totalMonthlyIncome > 0 && (
+                <div style={{ paddingTop: 10, borderTop: '0.5px solid var(--line-soft)' }}>
+                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Net cash flow / month</div>
+                  <div className="num" style={{ fontSize: 20, fontWeight: 600, color: fs.netCashMonthly >= 0 ? 'var(--up)' : 'var(--down)' }}>
+                    {fs.netCashMonthly >= 0 ? '+' : ''}{fmtBase(fs.netCashMonthly, profile.displayCurrency, { compact: true })}
+                  </div>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Income minus avg monthly spend</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Return by asset class */}
+          {Object.keys(fs.returnByClass).length > 0 && (
+            <div className="card" style={{ padding: '20px 22px' }}>
+              <div className="font-serif" style={{ fontSize: 17, marginBottom: 14 }}>Return by asset class</div>
+              <div className="col" style={{ gap: 12 }}>
+                {Object.entries(fs.returnByClass)
+                  .map(([group, d]) => ({
+                    group, color: d.color,
+                    retPct: d.cost > 0 ? ((d.value - d.cost) / d.cost * 100) : 0,
+                    value: d.value,
+                  }))
+                  .sort((a, b) => b.retPct - a.retPct)
+                  .map((r, i) => {
+                    const isUp = r.retPct >= 0;
+                    return (
+                      <div key={i}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{r.group}</span>
+                          </div>
+                          <span className="num" style={{ fontSize: 12, fontWeight: 700, color: isUp ? 'var(--up)' : 'var(--down)' }}>
+                            {isUp ? '+' : ''}{r.retPct.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div style={{ height: 4, background: 'var(--bg-2)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%', borderRadius: 2,
+                            width: Math.min(Math.abs(r.retPct) / Math.max(...Object.values(fs.returnByClass).map(d => d.cost > 0 ? Math.abs((d.value - d.cost) / d.cost * 100) : 0), 1) * 100, 100) + '%',
+                            background: isUp ? r.color : 'var(--down)',
+                            transition: 'width 0.85s cubic-bezier(0.23,1,0.32,1)',
+                          }} />
+                        </div>
+                        <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>
+                          {fmtBase(r.value, profile.displayCurrency, { compact: true })} value
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })() : null,
 
     chart: (
       <div className="card" style={{ padding: '22px 24px' }}>

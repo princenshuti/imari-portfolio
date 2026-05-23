@@ -189,6 +189,31 @@ export const KIGALI_NEIGHBOURHOODS = [
   { name:'Gisozi',        pricePerSqm: 180_000, change:+1.2 },
 ];
 
+// ───── Rwanda administrative geography ───────────────────────
+export const RWANDA_PROVINCES = [
+  'Kigali City',
+  'Eastern Province',
+  'Western Province',
+  'Northern Province',
+  'Southern Province',
+];
+
+export const RWANDA_DISTRICTS = {
+  'Kigali City':       ['Gasabo', 'Kicukiro', 'Nyarugenge'],
+  'Eastern Province':  ['Bugesera', 'Gatsibo', 'Kayonza', 'Kirehe', 'Ngoma', 'Nyagatare', 'Rwamagana'],
+  'Western Province':  ['Karongi', 'Ngororero', 'Nyabihu', 'Nyamasheke', 'Rubavu', 'Rusizi', 'Rutsiro'],
+  'Northern Province': ['Burera', 'Gakenke', 'Gicumbi', 'Musanze', 'Rulindo'],
+  'Southern Province': ['Gisagara', 'Huye', 'Kamonyi', 'Muhanga', 'Nyamagabe', 'Nyanza', 'Nyaruguru', 'Ruhango'],
+};
+
+export const COUNTRIES = [
+  'Rwanda',
+  'Kenya', 'Uganda', 'Tanzania', 'Burundi', 'DRC',
+  'Ethiopia', 'South Africa', 'Nigeria', 'Ghana',
+  'United States', 'United Kingdom', 'France', 'Belgium',
+  'China', 'India', 'UAE', 'Other',
+];
+
 // ───── Rwandan banks + MoMo providers ─────────────────────────
 export const RWANDA_BANKS = [
   'Bank of Kigali (BK)',
