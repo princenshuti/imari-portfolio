@@ -399,6 +399,148 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
   );
 }
 
+// ─── Dashboard layout: drag-to-reorder + hideable sections ────────────────
+const SECTION_META = {
+  kpi:        { label: 'KPI Strip',            canHide: false },
+  hero:       { label: 'Portfolio Overview',    canHide: false },
+  insight:    { label: 'AI Insight',            canHide: true  },
+  chart:      { label: 'Net Worth Timeline',    canHide: true  },
+  category:   { label: 'Category Performance',  canHide: true  },
+  movers:     { label: 'Top Movers',            canHide: true  },
+  alerts:     { label: 'Alerts',                canHide: true  },
+  benchmarks: { label: 'Benchmarks & Goals',    canHide: true  },
+  markets:    { label: 'Markets Watchlist',     canHide: true  },
+};
+const DEFAULT_SECTION_ORDER = ['kpi','hero','insight','chart','category','movers','alerts','benchmarks','markets'];
+
+function useDashboardLayout() {
+  const [order, setOrder] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('imari-dash-order') || 'null');
+      if (Array.isArray(s) && s.every(x => DEFAULT_SECTION_ORDER.includes(x))) return s;
+    } catch {}
+    return [...DEFAULT_SECTION_ORDER];
+  });
+  const [hidden, setHidden] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('imari-dash-hidden') || '[]');
+      if (Array.isArray(s)) return new Set(s);
+    } catch {}
+    return new Set();
+  });
+  const [editMode, setEditMode] = useState(false);
+
+  const reorder = useCallback((fromId, toId) => {
+    setOrder(prev => {
+      if (fromId === toId) return prev;
+      const next = [...prev];
+      const fi = next.indexOf(fromId), ti = next.indexOf(toId);
+      if (fi < 0 || ti < 0) return prev;
+      next.splice(fi, 1);
+      next.splice(ti, 0, fromId);
+      localStorage.setItem('imari-dash-order', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const toggleHide = useCallback((id) => {
+    setHidden(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      localStorage.setItem('imari-dash-hidden', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
+  const resetLayout = useCallback(() => {
+    setOrder([...DEFAULT_SECTION_ORDER]);
+    setHidden(new Set());
+    localStorage.removeItem('imari-dash-order');
+    localStorage.removeItem('imari-dash-hidden');
+  }, []);
+
+  return { order, hidden, editMode, setEditMode, reorder, toggleHide, resetLayout };
+}
+
+function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReorder, onToggleHide, children }) {
+  const [dragOver, setDragOver] = useState(false);
+  const collapsed = isHidden || !hasData;
+
+  return (
+    <div
+      draggable={editMode}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('dash-section', id); }}
+      onDragOver={(e) => { if (!editMode) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        if (!editMode) return;
+        e.preventDefault(); setDragOver(false);
+        const fromId = e.dataTransfer.getData('dash-section');
+        if (fromId && fromId !== id) onReorder(fromId, id);
+      }}
+      onDragEnd={() => setDragOver(false)}
+      style={{
+        marginBottom: 16,
+        outline: dragOver
+          ? '2px solid var(--brand)'
+          : editMode ? '1.5px dashed var(--line-strong)' : 'none',
+        outlineOffset: 4,
+        borderRadius: 12,
+        transition: 'outline-color 0.1s ease',
+        cursor: editMode ? 'grab' : 'default',
+      }}
+    >
+      {/* Edit-mode drag handle strip */}
+      {editMode && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '7px 12px', marginBottom: collapsed ? 6 : 8,
+          background: 'var(--paper)', border: '1px solid var(--line)',
+          borderRadius: 8, userSelect: 'none',
+          animation: 'imari-slideUp 0.16s cubic-bezier(0.23,1,0.32,1) both',
+        }}>
+          {/* 6-dot grip icon */}
+          <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">
+            {[[3,2],[7,2],[3,7],[7,7],[3,12],[7,12]].map(([cx,cy],i) => (
+              <circle key={i} cx={cx} cy={cy} r={1.5} fill="var(--ink-3)" />
+            ))}
+          </svg>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', flex: 1 }}>{label}</span>
+          {!hasData && <span style={{ fontSize: 10, color: 'var(--ink-4)', fontStyle: 'italic' }}>no data yet</span>}
+          {canHide && hasData && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleHide(id); }}
+              style={{
+                fontSize: 10, padding: '3px 10px', borderRadius: 6,
+                cursor: 'pointer', fontFamily: 'inherit',
+                border: '1px solid',
+                background: isHidden ? 'var(--brand-soft)' : 'var(--bg-2)',
+                color:      isHidden ? 'var(--brand)'      : 'var(--ink-3)',
+                borderColor: isHidden ? 'var(--brand)'     : 'transparent',
+                transition: 'background 0.12s ease, color 0.12s ease, border-color 0.12s ease',
+              }}
+            >{isHidden ? '◎ Shown' : '◯ Hide'}</button>
+          )}
+          {!canHide && (
+            <span style={{ fontSize: 10, color: 'var(--ink-4)', padding: '3px 10px' }}>always visible</span>
+          )}
+        </div>
+      )}
+
+      {/* Section content — animated collapse */}
+      <div style={{
+        overflow: 'hidden',
+        maxHeight: collapsed ? 0 : 4000,
+        opacity: collapsed ? 0 : 1,
+        transition: 'max-height 0.3s cubic-bezier(0.23,1,0.32,1), opacity 0.22s ease-out',
+        pointerEvents: collapsed ? 'none' : 'auto',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard ────────────────────────────────────────────────────────
 export default function DashboardView({ state, dispatch }) {
   const { profile, assets, snapshots = [], goals = [], liabilities = [], cashflows = [] } = state;
@@ -553,26 +695,15 @@ export default function DashboardView({ state, dispatch }) {
   const hasCF = cashflows.length > 0;
   const showAlerts = concentrationAlerts.length > 0 || riskAlerts.length > 0 || maintenanceAssets.length > 0;
 
+  // ─── Layout state ──────────────────────────────────────────────
+  const { order, hidden, editMode, setEditMode, reorder, toggleHide, resetLayout } = useDashboardLayout();
+
   // ─── Render ────────────────────────────────────────────────────
-  return (
-    <div style={{ padding: 28, paddingTop: 24, background: 'var(--bg)', minHeight: 'calc(100vh - 64px)' }}>
 
-      {/* Animation keyframes */}
-      <style>{`
-        @keyframes imari-slideUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes imari-shimmer {
-          0%   { background-position: 200% center; }
-          100% { background-position: -200% center; }
-        }
-        .dash-btn-range { transition: background 0.14s ease-out, color 0.14s ease-out; }
-        .dash-btn-range:active { transform: scale(0.97); }
-      `}</style>
-
-      {/* ── Executive KPI Strip ────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 16 }}>
+  // Section content map — values are null when data conditions not met
+  const sectionContent = {
+    kpi: (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
         <KpiTile
           delay={0}
           label="Net worth"
@@ -610,9 +741,10 @@ export default function DashboardView({ state, dispatch }) {
           onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}
         />
       </div>
+    ),
 
-      {/* ── Bento hero row ─────────────────────────────────────── */}
-      <div className="dash-grid-3" style={{ marginBottom: 16 }}>
+    hero: (
+      <div className="dash-grid-3">
 
         {/* Net Worth Hero */}
         <div className="card-hero" style={{ padding: 28 }}>
@@ -717,12 +849,12 @@ export default function DashboardView({ state, dispatch }) {
           </div>
         </div>
       </div>
+    ),
 
-      {/* ── AI Insight ─────────────────────────────────────────── */}
-      <DashboardInsight state={state} dispatch={dispatch} />
+    insight: <DashboardInsight state={state} dispatch={dispatch} />,
 
-      {/* ── Portfolio Growth Chart ──────────────────────────────── */}
-      <div className="card" style={{ padding: '22px 24px', marginBottom: 16 }}>
+    chart: (
+      <div className="card" style={{ padding: '22px 24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <div className="font-serif" style={{ fontSize: 19 }}>Net worth timeline</div>
@@ -743,105 +875,73 @@ export default function DashboardView({ state, dispatch }) {
         </div>
         <PortfolioChart snapshots={chartSnaps} displayCurrency={profile.displayCurrency} height={200} />
       </div>
+    ),
 
-      {/* ── Category Performance ────────────────────────────────── */}
-      {stats.groups.length > 0 && (
-        <div className="card" style={{ padding: '22px 24px', marginBottom: 16 }}>
-          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18 }}>
+    category: stats.groups.length > 0 ? (
+      <div className="card" style={{ padding: '22px 24px' }}>
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18 }}>
+          <div>
+            <div className="font-serif" style={{ fontSize: 19 }}>Category performance</div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Unrealised gain / loss by asset class</div>
+          </div>
+          <button onClick={() => dispatch({ type: 'nav', to: 'assets' })} style={{
+            border: 0, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
+          }}>View assets →</button>
+        </div>
+        <CategoryBars groups={[...stats.groups].sort((a, b) => b.gainPct - a.gainPct)} totalValue={stats.totalValue} />
+      </div>
+    ) : null,
+
+    movers: (gainers.length > 0 || losers.length > 0) ? (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="card" style={{ padding: '20px 22px' }}>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, alignItems: 'center' }}>
             <div>
-              <div className="font-serif" style={{ fontSize: 19 }}>Category performance</div>
-              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-                Unrealised gain / loss by asset class
-              </div>
+              <div className="font-serif" style={{ fontSize: 17 }}>Top appreciating</div>
+              <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Highest unrealised gains since purchase</div>
             </div>
-            <button onClick={() => dispatch({ type: 'nav', to: 'assets' })} style={{
-              border: 0, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
-            }}>View assets →</button>
+            <span style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'var(--up-soft)', color: 'var(--up)', fontSize: 10, fontWeight: 700 }}>▲ {gainers.length}</span>
           </div>
-          <CategoryBars
-            groups={[...stats.groups].sort((a, b) => b.gainPct - a.gainPct)}
-            totalValue={stats.totalValue}
-          />
-        </div>
-      )}
-
-      {/* ── Gainers & Losers ────────────────────────────────────── */}
-      {(gainers.length > 0 || losers.length > 0) && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-
-          {/* Top appreciating */}
-          <div className="card" style={{ padding: '20px 22px' }}>
-            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, alignItems: 'center' }}>
-              <div>
-                <div className="font-serif" style={{ fontSize: 17 }}>Top appreciating</div>
-                <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Highest unrealised gains since purchase</div>
-              </div>
-              <span style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'var(--up-soft)', color: 'var(--up)', fontSize: 10, fontWeight: 700 }}>
-                ▲ {gainers.length}
-              </span>
+          {gainers.length === 0 ? (
+            <div className="muted" style={{ fontSize: 12 }}>No assets in profit yet</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+              {gainers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} />)}
             </div>
-            {gainers.length === 0 ? (
-              <div className="muted" style={{ fontSize: 12 }}>No assets in profit yet</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
-                {gainers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} />)}
-              </div>
-            )}
-          </div>
-
-          {/* Highest depreciation */}
-          <div className="card" style={{ padding: '20px 22px' }}>
-            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, alignItems: 'center' }}>
-              <div>
-                <div className="font-serif" style={{ fontSize: 17 }}>Highest depreciation</div>
-                <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Assets with unrealised losses</div>
-              </div>
-              <span style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'var(--down-soft)', color: 'var(--down)', fontSize: 10, fontWeight: 700 }}>
-                ▼ {losers.length}
-              </span>
+          )}
+        </div>
+        <div className="card" style={{ padding: '20px 22px' }}>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, alignItems: 'center' }}>
+            <div>
+              <div className="font-serif" style={{ fontSize: 17 }}>Highest depreciation</div>
+              <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Assets with unrealised losses</div>
             </div>
-            {losers.length === 0 ? (
-              <div className="muted" style={{ fontSize: 12 }}>No assets in the red — great!</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
-                {losers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} />)}
-              </div>
-            )}
+            <span style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'var(--down-soft)', color: 'var(--down)', fontSize: 10, fontWeight: 700 }}>▼ {losers.length}</span>
           </div>
+          {losers.length === 0 ? (
+            <div className="muted" style={{ fontSize: 12 }}>No assets in the red — great!</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+              {losers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} />)}
+            </div>
+          )}
         </div>
-      )}
+      </div>
+    ) : null,
 
-      {/* ── Alert Widgets ───────────────────────────────────────── */}
-      {showAlerts && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 16 }}>
-          <AlertCard
-            title="Asset concentration"
-            accentColor="var(--gold)"
-            items={concentrationAlerts}
-            onNav={concentrationAlerts.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null}
-            navLabel="Rebalance →"
-          />
-          <AlertCard
-            title="High-risk signals"
-            accentColor="var(--down)"
-            items={riskAlerts}
-            onNav={riskAlerts.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null}
-            navLabel="Review assets →"
-          />
-          <AlertCard
-            title="Maintenance assets"
-            accentColor="var(--clay)"
-            items={maintenanceAssets}
-            onNav={maintenanceAssets.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null}
-            navLabel="View assets →"
-          />
-        </div>
-      )}
+    alerts: showAlerts ? (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+        <AlertCard title="Asset concentration" accentColor="var(--gold)" items={concentrationAlerts}
+          onNav={concentrationAlerts.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null} navLabel="Rebalance →" />
+        <AlertCard title="High-risk signals" accentColor="var(--down)" items={riskAlerts}
+          onNav={riskAlerts.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null} navLabel="Review assets →" />
+        <AlertCard title="Maintenance assets" accentColor="var(--clay)" items={maintenanceAssets}
+          onNav={maintenanceAssets.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null} navLabel="View assets →" />
+      </div>
+    ) : null,
 
-      {/* ── Benchmarks + Goals ──────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: activeGoals.length > 0 ? '1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
-
-        {/* Benchmark comparison */}
+    benchmarks: (
+      <div style={{ display: 'grid', gridTemplateColumns: activeGoals.length > 0 ? '1fr 1fr' : '1fr', gap: 16 }}>
         <div className="card" style={{ padding: '20px 22px' }}>
           <div className="font-serif" style={{ fontSize: 17, marginBottom: 4 }}>vs. Benchmarks</div>
           <div className="muted" style={{ fontSize: 11, marginBottom: 16 }}>
@@ -856,8 +956,6 @@ export default function DashboardView({ state, dispatch }) {
             Benchmark figures are illustrative. Portfolio bar shows the {chartRange} return.
           </div>
         </div>
-
-        {/* Goals progress */}
         {activeGoals.length > 0 && (
           <div className="card" style={{ padding: '20px 22px' }}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
@@ -901,17 +999,12 @@ export default function DashboardView({ state, dispatch }) {
             )}
           </div>
         )}
-
-        {/* True net worth card — when liabilities exist but no goals */}
         {liabilities.length > 0 && activeGoals.length === 0 && (
           <div className="card" style={{ padding: '20px 22px' }}>
             <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>True net worth</div>
-            <div className="font-serif" style={{ fontSize: 36, marginBottom: 8 }}>
-              {fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })}
-            </div>
+            <div className="font-serif" style={{ fontSize: 36, marginBottom: 8 }}>{fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })}</div>
             <div className="muted" style={{ fontSize: 12 }}>
-              {fmtBase(stats.totalValue, profile.displayCurrency, { compact: true })} assets
-              − {fmtBase(totalDebt, profile.displayCurrency, { compact: true })} debt
+              {fmtBase(stats.totalValue, profile.displayCurrency, { compact: true })} assets − {fmtBase(totalDebt, profile.displayCurrency, { compact: true })} debt
             </div>
             <button onClick={() => dispatch({ type: 'nav', to: 'liabilities' })} style={{
               marginTop: 16, border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
@@ -919,18 +1012,124 @@ export default function DashboardView({ state, dispatch }) {
           </div>
         )}
       </div>
+    ),
 
-      {/* ── Markets you watch ───────────────────────────────────── */}
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-        <div className="font-serif" style={{ fontSize: 19, letterSpacing: '-0.01em' }}>Markets you watch</div>
-        <button onClick={() => dispatch({ type: 'nav', to: 'trends' })} style={{
-          border: 0, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
-        }}>See all trends →</button>
+    markets: (
+      <div>
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+          <div className="font-serif" style={{ fontSize: 19, letterSpacing: '-0.01em' }}>Markets you watch</div>
+          <button onClick={() => dispatch({ type: 'nav', to: 'trends' })} style={{
+            border: 0, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
+          }}>See all trends →</button>
+        </div>
+        <div className="dash-grid-4">
+          {watchlist.map(d => <TrendCard key={d.id} d={d} />)}
+        </div>
       </div>
-      <div className="dash-grid-4" style={{ marginBottom: 24 }}>
-        {watchlist.map(d => <TrendCard key={d.id} d={d} />)}
+    ),
+  };
+
+  return (
+    <div style={{ padding: 28, paddingTop: 24, background: 'var(--bg)', minHeight: 'calc(100vh - 64px)' }}>
+
+      {/* Keyframes */}
+      <style>{`
+        @keyframes imari-slideUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes imari-shimmer {
+          0%   { background-position: 200% center; }
+          100% { background-position: -200% center; }
+        }
+        .dash-btn-range { transition: background 0.14s ease-out, color 0.14s ease-out; }
+        .dash-btn-range:active { transform: scale(0.97); }
+        .dash-arrange-btn { transition: background 0.14s ease-out, color 0.14s ease-out, box-shadow 0.14s ease-out, border-color 0.14s ease-out; }
+        .dash-arrange-btn:active { transform: scale(0.97); }
+      `}</style>
+
+      {/* ── Arrange button ─────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: editMode ? 10 : 8 }}>
+        <button
+          className="dash-arrange-btn"
+          onClick={() => setEditMode(e => !e)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '6px 14px', borderRadius: 8,
+            border: '1px solid',
+            fontFamily: 'inherit', fontSize: 11, fontWeight: 500, cursor: 'pointer',
+            background:   editMode ? 'var(--brand)' : 'var(--paper)',
+            color:        editMode ? 'var(--brand-ink)' : 'var(--ink-2)',
+            borderColor:  editMode ? 'var(--brand)' : 'var(--line)',
+            boxShadow:    editMode ? '0 2px 10px color-mix(in oklab, var(--brand) 28%, transparent)' : 'none',
+          }}
+        >
+          {editMode ? (
+            <>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="2,6 4.5,8.5 9,2.5" />
+              </svg>
+              Done
+            </>
+          ) : (
+            <>
+              <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">
+                {[[3,2],[7,2],[3,7],[7,7],[3,12],[7,12]].map(([cx,cy],i) => (
+                  <circle key={i} cx={cx} cy={cy} r={1.5} fill="currentColor" />
+                ))}
+              </svg>
+              Arrange
+            </>
+          )}
+        </button>
       </div>
 
+      {/* ── Edit-mode info bar ─────────────────────────────────── */}
+      {editMode && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 14px', marginBottom: 14, borderRadius: 10,
+          background: 'color-mix(in oklab, var(--brand) 7%, var(--bg))',
+          border: '1px solid color-mix(in oklab, var(--brand) 20%, transparent)',
+          animation: 'imari-slideUp 0.18s cubic-bezier(0.23,1,0.32,1) both',
+        }}>
+          <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">
+            {[[3,2],[7,2],[3,7],[7,7],[3,12],[7,12]].map(([cx,cy],i) => (
+              <circle key={i} cx={cx} cy={cy} r={1.5} fill="var(--brand)" />
+            ))}
+          </svg>
+          <span style={{ fontSize: 11.5, color: 'var(--ink-2)', flex: 1 }}>
+            <strong>Drag</strong> a section to reorder · <strong>Hide</strong> to collapse from view
+          </span>
+          <button onClick={resetLayout} style={{
+            fontSize: 11, padding: '4px 10px', borderRadius: 6,
+            border: '1px solid var(--line)', background: 'var(--paper)',
+            cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink-3)',
+            transition: 'background 0.12s ease',
+          }}>Reset defaults</button>
+        </div>
+      )}
+
+      {/* ── Sections (order + visibility driven by useDashboardLayout) ── */}
+      {order.map(id => {
+        const content = sectionContent[id];
+        if (!editMode && !content) return null; // data-conditional: skip when no data
+        return (
+          <SectionShell
+            key={id}
+            id={id}
+            label={SECTION_META[id].label}
+            canHide={SECTION_META[id].canHide}
+            isHidden={hidden.has(id)}
+            hasData={!!content}
+            editMode={editMode}
+            onReorder={reorder}
+            onToggleHide={toggleHide}
+          >
+            {content}
+          </SectionShell>
+        );
+      })}
     </div>
   );
 }
