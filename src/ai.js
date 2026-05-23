@@ -15,30 +15,39 @@
 import { supabase, isConfigured } from './supabase.js';
 
 // ── Local-dev fallback key (never used in production with Supabase) ───────────
-const API_KEY_STORAGE = 'imari:anthropic:key';
+// Key baked in at build time via VITE_ANTHROPIC_KEY in .env.local (never .env)
 const ENV_KEY = import.meta.env.VITE_ANTHROPIC_KEY || '';
 
+// In-memory store for keys entered via the Settings UI in local-dev mode.
+// Intentionally NOT persisted to localStorage/sessionStorage/cookies —
+// prevents CodeQL js/clear-text-storage-of-sensitive-data and limits the
+// exposure window to the current page session.
+let _memKey = '';
+
 /**
- * True when AI is available for users.
- * - Supabase configured → edge function provides the key server-side.
- * - Supabase not configured → need a local key (env or localStorage).
+ * True when AI is available:
+ * - Supabase configured  → edge function provides the key server-side
+ * - Supabase not configured → VITE_ANTHROPIC_KEY env var or in-session manual entry
  */
 export const hasEnvKey = isConfigured || Boolean(ENV_KEY);
 
 /**
- * Returns a truthy value if AI can be used, empty string if not.
- * Callers use this only to decide whether to show the "add your key" message.
- * The actual key is NEVER passed to the Anthropic API in the browser when
- * Supabase is configured.
+ * Returns a truthy value when AI can be used; empty string when it cannot.
+ * Callers use this only to decide whether to show the "add your key" prompt.
+ * The real key is NEVER sent from the browser when Supabase is configured.
  */
 export function getApiKey() {
-  if (isConfigured) return '__via_proxy__';        // edge function handles auth
-  return ENV_KEY || localStorage.getItem(API_KEY_STORAGE) || '';
+  if (isConfigured) return '__via_proxy__';   // edge function handles auth
+  return ENV_KEY || _memKey || '';
 }
 
-/** Only meaningful in local-dev / no-Supabase mode. */
+/**
+ * Store the key in memory only (cleared on page refresh).
+ * Only meaningful in local-dev / no-Supabase mode.
+ * For persistence, set VITE_ANTHROPIC_KEY in .env.local instead.
+ */
 export function setApiKey(key) {
-  localStorage.setItem(API_KEY_STORAGE, key.trim());
+  _memKey = key.trim();
 }
 
 // ── Client-side rate limiter (3 s cooldown between requests) ─────────────────

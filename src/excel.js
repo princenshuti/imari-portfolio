@@ -1,5 +1,9 @@
-// excel.js — all XLSX operations use dynamic import so SheetJS is only
-// loaded when the user actually downloads a template or imports a file.
+// excel.js — all Excel operations use ExcelJS (dynamically imported, loaded only on demand).
+// Migrated from SheetJS (xlsx) which had two unpatched High CVEs:
+//   • Prototype Pollution (GHSA-4r6h-8v6p-xvw6)
+//   • ReDoS (GHSA-5pgg-2g8v-p4x9)
+// ExcelJS has no known active CVEs and is actively maintained.
+
 import { CLASSES, CURRENCIES, id } from './data.js';
 
 // All possible asset fields, in the order they appear in the template
@@ -9,13 +13,12 @@ const COLUMNS = [
   { key: 'currency',      label: 'currency',      required: true,  hint: 'RWF, USD, EUR, or KES' },
   { key: 'purchasePrice', label: 'purchasePrice', required: true,  hint: 'Number in the chosen currency' },
   { key: 'purchaseDate',  label: 'purchaseDate',  required: true,  hint: 'YYYY-MM-DD' },
-  { key: 'currentValue',  label: 'currentValue',  required: false, hint: 'Leave blank to use Imari\'s suggestion' },
+  { key: 'currentValue',  label: 'currentValue',  required: false, hint: "Leave blank to use Imari's suggestion" },
   { key: 'notes',         label: 'notes',         required: false, hint: 'Free text' },
-  // Class-specific
   { key: 'neighbourhood', label: 'neighbourhood', required: false, hint: 'Real estate only' },
-  { key: 'upi',           label: 'upi',           required: false, hint: 'Real estate — Unique Parcel Identifier (e.g. 1/01/01/01/0001). Used to match rows on re-import.' },
+  { key: 'upi',           label: 'upi',           required: false, hint: 'Real estate — Unique Parcel Identifier (e.g. 1/01/01/01/0001)' },
   { key: 'model',         label: 'model',         required: false, hint: 'Vehicle only (e.g. "Toyota Rav4 2018")' },
-  { key: 'chassis',       label: 'chassis',       required: false, hint: 'Vehicle — chassis / VIN number. Used to match rows on re-import.' },
+  { key: 'chassis',       label: 'chassis',       required: false, hint: 'Vehicle — chassis / VIN number' },
   { key: 'count',         label: 'count',         required: false, hint: 'Livestock — number of head' },
   { key: 'ticker',        label: 'ticker',        required: false, hint: 'Stocks / crypto (e.g. BOK, BTC)' },
   { key: 'shares',        label: 'shares',        required: false, hint: 'Stocks — number of shares' },
@@ -32,147 +35,209 @@ const COLUMNS = [
 ];
 
 const NUMERIC_FIELDS = new Set(['purchasePrice', 'currentValue', 'count', 'shares', 'units', 'lastPrice', 'yieldPct', 'grams', 'stakePct']);
-const DATE_FIELDS = new Set(['purchaseDate', 'maturity', 'dueDate']);
+const DATE_FIELDS    = new Set(['purchaseDate', 'maturity', 'dueDate']);
 
 const SAMPLE_ROWS = [
-  { kind: 'realestate-land', name: 'Plot in Kabuga',       currency: 'RWF', purchasePrice: 150000000, purchaseDate: '2022-06-15', currentValue: '', neighbourhood: 'Kabuga', upi: '1/01/01/01/0001' },
-  { kind: 'rse-equity',      name: 'Bank of Kigali shares',currency: 'RWF', purchasePrice: 56000,     purchaseDate: '2023-03-10', ticker: 'BOK',  shares: 200, lastPrice: 320 },
-  { kind: 'vehicle',         name: 'Toyota Rav4',          currency: 'RWF', purchasePrice: 18000000,  purchaseDate: '2021-09-01', model: 'Toyota Rav4 2018', chassis: 'JTMBD33V585012345' },
-  { kind: 'crypto',          name: 'Bitcoin',              currency: 'USD', purchasePrice: 1750,      purchaseDate: '2023-11-15', ticker: 'BTC', units: 0.05, lastPrice: 68240 },
-  { kind: 'savings',         name: 'BK savings account',   currency: 'RWF', purchasePrice: 1200000,   purchaseDate: '2023-08-12', bank: 'Bank of Kigali', yieldPct: 5 },
+  { kind: 'realestate-land', name: 'Plot in Kabuga',        currency: 'RWF', purchasePrice: 150000000, purchaseDate: '2022-06-15', neighbourhood: 'Kabuga',    upi: '1/01/01/01/0001' },
+  { kind: 'rse-equity',      name: 'Bank of Kigali shares', currency: 'RWF', purchasePrice: 56000,     purchaseDate: '2023-03-10', ticker: 'BOK', shares: 200, lastPrice: 320 },
+  { kind: 'vehicle',         name: 'Toyota Rav4',           currency: 'RWF', purchasePrice: 18000000,  purchaseDate: '2021-09-01', model: 'Toyota Rav4 2018',  chassis: 'JTMBD33V585012345' },
+  { kind: 'crypto',          name: 'Bitcoin',               currency: 'USD', purchasePrice: 1750,      purchaseDate: '2023-11-15', ticker: 'BTC', units: 0.05, lastPrice: 68240 },
+  { kind: 'savings',         name: 'BK savings account',    currency: 'RWF', purchasePrice: 1200000,   purchaseDate: '2023-08-12', bank: 'Bank of Kigali',      yieldPct: 5 },
 ];
 
-function excelDateToISO(XLSX, value) {
+// ── Date normalisation ─────────────────────────────────────────────────────────
+// ExcelJS returns proper JS Date objects for date cells (unlike SheetJS serial ints).
+function excelDateToISO(value) {
   if (value == null || value === '') return '';
-  if (typeof value === 'number') {
-    const d = XLSX.SSF.parse_date_code(value);
-    if (!d) return String(value);
-    return `${d.y.toString().padStart(4, '0')}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return '';
+    return value.toISOString().slice(0, 10);
   }
   const s = String(value).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const parsed = new Date(s);
-  if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
-  return s;
+  return isNaN(parsed) ? s : parsed.toISOString().slice(0, 10);
 }
 
+// ── Cell value normalisation ───────────────────────────────────────────────────
+// ExcelJS can return rich-text objects or formula results — unwrap them.
+function cellVal(v) {
+  if (v == null) return '';
+  if (v instanceof Date) return v;
+  if (typeof v === 'object') {
+    if (v.richText)  return v.richText.map(r => r.text || '').join('');
+    if (v.result != null) return v.result;   // formula cell
+    if (v.text != null)   return String(v.text);
+  }
+  return v;
+}
+
+// ── Trigger browser download of an ArrayBuffer ────────────────────────────────
+function downloadBuffer(buffer, filename) {
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Export: download filled template ──────────────────────────────────────────
 export async function downloadAssetTemplate() {
-  const XLSX = (await import('xlsx')).default || (await import('xlsx'));
-  const wb = XLSX.utils.book_new();
+  const ExcelJS = (await import('exceljs')).default;
+  const wb = new ExcelJS.Workbook();
+  wb.creator  = 'Imari by Maxventures';
+  wb.created  = new Date();
+  wb.modified = new Date();
 
-  // Sheet 1: Assets (header row + sample rows + 20 blank rows for users to fill)
-  const headerRow = COLUMNS.map(c => c.label);
-  const sampleData = SAMPLE_ROWS.map(r => COLUMNS.map(c => r[c.key] ?? ''));
-  const blankRows = Array.from({ length: 20 }, () => COLUMNS.map(() => ''));
-  const aoa = [headerRow, ...sampleData, ...blankRows];
-  const assetsSheet = XLSX.utils.aoa_to_sheet(aoa);
+  const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E8DF' } };
+  const HEADER_FONT = { bold: true };
 
-  // Set column widths
-  assetsSheet['!cols'] = COLUMNS.map(c => ({ wch: Math.max(c.label.length + 2, 14) }));
+  // ── 1. Instructions sheet (shown first in Excel) ──────────────────────────
+  const instrSheet = wb.addWorksheet('Instructions');
+  instrSheet.columns = [{ width: 100 }];
+  [
+    'Imari Portfolio — bulk asset import template',
+    '',
+    '1. Fill in one row per asset on the "Assets" sheet.',
+    '2. The first 5 rows are example data — replace or delete them as you like.',
+    '3. Required columns: kind, name, currency, purchasePrice, purchaseDate.',
+    '4. "kind" must match one of the codes on the "Classes" sheet.',
+    '5. "currency" must be one of: RWF, USD, EUR, KES.',
+    '6. Dates can be either YYYY-MM-DD or proper Excel dates — both work.',
+    '7. Class-specific columns (ticker, shares, neighbourhood, etc.) are optional unless your asset class uses them.',
+    '8. Leave "currentValue" blank to let Imari suggest it from the valuation rule.',
+    '',
+    'Save the file and upload it via Assets → Import Excel in the app.',
+    '',
+    'Need a fresh template? Click "Download template" again in the app.',
+  ].forEach(line => instrSheet.addRow([line]));
+  instrSheet.getRow(1).font = { bold: true, size: 13 };
 
-  // Freeze the header row
-  assetsSheet['!freeze'] = { xSplit: 0, ySplit: 1 };
-  assetsSheet['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:0, c:COLUMNS.length-1}}) };
+  // ── 2. Assets sheet ───────────────────────────────────────────────────────
+  const assetsSheet = wb.addWorksheet('Assets');
+  assetsSheet.columns = COLUMNS.map(c => ({
+    header: c.label,
+    key:    c.label,
+    width:  Math.max(c.label.length + 2, 14),
+  }));
+  const headerRow = assetsSheet.getRow(1);
+  headerRow.font = HEADER_FONT;
+  headerRow.fill = HEADER_FILL;
+  assetsSheet.views = [{ state: 'frozen', ySplit: 1 }];
+  assetsSheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to:   { row: 1, column: COLUMNS.length },
+  };
+  SAMPLE_ROWS.forEach(r => assetsSheet.addRow(COLUMNS.map(c => r[c.key] ?? '')));
+  for (let i = 0; i < 20; i++) assetsSheet.addRow(COLUMNS.map(() => ''));
 
-  XLSX.utils.book_append_sheet(wb, assetsSheet, 'Assets');
-
-  // Sheet 2: Field reference
-  const fieldsAoa = [
-    ['Field', 'Required?', 'Description'],
-    ...COLUMNS.map(c => [c.label, c.required ? 'Yes' : 'No', c.hint]),
+  // ── 3. Field reference sheet ──────────────────────────────────────────────
+  const fieldsSheet = wb.addWorksheet('Field reference');
+  fieldsSheet.columns = [
+    { header: 'Field',       width: 16 },
+    { header: 'Required?',   width: 12 },
+    { header: 'Description', width: 60 },
   ];
-  const fieldsSheet = XLSX.utils.aoa_to_sheet(fieldsAoa);
-  fieldsSheet['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 60 }];
-  XLSX.utils.book_append_sheet(wb, fieldsSheet, 'Field reference');
+  fieldsSheet.getRow(1).font = HEADER_FONT;
+  fieldsSheet.getRow(1).fill = HEADER_FILL;
+  COLUMNS.forEach(c => fieldsSheet.addRow([c.label, c.required ? 'Yes' : 'No', c.hint]));
 
-  // Sheet 3: Asset class codes
-  const classesAoa = [
-    ['kind code', 'Label', 'Group', 'Class-specific fields', 'Valuation rule'],
-    ...CLASSES.map(c => [c.kind, c.label, c.group, c.fields.join(', '), c.note]),
+  // ── 4. Classes sheet ──────────────────────────────────────────────────────
+  const classesSheet = wb.addWorksheet('Classes');
+  classesSheet.columns = [
+    { header: 'kind code',             width: 18 },
+    { header: 'Label',                 width: 24 },
+    { header: 'Group',                 width: 16 },
+    { header: 'Class-specific fields', width: 28 },
+    { header: 'Valuation rule',        width: 50 },
   ];
-  const classesSheet = XLSX.utils.aoa_to_sheet(classesAoa);
-  classesSheet['!cols'] = [{ wch: 18 }, { wch: 24 }, { wch: 16 }, { wch: 28 }, { wch: 50 }];
-  XLSX.utils.book_append_sheet(wb, classesSheet, 'Classes');
+  classesSheet.getRow(1).font = HEADER_FONT;
+  classesSheet.getRow(1).fill = HEADER_FILL;
+  CLASSES.forEach(c => classesSheet.addRow([c.kind, c.label, c.group, c.fields.join(', '), c.note]));
 
-  // Sheet 4: Currencies
-  const currenciesAoa = [
-    ['Currency code', 'Symbol', 'Label'],
-    ...CURRENCIES.map(c => [c.code, c.symbol, c.label]),
+  // ── 5. Currencies sheet ───────────────────────────────────────────────────
+  const currSheet = wb.addWorksheet('Currencies');
+  currSheet.columns = [
+    { header: 'Currency code', width: 16 },
+    { header: 'Symbol',        width: 10 },
+    { header: 'Label',         width: 26 },
   ];
-  const currenciesSheet = XLSX.utils.aoa_to_sheet(currenciesAoa);
-  currenciesSheet['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 26 }];
-  XLSX.utils.book_append_sheet(wb, currenciesSheet, 'Currencies');
+  currSheet.getRow(1).font = HEADER_FONT;
+  currSheet.getRow(1).fill = HEADER_FILL;
+  CURRENCIES.forEach(c => currSheet.addRow([c.code, c.symbol, c.label]));
 
-  // Sheet 5: Instructions
-  const instructions = [
-    ['Imari Portfolio — bulk asset import template'],
-    [''],
-    ['1. Fill in one row per asset on the "Assets" sheet.'],
-    ['2. The first 5 rows are example data — replace or delete them as you like.'],
-    ['3. Required columns: kind, name, currency, purchasePrice, purchaseDate.'],
-    ['4. "kind" must match one of the codes on the "Classes" sheet.'],
-    ['5. "currency" must be one of: RWF, USD, EUR, KES.'],
-    ['6. Dates can be either YYYY-MM-DD or proper Excel dates — both work.'],
-    ['7. Class-specific columns (ticker, shares, neighbourhood, etc.) are optional unless your asset class uses them.'],
-    ['8. Leave "currentValue" blank to let Imari suggest it from the valuation rule.'],
-    [''],
-    ['Save the file and upload it via Assets → Import Excel in the app.'],
-    [''],
-    ['Need a fresh template? Click "Download template" again in the app.'],
-  ];
-  const instructionsSheet = XLSX.utils.aoa_to_sheet(instructions);
-  instructionsSheet['!cols'] = [{ wch: 100 }];
-  XLSX.utils.book_append_sheet(wb, instructionsSheet, 'Instructions');
-
-  // Reorder sheets so Instructions is first
-  wb.SheetNames = ['Instructions', 'Assets', 'Field reference', 'Classes', 'Currencies'];
-
-  XLSX.writeFile(wb, `imari-asset-template-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const buffer = await wb.xlsx.writeBuffer();
+  downloadBuffer(buffer, `imari-asset-template-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
-// Given a parsed (imported) asset and the current portfolio asset list,
-// return the existing asset if a natural key matches, otherwise null.
-// Priority: UPI (real estate) → chassis (vehicle) → ticker+kind (equities/crypto)
+// ── Import: parse an uploaded .xlsx file ──────────────────────────────────────
 export function findExistingByNaturalKey(parsed, existingAssets) {
-  if (parsed.upi) return existingAssets.find(a => a.upi === parsed.upi) || null;
+  if (parsed.upi)    return existingAssets.find(a => a.upi     === parsed.upi)    || null;
   if (parsed.chassis) return existingAssets.find(a => a.chassis === parsed.chassis) || null;
-  if (parsed.ticker) return existingAssets.find(a => a.ticker === parsed.ticker && a.kind === parsed.kind) || null;
+  if (parsed.ticker) return existingAssets.find(a => a.ticker  === parsed.ticker && a.kind === parsed.kind) || null;
   return null;
 }
 
+const MAX_EXCEL_BYTES = 10 * 1024 * 1024; // 10 MB
+
 export function parseAssetExcel(file) {
+  if (file.size > MAX_EXCEL_BYTES) {
+    return Promise.reject(new Error(`File too large (max ${MAX_EXCEL_BYTES / 1024 / 1024} MB)`));
+  }
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async e => {
       try {
-        const XLSX = (await import('xlsx')).default || (await import('xlsx'));
-        const wb = XLSX.read(e.target.result, { type: 'array' });
-        const sheetName = wb.SheetNames.find(n => n.toLowerCase() === 'assets') || wb.SheetNames[0];
-        const sheet = wb.Sheets[sheetName];
-        if (!sheet) throw new Error('No "Assets" sheet found in the workbook.');
+        const ExcelJS = (await import('exceljs')).default;
+        const wb = new ExcelJS.Workbook();
+        // load() safely parses OOXML — ExcelJS does not eval() content
+        await wb.xlsx.load(e.target.result);
 
-        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
-        const validKinds = new Set(CLASSES.map(c => c.kind));
+        const ws = wb.worksheets.find(s => s.name.toLowerCase() === 'assets') || wb.worksheets[0];
+        if (!ws) throw new Error('No "Assets" sheet found in the workbook.');
+
+        // Read headers from row 1
+        const headers = [];
+        ws.getRow(1).eachCell({ includeEmpty: true }, (cell, colIdx) => {
+          headers[colIdx - 1] = String(cellVal(cell.value) || '').trim();
+        });
+
+        const validKinds      = new Set(CLASSES.map(c => c.kind));
         const validCurrencies = new Set(CURRENCIES.map(c => c.code));
-
         const assets = [];
         const errors = [];
 
-        rows.forEach((row, idx) => {
-          const lineNo = idx + 2; // header is row 1, data starts at row 2
+        ws.eachRow({ includeEmpty: false }, (row, rowNum) => {
+          if (rowNum === 1) return; // skip header
 
-          // Skip fully empty rows
-          const hasAny = COLUMNS.some(c => row[c.label] !== '' && row[c.label] != null);
+          // Build a header → value map for this row
+          const rowData = {};
+          headers.forEach((header, i) => {
+            rowData[header] = cellVal(row.getCell(i + 1).value);
+          });
+
+          // Skip rows that are entirely blank
+          const hasAny = COLUMNS.some(c => {
+            const v = rowData[c.label];
+            return v !== '' && v != null;
+          });
           if (!hasAny) return;
 
           const asset = { id: id() };
           let rowError = null;
 
           for (const col of COLUMNS) {
-            let v = row[col.label];
+            let v = rowData[col.label];
             if (v === '' || v == null) {
               if (col.required) {
-                rowError = `Row ${lineNo}: missing required field "${col.label}".`;
+                rowError = `Row ${rowNum}: missing required field "${col.label}".`;
                 break;
               }
               continue;
@@ -180,12 +245,12 @@ export function parseAssetExcel(file) {
             if (NUMERIC_FIELDS.has(col.key)) {
               const n = Number(v);
               if (isNaN(n)) {
-                rowError = `Row ${lineNo}: "${col.label}" must be a number, got "${v}".`;
+                rowError = `Row ${rowNum}: "${col.label}" must be a number, got "${v}".`;
                 break;
               }
               v = n;
             } else if (DATE_FIELDS.has(col.key)) {
-              v = excelDateToISO(XLSX, v);
+              v = excelDateToISO(v);
             } else {
               v = String(v).trim();
             }
@@ -195,11 +260,11 @@ export function parseAssetExcel(file) {
           if (rowError) { errors.push(rowError); return; }
 
           if (!validKinds.has(asset.kind)) {
-            errors.push(`Row ${lineNo}: unknown kind "${asset.kind}". See the Classes sheet for valid codes.`);
+            errors.push(`Row ${rowNum}: unknown kind "${asset.kind}". See the Classes sheet for valid codes.`);
             return;
           }
           if (!validCurrencies.has(asset.currency)) {
-            errors.push(`Row ${lineNo}: unknown currency "${asset.currency}". Use RWF, USD, EUR, or KES.`);
+            errors.push(`Row ${rowNum}: unknown currency "${asset.currency}". Use RWF, USD, EUR, or KES.`);
             return;
           }
           if (!asset.currentValue) asset.currentValue = '';
