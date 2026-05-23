@@ -521,14 +521,16 @@ export default function App() {
         />
         <div className="col main-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
           {showTopBar && (
-            <TopBar
-              title={titles[nav].title}
-              subtitle={titles[nav].subtitle}
-              profile={state.profile}
-              displayCurrency={state.profile.displayCurrency}
-              onCurrency={c => guardedDispatch({ type:'setProfile', patch: { displayCurrency: c } })}
-              role={role}
-            />
+            <div data-noprint>
+              <TopBar
+                title={titles[nav].title}
+                subtitle={titles[nav].subtitle}
+                profile={state.profile}
+                displayCurrency={state.profile.displayCurrency}
+                onCurrency={c => guardedDispatch({ type:'setProfile', patch: { displayCurrency: c } })}
+                role={role}
+              />
+            </div>
           )}
           <div key={nav} className="page-view">
             <Suspense fallback={<FullScreenLoader />}>
@@ -537,8 +539,8 @@ export default function App() {
           </div>
         </div>
         <MobileTabBar active={nav} onNav={navigateTo} />
-        <ToastContainer toasts={toasts} dismiss={dismiss} />
-        <FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} />
+        <div data-noprint><ToastContainer toasts={toasts} dismiss={dismiss} /></div>
+        <div data-noprint><FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} /></div>
       </div>
     </ErrorBoundary>
   );

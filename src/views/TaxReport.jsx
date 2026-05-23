@@ -6,9 +6,12 @@ import {
 
 // ─── Helpers ──────────────────────────────────────────────────
 
-function Section({ title, sub, children, accent = 'var(--brand)' }) {
+function Section({ title, sub, children, accent = 'var(--brand)', printBreak = false }) {
   return (
-    <div style={{ marginBottom: 28 }}>
+    <div style={{
+      marginBottom: 28,
+      ...(printBreak ? { pageBreakBefore: 'always', breakBefore: 'always', paddingTop: 8 } : {}),
+    }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <div style={{ width: 3, height: 18, borderRadius: 2, background: accent, flexShrink: 0 }} />
         <div>
@@ -59,7 +62,7 @@ function FormulaBox({ children }) {
 
 function TaxTable({ columns, rows, footerRow }) {
   return (
-    <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+    <div className="card" style={{ padding: 0, overflowX: 'auto', overflowY: 'visible' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
           <tr style={{ background: 'var(--bg-2)' }}>
@@ -197,8 +200,19 @@ export default function TaxReportView({ state }) {
             Rwanda Revenue Authority · Based on asset values as at {today.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}
           </div>
         </div>
-        <button onClick={() => window.print()} className="btn btn-ghost" style={{ fontSize: 12 }}>
-          Print / Save PDF
+        <button
+          onClick={() => {
+            // Scroll the .main-scroll container to top so the browser
+            // captures the full document, not just the visible viewport.
+            const scroller = document.querySelector('.main-scroll');
+            if (scroller) scroller.scrollTop = 0;
+            // Small delay so scroll settles before the print dialog opens.
+            setTimeout(() => window.print(), 80);
+          }}
+          className="btn btn-ghost"
+          style={{ fontSize: 12 }}
+        >
+          🖨 Print / Save PDF
         </button>
       </div>
 
@@ -314,6 +328,7 @@ export default function TaxReportView({ state }) {
         title="Vehicle Road Maintenance Levy"
         sub="Annual obligation per vehicle · Law 013/2025 of 27/05/2025"
         accent="var(--clay)"
+        printBreak
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
           <LawBadge law="Law 013/2025 · Art. 2(2)" />
@@ -372,6 +387,7 @@ export default function TaxReportView({ state }) {
         title="Capital Gains Tax — on disposal"
         sub="CGT is only triggered when you sell an asset · estimated at current unrealised gains"
         accent="var(--gold)"
+        printBreak
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
           <LawBadge law="Rwanda Income Tax Law · RRA CGT" />

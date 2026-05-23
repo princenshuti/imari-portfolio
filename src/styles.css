@@ -392,3 +392,78 @@ input:focus, select:focus, textarea:focus {
 .tab-btn.active { color: var(--brand); background: var(--brand-softer); }
 .tab-btn:focus-visible { outline: 2px solid var(--brand); }
 .tab-btn span.glyph { font-size: 18px; }
+
+/* ── Print / Save PDF ─────────────────────────────────────────── */
+@media print {
+  /* Force backgrounds + exact colours to render in PDF */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Paper size & margins */
+  @page { size: A4 portrait; margin: 1.4cm 1.2cm; }
+
+  /* Override CSS variables to light/print-safe values regardless of dark mode */
+  :root, body, body[data-theme="dark"], body[data-theme="light"] {
+    --bg:          #FFFFFF !important;
+    --bg-2:        #F4F2EC !important;
+    --paper:       #FFFFFF !important;
+    --paper-2:     #FFFFFF !important;
+    --line:        rgba(0,0,0,0.13) !important;
+    --line-soft:   rgba(0,0,0,0.08) !important;
+    --line-strong: rgba(0,0,0,0.22) !important;
+    --ink:   #111111 !important;
+    --ink-2: #222222 !important;
+    --ink-3: #555555 !important;
+    --ink-4: #888888 !important;
+    --brand:  #0D4B3A !important;
+    --up:     #1A7A52 !important;
+    --down:   #B03428 !important;
+    --gold:   #A8780A !important;
+    --clay:   #C07040 !important;
+    --shadow-0: none !important;
+    --shadow-1: none !important;
+    --shadow-2: none !important;
+    --shadow-3: none !important;
+    --shadow-pop: none !important;
+  }
+
+  /* Hide all non-report chrome */
+  .sidebar-desktop,
+  .mobile-tab-bar,
+  [data-noprint] { display: none !important; }
+
+  /* Make the scroll container expand to full content height */
+  html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+  .main-scroll {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Full-width content — no sidebar gutter */
+  .col.main-scroll { flex: 1 1 100% !important; width: 100% !important; }
+
+  /* Remove card shadows; keep borders */
+  .card, .card-stat {
+    box-shadow: none !important;
+    border: 0.5px solid rgba(0,0,0,0.15) !important;
+    overflow: visible !important;    /* tables must not clip */
+  }
+
+  /* Tables: remove overflow scroll wrapper so all columns render */
+  table { width: 100% !important; overflow: visible !important; }
+
+  /* Avoid breaking rows / cards across pages */
+  tr, .card, .card-stat { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }   /* repeat header on each printed page */
+  tfoot { display: table-footer-group; }
+
+  /* Keep section headings with their first content block */
+  .font-serif { page-break-after: avoid; break-after: avoid; }
+
+  /* Hide the Print button itself */
+  .btn-ghost { display: none !important; }
+
+  /* Hover animations unnecessary in print */
+  .hover-lift, .hover-lift:hover { transform: none !important; }
+}
