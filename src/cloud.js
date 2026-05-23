@@ -162,12 +162,19 @@ export async function listMembers(portfolioId) {
   return data;
 }
 
+const VALID_ROLES = new Set(['owner', 'editor', 'viewer']);
+/** UUID v4 shape — only accept well-formed IDs to prevent injection via eq() */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function removeMember(memberId) {
+  if (!UUID_RE.test(memberId)) throw new Error('Invalid member ID');
   const { error } = await supabase.from('portfolio_members').delete().eq('id', memberId);
   if (error) throw error;
 }
 
 export async function updateMemberRole(memberId, role) {
+  if (!UUID_RE.test(memberId))  throw new Error('Invalid member ID');
+  if (!VALID_ROLES.has(role))   throw new Error(`Invalid role "${role}" — must be owner, editor, or viewer`);
   const { error } = await supabase.from('portfolio_members').update({ role }).eq('id', memberId);
   if (error) throw error;
 }

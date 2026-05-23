@@ -219,6 +219,11 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
   const handleFile = (file) => {
     if (!file) return;
     setErr(null);
+    const MAX_CSV_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (file.size > MAX_CSV_BYTES) {
+      setErr('File too large (max 5 MB). Export a shorter date range from your bank app.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {

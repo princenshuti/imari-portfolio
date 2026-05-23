@@ -28,7 +28,9 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_ANTHROPIC_KEY: ${{ secrets.VITE_ANTHROPIC_KEY }}
+          # VITE_ANTHROPIC_KEY is intentionally NOT passed here.
+          # The Anthropic key lives in a Supabase Edge Function secret (server-side only).
+          # Local-dev fallback: add VITE_ANTHROPIC_KEY to your .env.local file.
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

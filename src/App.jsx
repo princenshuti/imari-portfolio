@@ -165,8 +165,13 @@ function reducer(state, action) {
       Object.assign(FX, action.fx);
       return { ...state, fx: action.fx };
     }
-    case 'appendChat':
-      return { ...state, chat: [...state.chat, action.msg] };
+    case 'appendChat': {
+      // Cap at 80 messages — prevents unbounded DB growth and keeps AI context lean.
+      // Drop the oldest user+assistant pair (2 messages) when over the limit.
+      const MAX_CHAT = 80;
+      const next = [...state.chat, action.msg];
+      return { ...state, chat: next.length > MAX_CHAT ? next.slice(next.length - MAX_CHAT) : next };
+    }
     case 'clearChat':
       return { ...state, chat: [] };
     case 'setInsight':
