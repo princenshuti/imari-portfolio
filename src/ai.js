@@ -2,10 +2,27 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const API_KEY_STORAGE = 'imari:anthropic:key';
 
+/**
+ * The key baked in at build time via VITE_ANTHROPIC_KEY.
+ * When set, all users share it automatically — no per-user input needed.
+ */
+const ENV_KEY = import.meta.env.VITE_ANTHROPIC_KEY || '';
+
+/**
+ * True when the app owner has embedded a shared key at build time.
+ * Use this to hide the manual-entry field in Settings.
+ */
+export const hasEnvKey = Boolean(ENV_KEY);
+
+/**
+ * Returns the active API key.
+ * Priority: build-time env key → user's localStorage key → ''
+ */
 export function getApiKey() {
-  return localStorage.getItem(API_KEY_STORAGE) || '';
+  return ENV_KEY || localStorage.getItem(API_KEY_STORAGE) || '';
 }
 
+/** Only meaningful when hasEnvKey is false (user-managed key). */
 export function setApiKey(key) {
   localStorage.setItem(API_KEY_STORAGE, key.trim());
 }

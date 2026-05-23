@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { CURRENCIES, MILESTONES } from '../data.js';
 import { exportJSON, importJSONFile } from '../store.js';
-import { getApiKey, setApiKey } from '../ai.js';
+import { getApiKey, setApiKey, hasEnvKey } from '../ai.js';
 import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, isConfigured } from '../cloud.js';
 import { Field, inputStyle } from '../components/Field.jsx';
 import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
@@ -470,24 +470,57 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
 
       <MembersSection portfolioId={portfolioId} role={role} session={session} />
 
-      <Section title="AI Advisor" subtitle="Your Anthropic API key powers the AI Advisor and dashboard insights. It's stored only in this browser.">
-        <Field label="Anthropic API key" hint="sk-ant-…">
-          <div className="row" style={{ gap: 8 }}>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={e => setApiKeyLocal(e.target.value)}
-              placeholder="sk-ant-api03-…"
-              style={{ ...inputStyle, flex: 1, fontFamily:'Geist Mono, monospace' }}
-            />
-            <button onClick={handleSaveApiKey} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
-              {apiKeySaved ? '✓ Saved' : 'Save key'}
-            </button>
+      <Section
+        title="AI Advisor"
+        subtitle={hasEnvKey
+          ? 'AI Advisor is enabled for all users via a shared key managed by the app owner.'
+          : 'Your Anthropic API key powers the AI Advisor and dashboard insights.'}
+      >
+        {hasEnvKey ? (
+          /* ── Shared env key is active ─ no user input needed ─── */
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '14px 18px', borderRadius: 10,
+            background: 'color-mix(in oklab, var(--up) 10%, var(--paper))',
+            border: '1px solid color-mix(in oklab, var(--up) 22%, transparent)',
+          }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%', background: 'var(--up)',
+              flexShrink: 0, animation: 'imari-dot-pulse 2.4s ease-in-out infinite',
+            }} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--up)' }}>
+                AI Advisor is active
+              </div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.5 }}>
+                A shared API key is configured for this deployment — you don't need to enter anything.
+                All users on this app can access the AI Advisor automatically.
+              </div>
+            </div>
           </div>
-        </Field>
-        <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
-          Get a key at <strong>console.anthropic.com</strong>. The key never leaves this browser — it's sent directly to the Anthropic API when you use the advisor.
-        </div>
+        ) : (
+          /* ── No env key — user must supply their own ─────────── */
+          <>
+            <Field label="Anthropic API key" hint="sk-ant-…">
+              <div className="row" style={{ gap: 8 }}>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={e => setApiKeyLocal(e.target.value)}
+                  placeholder="sk-ant-api03-…"
+                  style={{ ...inputStyle, flex: 1, fontFamily:'Geist Mono, monospace' }}
+                />
+                <button onClick={handleSaveApiKey} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
+                  {apiKeySaved ? '✓ Saved' : 'Save key'}
+                </button>
+              </div>
+            </Field>
+            <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
+              Get a key at <strong>console.anthropic.com</strong>.
+              The key is stored only in this browser — it's sent directly to the Anthropic API.
+            </div>
+          </>
+        )}
       </Section>
 
       <Section title="Exchange rates" subtitle="Edit if the FX values look off. All amounts convert via these rates.">
