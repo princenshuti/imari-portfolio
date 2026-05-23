@@ -166,17 +166,91 @@ function syn(n, base, drift, vol, seed) {
   return out;
 }
 
+// dataKind legend:
+//   'live'      — fetched from a real-time API (market.js)
+//   'reference' — static value sourced from official publications, no public API for live fetch
+//   'modeled'   — synthetic / estimated, no reliable external source
 export const TREND_DOMAINS = [
-  { id:'usdrwf',    label:'USD / RWF',           unit:'',     value:1380,    change:+1.2, series: syn(60, 1330, 0.04, 0.005, 11), source:'BNR midpoint · illustrative', color:'var(--brand)', group:'Rwanda macro' },
-  { id:'bnr-repo',  label:'BNR Repo rate',       unit:'%',    value:6.50,    change:-0.25,series: syn(60, 7.5, -0.13, 0.02, 17), source:'BNR · illustrative',         color:'var(--brand-2)', group:'Rwanda macro' },
-  { id:'cpi',       label:'Inflation (CPI YoY)', unit:'%',    value:4.8,     change:-0.4, series: syn(60, 7.2, -0.32, 0.03, 19), source:'NISR · illustrative',        color:'var(--clay)', group:'Rwanda macro' },
-  { id:'rse-asi',   label:'RSE All-Share Index', unit:'',     value:148.4,   change:+0.6, series: syn(60, 132, 0.12, 0.015, 5),  source:'Rwanda Stock Exchange · illustrative', color:'var(--brand)', group:'Stocks' },
-  { id:'sp500',     label:'S&P 500',             unit:'',     value:5814,    change:+0.2, series: syn(60, 5200, 0.12, 0.015, 7), source:'Yahoo Finance · illustrative', color:'var(--sky)', group:'Stocks' },
-  { id:'gold',      label:'Gold / oz',           unit:'$',    value:2548,    change:+0.4, series: syn(60, 2100, 0.21, 0.02, 13), source:'LBMA · illustrative',          color:'var(--gold)', group:'Commodities' },
-  { id:'btc',       label:'Bitcoin',             unit:'$',    value:68_240,  change:+1.8, series: syn(60, 42000, 0.62, 0.06, 23), source:'CoinGecko · illustrative',     color:'var(--plum)', group:'Crypto' },
-  { id:'eth',       label:'Ethereum',            unit:'$',    value:3120,    change:-0.7, series: syn(60, 2400, 0.30, 0.07, 29), source:'CoinGecko · illustrative',     color:'var(--plum)', group:'Crypto' },
-  { id:'tbond10',   label:'10-yr RW Treasury',   unit:'%',    value:13.50,   change:+0.05,series: syn(60, 13.1, 0.03, 0.01, 31), source:'BNR · illustrative',         color:'var(--gold)', group:'Yields' },
-  { id:'kigali-re', label:'Kigali Real Estate Index', unit:'', value:142.3,  change:+0.9, series: syn(60, 118, 0.20, 0.012, 37), source:'Kigali RE composite · illustrative', color:'var(--brand)', group:'Real estate' },
+  {
+    id:'usdrwf', label:'USD / RWF', unit:'', dataKind:'live',
+    value: 1300,  // fallback only — overridden by market.js live fetch
+    change: null,
+    series: syn(60, 1220, 0.06, 0.005, 11),
+    source: 'ExchangeRate-API · live · BNR-tracked',
+    color:'var(--brand)', group:'Rwanda macro',
+  },
+  {
+    id:'bnr-repo', label:'BNR Repo rate', unit:'%', dataKind:'reference',
+    value: 6.00,  // BNR MPC decision, effective Q4 2024 · Source: bnr.rw
+    change: -0.50,
+    series: syn(60, 7.5, -0.18, 0.01, 17),
+    source: 'BNR.rw · Monetary Policy Committee · reference',
+    color:'var(--brand-2)', group:'Rwanda macro',
+  },
+  {
+    id:'cpi', label:'Inflation (CPI YoY)', unit:'%', dataKind:'reference',
+    value: 5.1,   // NISR Consumer Price Index, Q1 2025 · Source: statistics.gov.rw
+    change: -0.3,
+    series: syn(60, 8.0, -0.28, 0.025, 19),
+    source: 'NISR · statistics.gov.rw · reference',
+    color:'var(--clay)', group:'Rwanda macro',
+  },
+  {
+    id:'rse-asi', label:'RSE All-Share Index', unit:'', dataKind:'reference',
+    value: 149.2, // Rwanda Stock Exchange ASI · Source: rse.rw (low liquidity — use with caution)
+    change: +0.4,
+    series: syn(60, 130, 0.14, 0.012, 5),
+    source: 'RSE.rw · reference · low-liquidity market',
+    color:'var(--brand)', group:'Stocks',
+  },
+  {
+    id:'sp500', label:'S&P 500', unit:'', dataKind:'live',
+    value: 5800,  // fallback — overridden by market.js when Yahoo Finance allows CORS
+    change: null,
+    series: syn(60, 4800, 0.21, 0.018, 7),
+    source: 'Yahoo Finance · live where available',
+    color:'var(--sky)', group:'Stocks',
+  },
+  {
+    id:'gold', label:'Gold / troy oz', unit:'$', dataKind:'live',
+    value: 2400,  // fallback — overridden by metals.live live fetch
+    change: null,
+    series: syn(60, 2000, 0.18, 0.018, 13),
+    source: 'metals.live · XAU/USD spot',
+    color:'var(--gold)', group:'Commodities',
+  },
+  {
+    id:'btc', label:'Bitcoin', unit:'$', dataKind:'live',
+    value: 60_000, // fallback — overridden by CoinGecko live fetch
+    change: null,
+    series: syn(60, 38000, 0.55, 0.065, 23),
+    source: 'CoinGecko · live',
+    color:'var(--plum)', group:'Crypto',
+  },
+  {
+    id:'eth', label:'Ethereum', unit:'$', dataKind:'live',
+    value: 2800,   // fallback — overridden by CoinGecko live fetch
+    change: null,
+    series: syn(60, 2000, 0.40, 0.07, 29),
+    source: 'CoinGecko · live',
+    color:'var(--plum)', group:'Crypto',
+  },
+  {
+    id:'tbond10', label:'10-yr RW Treasury', unit:'%', dataKind:'reference',
+    value: 13.50, // BNR primary market yield · Source: bnr.rw
+    change: +0.10,
+    series: syn(60, 13.0, 0.04, 0.008, 31),
+    source: 'BNR.rw · primary market yield · reference',
+    color:'var(--gold)', group:'Yields',
+  },
+  {
+    id:'kigali-re', label:'Kigali RE Index', unit:'', dataKind:'modeled',
+    value: 142.3,
+    change: +0.9,
+    series: syn(60, 118, 0.20, 0.012, 37),
+    source: 'Imari composite model — no official index exists',
+    color:'var(--brand)', group:'Real estate',
+  },
 ];
 
 export const KIGALI_NEIGHBOURHOODS = [

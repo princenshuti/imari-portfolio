@@ -51,33 +51,94 @@ export function KPI({ label, value, sub, accent = 'var(--brand)' }) {
   );
 }
 
-export function TrendCard({ d, big = false }) {
-  const isUp = d.change >= 0;
+/**
+ * TrendCard renders one market indicator.
+ * Props:
+ *   d        — domain object from TREND_DOMAINS
+ *   big      — larger layout (used on Trends page)
+ *   override — live data from market.js: { value, change, live, source, fetchedAt }
+ *              If null/undefined the domain's static values are used.
+ */
+export function TrendCard({ d, big = false, override = null }) {
+  // Merge live override on top of static domain data
+  const value    = override?.value  ?? d.value;
+  const change   = override?.change ?? d.change;
+  const source   = override?.source ?? d.source;
+  const isLive   = override?.live   ?? false;
+
+  // Badge logic
+  // 'live'      → green pill with pulsing dot
+  // 'reference' → gold pill
+  // 'modeled'   → muted pill
+  const kind = isLive ? 'live' : (d.dataKind ?? 'modeled');
+  const BADGE = {
+    live:      { bg: 'color-mix(in oklab, var(--up) 14%, transparent)',   color: 'var(--up)',   label: 'Live'      },
+    reference: { bg: 'color-mix(in oklab, var(--gold) 14%, transparent)', color: 'var(--gold)', label: 'Reference' },
+    modeled:   { bg: 'var(--bg-2)',                                        color: 'var(--ink-4)',label: 'Modeled'   },
+  };
+  const badge = BADGE[kind] || BADGE.modeled;
+
+  const hasChange = change !== null && change !== undefined && !isNaN(change);
+  const isUp = hasChange ? change >= 0 : true;
+
   return (
     <div className="card hover-lift" style={{ padding: big ? 20 : 16, position: 'relative', cursor: 'default' }}>
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)' }}>{d.label}</div>
-        <span className="pill pill-soft" style={{ fontSize: 9 }}>illustrative</span>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          padding: '2px 7px', borderRadius: 20,
+          background: badge.bg, fontSize: 9, fontWeight: 700, color: badge.color,
+        }}>
+          {kind === 'live' && (
+            <span style={{
+              width: 5, height: 5, borderRadius: '50%', background: badge.color, flexShrink: 0,
+              animation: 'imari-dot-pulse 2s ease-in-out infinite',
+            }} />
+          )}
+          {badge.label}
+        </div>
       </div>
+
       <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
         <div className="font-serif num" style={{
           fontSize: big ? 28 : 20,
           letterSpacing: '-0.02em',
           lineHeight: 1,
         }}>
-          {d.unit === '$' ? '$' : ''}{d.value.toLocaleString('en-US', { maximumFractionDigits: 2 })}{d.unit && d.unit !== '$' ? d.unit : ''}
+          {d.unit === '$' ? '$' : ''}
+          {(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+          {d.unit && d.unit !== '$' ? d.unit : ''}
         </div>
-        <div className="num" style={{
-          fontSize: 11, fontWeight: 600,
-          color: isUp ? 'var(--up)' : 'var(--down)',
-        }}>
-          {isUp ? '▲' : '▼'} {Math.abs(d.change).toFixed(2)}{d.unit === '%' ? 'pp' : '%'}
-        </div>
+        {hasChange && (
+          <div className="num" style={{
+            fontSize: 11, fontWeight: 600,
+            color: isUp ? 'var(--up)' : 'var(--down)',
+          }}>
+            {isUp ? '▲' : '▼'} {Math.abs(change).toFixed(2)}{d.unit === '%' ? 'pp' : '%'}
+          </div>
+        )}
+        {!hasChange && kind === 'live' && (
+          <div className="muted" style={{ fontSize: 10 }}>live rate</div>
+        )}
       </div>
+
       <div style={{ marginTop: 8, color: d.color }}>
         <Sparkline data={d.series} w={big ? 240 : 160} h={big ? 40 : 30} stroke={d.color} fill />
       </div>
-      <div className="muted" style={{ fontSize: 9.5, marginTop: 4 }}>{d.source}</div>
+      <div className="muted" style={{ fontSize: 9.5, marginTop: 4, lineHeight: 1.4 }}>
+        {source}
+        {override?.fetchedAt && (
+          <span style={{ marginLeft: 4, opacity: 0.6 }}>· {timeSince(override.fetchedAt)}</span>
+        )}
+      </div>
     </div>
   );
+}
+
+function timeSince(isoStr) {
+  const s = Math.floor((Date.now() - new Date(isoStr)) / 1000);
+  if (s < 60)   return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  return `${Math.floor(s / 3600)}h ago`;
 }
