@@ -54,7 +54,7 @@ export const CLASSES = [
   },
   {
     kind:'vehicle', label:'Vehicle', group:'Vehicles', glyph:'⏵', color:'var(--clay)',
-    fields:['model','chassis'],
+    fields:['model','chassis','vehicleCategory'],
     rule: (a, today) => simpleGrowth(a, -0.15, today),
     note: '-15%/yr depreciation rule of thumb',
   },
@@ -363,6 +363,36 @@ export const GOAL_CATEGORIES = [
 export const MILESTONES = [
   10_000_000, 25_000_000, 50_000_000, 100_000_000,
   250_000_000, 500_000_000, 1_000_000_000,
+];
+
+// ───── Fixed Asset Tax (RRA · immovable property) ─────────────
+// Source: rra.gov.rw/fileadmin/img/fixed-asset-tax.html
+export const FIXED_ASSET_TAX = {
+  rate:                 0.001,          // 1/1000 = 0.1% per year of market value
+  residentialExemption: 3_000_000,     // RWF · only excess above this threshold is taxed
+  // Applies to: realestate-land (full rate), realestate-house (with exemption)
+  // Exempt: agricultural/forestry land ≤ 2 ha; government; religious; diplomatic; residential ≤ 3M
+  declarationDeadline:  'March 31',    // self-assessed · annual
+  paymentDeadline:      'March 31',    // annual obligation
+  latePenalties:        [0.10, 0.20, 0.30, 0.40], // < 1 month, 1-2m, 2-3m, > 3 months
+  lateInterestMonthly:  0.015,         // 1.5% / month from due date
+  lateSurcharge:        { rate: 0.10, max: 100_000 }, // 10% of tax, capped at 100k RWF
+};
+
+// ───── Vehicle Road Maintenance Levy (Law 013/2025 of 27/05/2025) ─────
+// Source: Official Gazette, special issue 29/05/2025 · applies annually, due 31 December
+export const VEHICLE_CATEGORIES = [
+  { id:'car',         label:'Car',            levy:  50_000 },
+  { id:'jeep',        label:'Jeep / SUV 4×4', levy:  50_000 },
+  { id:'pickup',      label:'Pick-up',         levy: 100_000 },
+  { id:'microbus',    label:'Microbus',        levy: 100_000 },
+  { id:'minibus',     label:'Minibus',         levy: 100_000 },
+  { id:'bus',         label:'Bus',             levy: 100_000 },
+  { id:'truck',       label:'Truck',           levy: 120_000 },
+  { id:'halftrailer', label:'Half-trailer',    levy: 120_000 },
+  { id:'trailer',     label:'Trailer',         levy: 150_000 },
+  // Fuel levy (collected at customs, not filed individually):
+  // Petrol / Gas oil: 15% of CIF value · Law 013/2025 Art. 2(1)
 ];
 
 // ───── Rwanda CGT / tax rates by asset class ──────────────────

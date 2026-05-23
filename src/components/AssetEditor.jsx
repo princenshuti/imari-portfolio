@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import {
   CLASSES, CURRENCIES, COUNTRIES,
   RWANDA_PROVINCES, RWANDA_DISTRICTS,
+  VEHICLE_CATEGORIES,
   suggestValue, fmt, id,
 } from '../data.js';
 import { Field, Input, inputStyle } from './Field.jsx';
@@ -140,8 +141,9 @@ export default function AssetEditor({ asset, onSave, onCancel }) {
     wallet:        asset.wallet        || '',
     grams:         asset.grams         ?? '',
     stakePct:      asset.stakePct      ?? '',
-    debtor:        asset.debtor        || '',
-    dueDate:       asset.dueDate       || '',
+    debtor:          asset.debtor          || '',
+    dueDate:         asset.dueDate         || '',
+    vehicleCategory: asset.vehicleCategory || 'car',
     // ── NEW fields ──────────────────────────────────────────
     location: asset.location || {
       country: 'Rwanda', province: '', district: '',
@@ -337,6 +339,17 @@ export default function AssetEditor({ asset, onSave, onCancel }) {
           {cls.fields.includes('chassis') && (
             <Field label="Chassis / VIN" hint="From the vehicle logbook">
               <Input value={a.chassis} onChange={v => update('chassis', v)} placeholder="e.g. JTMBD33V585012345" />
+            </Field>
+          )}
+          {cls.fields.includes('vehicleCategory') && (
+            <Field label="Vehicle category" hint="Road levy · Law 013/2025">
+              <select value={a.vehicleCategory} onChange={e => update('vehicleCategory', e.target.value)} style={inputStyle}>
+                {VEHICLE_CATEGORIES.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.label} — RWF {c.levy.toLocaleString()} / yr
+                  </option>
+                ))}
+              </select>
             </Field>
           )}
           {cls.fields.includes('count') && (
