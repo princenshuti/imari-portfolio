@@ -96,7 +96,7 @@ export default function Login({ pendingInvite }) {
           fontFamily:'Instrument Serif, serif', fontSize: 28, marginBottom: 18,
         }}>●</div>
         <div className="font-serif" style={{ fontSize: 32, lineHeight: 1.1, letterSpacing:'-0.02em' }}>
-          {mode === 'signin' ? 'Welcome back.' : mode === 'signup' ? 'Create your account.' : 'Reset your password.'}
+          {mode === 'signin' ? 'Welcome to Imali.' : mode === 'signup' ? 'Create your account.' : 'Reset your password.'}
         </div>
         <div className="muted" style={{ fontSize: 13, marginTop: 6, marginBottom: 22, lineHeight: 1.5 }}>
           {mode === 'forgot'
@@ -104,7 +104,7 @@ export default function Login({ pendingInvite }) {
             : pendingInvite
               ? `You've been invited as a ${pendingInvite.role}. Sign in or create an account with ${pendingInvite.email} to join the portfolio.`
               : mode === 'signin'
-                ? 'Sign in to access your portfolio.'
+                ? 'Sign in or create an account to access your portfolio.'
                 : 'Imari encrypts your password and stores it securely on Supabase.'}
         </div>
 
