@@ -157,7 +157,7 @@ export default function Login({ pendingInvite }) {
             Powered by
           </div>
           <img
-            src="/maxventures-logo.png"
+            src={`${import.meta.env.BASE_URL}maxventures-logo.png`}
             alt="Maxventures"
             style={{ width: 120, opacity: 0.85, display: 'inline-block' }}
           />
