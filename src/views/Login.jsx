@@ -17,8 +17,17 @@ export default function Login({ pendingInvite }) {
     setLoading(true); setError(null); setMessage(null);
     try {
       if (mode === 'forgot') {
-        await resetPassword(email);
-        setMessage('Check your email for a password reset link.');
+        try {
+          await resetPassword(email);
+          setMessage('If an account exists for that email, a reset link has been sent. Check your inbox.');
+        } catch (resetErr) {
+          const m = resetErr.message || '';
+          if (m.toLowerCase().includes('rate limit') || m.toLowerCase().includes('email rate')) {
+            setError('Too many reset attempts. Please wait a few minutes and try again.');
+          } else {
+            setError('Unable to send reset email. Please double-check the address and try again.');
+          }
+        }
         return;
       }
       if (mode === 'signin') {

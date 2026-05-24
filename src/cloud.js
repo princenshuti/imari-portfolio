@@ -20,7 +20,8 @@ export async function signIn(email, password) {
 
 export async function resetPassword(email) {
   if (!supabase) throw new Error('Auth not configured');
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  const redirectTo = `${window.location.origin}${window.location.pathname}`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw error;
 }
 
