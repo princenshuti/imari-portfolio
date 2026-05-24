@@ -152,8 +152,15 @@ export default function Login({ pendingInvite }) {
           )}
         </div>
 
-        <div className="muted" style={{ fontSize: 10.5, marginTop: 24, textAlign:'center', lineHeight: 1.5 }}>
-          Imali — Powered by Maxventures
+        <div style={{ marginTop: 24, textAlign:'center' }}>
+          <div className="muted" style={{ fontSize: 10, marginBottom: 8, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            Powered by
+          </div>
+          <img
+            src="/maxventures-logo.png"
+            alt="Maxventures"
+            style={{ width: 120, opacity: 0.85, display: 'inline-block' }}
+          />
         </div>
       </div>
     </div>
