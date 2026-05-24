@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { signIn, signUp, isConfigured } from '../cloud.js';
+import { signIn, signUp, resetPassword, isConfigured } from '../cloud.js';
 
 export default function Login({ pendingInvite }) {
   const [mode, setMode] = useState('signin');
@@ -10,10 +10,17 @@ export default function Login({ pendingInvite }) {
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
 
+  const switchMode = (next) => { setMode(next); setError(null); setMessage(null); };
+
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true); setError(null); setMessage(null);
     try {
+      if (mode === 'forgot') {
+        await resetPassword(email);
+        setMessage('Check your email for a password reset link.');
+        return;
+      }
       if (mode === 'signin') {
         await signIn(email, password);
       } else {
@@ -80,42 +87,64 @@ export default function Login({ pendingInvite }) {
           fontFamily:'Instrument Serif, serif', fontSize: 28, marginBottom: 18,
         }}>●</div>
         <div className="font-serif" style={{ fontSize: 32, lineHeight: 1.1, letterSpacing:'-0.02em' }}>
-          {mode === 'signin' ? 'Welcome back.' : 'Create your account.'}
+          {mode === 'signin' ? 'Welcome back.' : mode === 'signup' ? 'Create your account.' : 'Reset your password.'}
         </div>
         <div className="muted" style={{ fontSize: 13, marginTop: 6, marginBottom: 22, lineHeight: 1.5 }}>
-          {pendingInvite
-            ? `You've been invited as a ${pendingInvite.role}. Sign in or create an account with ${pendingInvite.email} to join the portfolio.`
-            : mode === 'signin'
-              ? 'Sign in to access your portfolio.'
-              : 'Imari encrypts your password and stores it securely on Supabase.'}
+          {mode === 'forgot'
+            ? "Enter your email and we'll send you a link to reset your password."
+            : pendingInvite
+              ? `You've been invited as a ${pendingInvite.role}. Sign in or create an account with ${pendingInvite.email} to join the portfolio.`
+              : mode === 'signin'
+                ? 'Sign in to access your portfolio.'
+                : 'Imari encrypts your password and stores it securely on Supabase.'}
         </div>
 
         <form onSubmit={submit} className="col" style={{ gap: 12 }}>
           <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
             placeholder="you@example.com" autoComplete="email" style={inputStyle}
             disabled={!!pendingInvite?.email} />
-          <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-            placeholder={mode === 'signup' ? 'At least 6 characters' : 'Password'}
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} style={inputStyle} />
+          {mode !== 'forgot' && (
+            <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+              placeholder={mode === 'signup' ? 'At least 6 characters' : 'Password'}
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} style={inputStyle} />
+          )}
+
+          {mode === 'signin' && (
+            <div style={{ textAlign:'right', marginTop: -4 }}>
+              <span onClick={() => switchMode('forgot')}
+                style={{ fontSize: 12, color:'var(--brand)', cursor:'pointer' }}>
+                Forgot password?
+              </span>
+            </div>
+          )}
 
           {error   && <div style={{ padding: 10, borderRadius: 8, background:'var(--down-soft)', color:'var(--down)', fontSize: 12.5 }}>{error}</div>}
           {message && <div style={{ padding: 10, borderRadius: 8, background:'var(--up-soft)',   color:'var(--up)',   fontSize: 12.5 }}>{message}</div>}
 
           <button type="submit" disabled={loading} className="btn btn-primary" style={{ width:'100%', marginTop: 6 }}>
-            {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in →' : 'Create account →'}
+            {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in →' : mode === 'forgot' ? 'Send reset link →' : 'Create account →'}
           </button>
         </form>
 
         <div style={{ marginTop: 18, textAlign:'center', fontSize: 12.5 }}>
-          <span className="muted">{mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}</span>{' '}
-          <span onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); setMessage(null); }}
-            style={{ color:'var(--brand)', cursor:'pointer', fontWeight: 500 }}>
-            {mode === 'signin' ? 'Create one' : 'Sign in'}
-          </span>
+          {mode === 'forgot' ? (
+            <>
+              <span className="muted">Remember your password?</span>{' '}
+              <span onClick={() => switchMode('signin')} style={{ color:'var(--brand)', cursor:'pointer', fontWeight: 500 }}>Sign in</span>
+            </>
+          ) : (
+            <>
+              <span className="muted">{mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}</span>{' '}
+              <span onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
+                style={{ color:'var(--brand)', cursor:'pointer', fontWeight: 500 }}>
+                {mode === 'signin' ? 'Create one' : 'Sign in'}
+              </span>
+            </>
+          )}
         </div>
 
         <div className="muted" style={{ fontSize: 10.5, marginTop: 24, textAlign:'center', lineHeight: 1.5 }}>
-          Passwords are hashed with bcrypt by Supabase Auth. Your portfolio data is protected by per-user Row Level Security.
+          Imali — Powered by Maxventures
         </div>
       </div>
     </div>

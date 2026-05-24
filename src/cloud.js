@@ -18,6 +18,12 @@ export async function signIn(email, password) {
   return data;
 }
 
+export async function resetPassword(email) {
+  if (!supabase) throw new Error('Auth not configured');
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) throw error;
+}
+
 export async function signOut() {
   if (!supabase) return;
   await supabase.auth.signOut();
