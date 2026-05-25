@@ -4,9 +4,24 @@ import { FX, SEED_ASSETS } from './data.js';
 export { isConfigured };
 
 // ─── Auth ─────────────────────────────────────────────────────
+
+// Always redirect back to the deployed app — never rely on Supabase's
+// Site URL setting alone. Works on both localhost and production.
+function appRedirectURL() {
+  const origin = window.location.origin;
+  // On GitHub Pages the app lives under /imari-portfolio/
+  // On localhost (Vite) it lives under /imari-portfolio/ too (base config)
+  const base = import.meta.env.BASE_URL || '/';
+  return `${origin}${base}`;
+}
+
 export async function signUp(email, password) {
   if (!supabase) throw new Error('Auth not configured');
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: appRedirectURL() },
+  });
   if (error) throw error;
   return data;
 }
@@ -20,8 +35,9 @@ export async function signIn(email, password) {
 
 export async function resetPassword(email) {
   if (!supabase) throw new Error('Auth not configured');
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: appRedirectURL(),
+  });
   if (error) throw error;
 }
 
