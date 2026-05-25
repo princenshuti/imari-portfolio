@@ -77,7 +77,7 @@ const FEATURES = [
   { icon: 'spark',  accent: 'var(--brand)', title: 'An advisor that knows your numbers',
     desc: 'Ask anything. The AI advisor reads your own portfolio first, then answers in context — grounded in your actual money, not generic web advice.' },
   { icon: 'doc',    accent: 'var(--plum)',  title: 'RRA-ready, all year round',
-    desc: 'Imari estimates your tax year-round using official RRA depreciation rules (5% buildings & machinery, 25% other business assets, 50% computers; land and fine arts not depreciated). Export a clean report when April comes — no scrambling.' },
+    desc: 'Imari calculates your RRA obligations as you go — Fixed Asset Tax (0.1% on property above RWF 3M), Vehicle Road Levy (per Law 013/2025), Capital Gains Tax (5% on realised gains) and Withholding Tax (15% on investment income). Export a clean year-end summary, ready to file by 31 March.' },
 ];
 
 const TRUST = [
