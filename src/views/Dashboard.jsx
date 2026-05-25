@@ -8,6 +8,7 @@ import { AreaChart, PortfolioChart, BenchmarkBar, Donut } from '../components/ch
 import { TrendCard } from '../components/Field.jsx';
 import AssetIcon from '../components/AssetIcon.jsx';
 import { filterByRange, calcReturn } from '../services/snapshots.js';
+import { useMarket } from '../contexts/MarketContext.jsx';
 
 // ─── Asset classification ──────────────────────────────────────────────────
 // Liquid = cash or near-cash (withdrawable same-day)
@@ -569,6 +570,11 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReord
 export default function DashboardView({ state, dispatch }) {
   const { profile, assets, snapshots = [], goals = [], liabilities = [], cashflows = [] } = state;
   const today = new Date();
+
+  // Live market overrides for the "Markets you watch" watchlist. Reads from the
+  // same context Trends uses, so USD/RWF (and crypto, gold, S&P) shows the same
+  // value here and there — no more 1300-vs-1463 mismatch.
+  const { overrides: marketOverrides } = useMarket();
 
   // ── Core portfolio stats ──────────────────────────────────────
   const stats = useMemo(() => {
@@ -1345,7 +1351,7 @@ export default function DashboardView({ state, dispatch }) {
           }}>See all trends →</button>
         </div>
         <div className="dash-grid-4">
-          {watchlist.map(d => <TrendCard key={d.id} d={d} />)}
+          {watchlist.map(d => <TrendCard key={d.id} d={d} override={marketOverrides[d.id]} />)}
         </div>
       </div>
     ),

@@ -388,19 +388,9 @@ export default function App() {
     return () => { aborted = true; };
   }, [session?.user?.id]);
 
-  // ─ Prime BNR exchange rates after sign-in ─────────────────
-  // Loads asymmetric buying/selling rates into LIVE_FX so converters use
-  // BNR official rates instead of the symmetric manual fallback. Cached in
-  // sessionStorage — re-runs cost ~nothing on subsequent boots.
-  useEffect(() => {
-    if (!session?.user) return;
-    import('./services/market.js')
-      .then(({ fetchMarket }) => fetchMarket())
-      .catch(err => {
-        // Surface in dev so silent FX fallbacks are diagnosable
-        if (import.meta.env.DEV) console.warn('BNR prime failed:', err);
-      });
-  }, [session?.user?.id]);
+  // Live FX / market data is owned by MarketProvider in main.jsx — it fetches
+  // on app mount, primes LIVE_FX so converters use BNR rates, and exposes
+  // useMarket() to consumers. App.jsx no longer needs to prime independently.
 
   // ─ Subscribe to realtime updates ──────────────────────────
   useEffect(() => {

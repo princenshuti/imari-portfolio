@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { CURRENCIES, MILESTONES, LIVE_FX } from '../data.js';
-import { fetchMarket } from '../services/market.js';
+import { useMarket } from '../contexts/MarketContext.jsx';
 import { exportJSON, importJSONFile } from '../store.js';
 import { getApiKey, setApiKey, hasEnvKey } from '../ai.js';
 import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, isConfigured } from '../cloud.js';
@@ -281,17 +281,11 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
   const [apiKey, setApiKeyLocal]      = useState(getApiKey());
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const [bnrInfo, setBnrInfo]         = useState(null); // { date, rates: {USD:{buy,sell,avg}, ...} }
-
-  // Refresh BNR rates info on mount (sessionStorage cache makes this near-free).
-  useEffect(() => {
-    let cancelled = false;
-    fetchMarket().then(m => {
-      if (cancelled || !m?.bnrRates) return;
-      setBnrInfo({ date: m.fxAsOf, rates: m.bnrRates, source: m.fxSource });
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
+  // BNR rate info derived from the shared MarketContext — no duplicate fetch.
+  const { market } = useMarket();
+  const bnrInfo = market?.bnrRates
+    ? { date: market.fxAsOf, rates: market.bnrRates, source: market.fxSource }
+    : null;
 
   const handleAvatarFile = async (file) => {
     if (!file) return;

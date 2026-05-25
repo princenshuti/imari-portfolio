@@ -1,52 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { TREND_DOMAINS, KIGALI_NEIGHBOURHOODS, fmt } from '../data.js';
 import { TrendCard } from '../components/Field.jsx';
-import { fetchMarket } from '../services/market.js';
-
-/** Build a per-domain live override from the market.js result. */
-function buildOverrides(market) {
-  if (!market) return {};
-  const fetchedAt = market.fetchedAt ?? null;
-
-  const overrides = {};
-
-  if (market.usdRwf && market.usdRwfLive) {
-    overrides['usdrwf'] = {
-      value: market.usdRwf, change: null, live: true, fetchedAt,
-      source: 'ExchangeRate-API · updated every 24h · BNR-tracked rate',
-    };
-  }
-
-  if (market.goldUsd && market.goldUsdLive) {
-    overrides['gold'] = {
-      value: market.goldUsd, change: null, live: true, fetchedAt,
-      source: 'metals.live · XAU/USD spot price',
-    };
-  }
-
-  if (market.btcUsd && market.btcLive) {
-    overrides['btc'] = {
-      value: market.btcUsd, change: market.btcChange, live: true, fetchedAt,
-      source: 'CoinGecko · real-time',
-    };
-  }
-
-  if (market.ethUsd && market.ethLive) {
-    overrides['eth'] = {
-      value: market.ethUsd, change: market.ethChange, live: true, fetchedAt,
-      source: 'CoinGecko · real-time',
-    };
-  }
-
-  if (market.sp500 && market.sp500Live) {
-    overrides['sp500'] = {
-      value: market.sp500, change: market.sp500Change, live: true, fetchedAt,
-      source: 'Yahoo Finance · last close',
-    };
-  }
-
-  return overrides;
-}
+import { useMarket } from '../contexts/MarketContext.jsx';
 
 /** Count live domains from a given overrides map */
 function countLive(overrides) {
@@ -54,27 +9,10 @@ function countLive(overrides) {
 }
 
 export default function TrendsView() {
-  const [market,    setMarket]    = useState(null);
-  const [overrides, setOverrides] = useState({});
-  const [status,    setStatus]    = useState('loading'); // 'loading' | 'done' | 'error'
-  const [fetchedAt, setFetchedAt] = useState(null);
-
-  const [errorMsg, setErrorMsg] = useState(null);
-  const load = useCallback(async (force = false) => {
-    setStatus('loading'); setErrorMsg(null);
-    try {
-      const m = await fetchMarket(force);
-      setMarket(m);
-      setOverrides(buildOverrides(m));
-      setFetchedAt(m.fetchedAt ? new Date(m.fetchedAt) : new Date());
-      setStatus('done');
-    } catch (e) {
-      setErrorMsg(e?.message || 'Could not reach market data sources.');
-      setStatus('error');
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+  // Single source of truth — same `overrides` map Dashboard's watchlist reads from.
+  // No more divergent USD/RWF rates between views.
+  const { overrides, status, error: errorMsg, fetchedAt, refresh } = useMarket();
+  const load = refresh;
 
   const groups = useMemo(() => {
     const out = {};
