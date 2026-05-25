@@ -44,7 +44,7 @@ function buildOverrides(market) {
       live: true,
       fetchedAt,
       source: bnrUSD
-        ? 'BNR official daily rate · buying / mid / selling spread'
+        ? 'BNR official daily rate · buying & selling spread'
         : 'ExchangeRate-API · updated every 24h · BNR-tracked rate',
       spread: bnrUSD ?? null,  // { buy, sell, avg, date } when from BNR
     };

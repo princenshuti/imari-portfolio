@@ -129,46 +129,59 @@ export function TrendCard({ d, big = false, override = null }) {
         </div>
       </div>
 
-      <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
-        <div className="font-serif num" style={{
-          fontSize: big ? 28 : 20,
-          letterSpacing: '-0.02em',
-          lineHeight: 1,
-        }}>
-          {d.unit === '$' ? '$' : ''}
-          {(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: override?.spread ? 4 : 2 })}
-          {d.unit && d.unit !== '$' ? d.unit : ''}
-        </div>
-        {hasChange && (
-          <div className="num" style={{
-            fontSize: 11, fontWeight: 600,
-            color: isUp ? 'var(--up-ink)' : 'var(--down-ink)',
-          }}>
-            <span aria-hidden="true">{isUp ? '▲' : '▼'}</span> {Math.abs(change).toFixed(2)}{d.unit === '%' ? 'pp' : '%'}
-          </div>
-        )}
-        {!hasChange && !override?.spread && kind === 'live' && (
-          <div className="muted" style={{ fontSize: 10 }}>live rate</div>
-        )}
-        {override?.spread && (
-          <div className="muted" style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            mid
-          </div>
-        )}
-      </div>
-
-      {/* BNR buy/sell spread — shown only when MarketContext attached spread data.
-          App uses BUY rate for foreign→RWF conversions, SELL rate for RWF→foreign,
-          so surfacing both makes the conversion math transparent. */}
-      {override?.spread && (
+      {override?.spread ? (
+        // BNR FX card: Buy / Sell side-by-side as the primary display.
+        // No "mid" rate shown — Buy is what the app uses for foreign→RWF totals,
+        // Sell is what it uses for RWF→foreign payouts (see toBase/fromBase in data.js).
         <div
-          className="num"
-          style={{ marginTop: 6, fontSize: 11, color: 'var(--ink-3)', display: 'flex', gap: 10, flexWrap: 'wrap' }}
-          title="Buy = bank buys foreign currency from you; Sell = bank sells foreign currency to you. Imari uses Buy for foreign→RWF totals and Sell for RWF→foreign payouts."
+          style={{ display: 'flex', gap: big ? 28 : 20, alignItems: 'flex-end' }}
+          title="Buy = bank buys foreign currency from you. Sell = bank sells foreign currency to you. Imari uses Buy for foreign→RWF totals and Sell for RWF→foreign payouts."
         >
-          <span>Buy <strong style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{override.spread.buy.toLocaleString('en-US', { maximumFractionDigits: 4 })}</strong></span>
-          <span style={{ opacity: 0.4 }} aria-hidden="true">·</span>
-          <span>Sell <strong style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{override.spread.sell.toLocaleString('en-US', { maximumFractionDigits: 4 })}</strong></span>
+          <div>
+            <div className="muted" style={{
+              fontSize: 9.5, fontWeight: 600, letterSpacing: '0.08em',
+              textTransform: 'uppercase', marginBottom: 3, color: 'var(--ink-3)',
+            }}>Buy</div>
+            <div className="font-serif num" style={{
+              fontSize: big ? 24 : 18, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)',
+            }}>
+              {override.spread.buy.toLocaleString('en-US', { maximumFractionDigits: 4 })}
+            </div>
+          </div>
+          <div>
+            <div className="muted" style={{
+              fontSize: 9.5, fontWeight: 600, letterSpacing: '0.08em',
+              textTransform: 'uppercase', marginBottom: 3, color: 'var(--ink-3)',
+            }}>Sell</div>
+            <div className="font-serif num" style={{
+              fontSize: big ? 24 : 18, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)',
+            }}>
+              {override.spread.sell.toLocaleString('en-US', { maximumFractionDigits: 4 })}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
+          <div className="font-serif num" style={{
+            fontSize: big ? 28 : 20,
+            letterSpacing: '-0.02em',
+            lineHeight: 1,
+          }}>
+            {d.unit === '$' ? '$' : ''}
+            {(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+            {d.unit && d.unit !== '$' ? d.unit : ''}
+          </div>
+          {hasChange && (
+            <div className="num" style={{
+              fontSize: 11, fontWeight: 600,
+              color: isUp ? 'var(--up-ink)' : 'var(--down-ink)',
+            }}>
+              <span aria-hidden="true">{isUp ? '▲' : '▼'}</span> {Math.abs(change).toFixed(2)}{d.unit === '%' ? 'pp' : '%'}
+            </div>
+          )}
+          {!hasChange && kind === 'live' && (
+            <div className="muted" style={{ fontSize: 10 }}>live rate</div>
+          )}
         </div>
       )}
 
