@@ -1,12 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabase.js';
 
-export default function ResetPassword({ onDone }) {
+export default function ResetPassword({ onDone, session }) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [ready, setReady] = useState(!!session);
+
+  // Wait for the recovery session to arrive if not yet available
+  useEffect(() => {
+    if (session) { setReady(true); return; }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && s) {
+        setReady(true);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [session]);
 
   const inputStyle = {
     width: '100%', padding: '12px 14px', borderRadius: 9, border: '1px solid var(--line)',
@@ -50,7 +62,11 @@ export default function ResetPassword({ onDone }) {
           Choose a strong password for your Imali account.
         </div>
 
-        {success ? (
+        {!ready ? (
+          <div style={{ padding: 14, borderRadius: 10, background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 13, textAlign: 'center' }}>
+            Verifying your reset link…
+          </div>
+        ) : success ? (
           <div style={{ padding: 14, borderRadius: 10, background: 'var(--up-soft)', color: 'var(--up)', fontSize: 13, textAlign: 'center' }}>
             ✅ Password updated! Signing you in…
           </div>
@@ -78,6 +94,7 @@ export default function ResetPassword({ onDone }) {
             </button>
           </form>
         )}
+
 
         <div style={{ marginTop: 24, textAlign: 'center' }}>
           <div className="muted" style={{ fontSize: 10, marginBottom: 8, letterSpacing: '0.04em', textTransform: 'uppercase' }}>

@@ -221,7 +221,12 @@ function clearInviteFromURL() {
 
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = loading
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  // Detect recovery token immediately from URL hash — don't wait for onAuthStateChange
+  // which fires after useEffect (too late, causes a Login flash or missed event).
+  const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
+    const h = window.location.hash;
+    return h.includes('type=recovery') || h.includes('type=signup');
+  });
   const [pendingInvite, setPendingInvite] = useState(null);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
   const [state, dispatch] = useReducer(reducer, null, () => {
@@ -285,7 +290,8 @@ export default function App() {
     }
     getSession().then(s => {
       setSession(s);
-      if (!s) setStateReady(true); // logged out — local state is authoritative
+      // Don't mark stateReady if we're in recovery mode — wait for the recovery session
+      if (!s && !window.location.hash.includes('type=recovery')) setStateReady(true);
     });
     const unsub = onAuthStateChange((s, event) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -467,7 +473,7 @@ export default function App() {
   // stateReady === false   → logged in but portfolio still loading from cloud
   // profile.name empty     → need onboarding name
   if (session === undefined) return <FullScreenLoader message="Checking session…" />;
-  if (isRecoveryMode) return <ResetPassword onDone={() => { setIsRecoveryMode(false); }} />;
+  if (isRecoveryMode) return <ResetPassword session={session} onDone={() => { setIsRecoveryMode(false); }} />;
   if (isConfigured && !session) return <Login pendingInvite={pendingInvite} />;
   if (!stateReady) return <FullScreenLoader message="Loading your portfolio…" />;
 
