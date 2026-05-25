@@ -49,6 +49,9 @@ function Icon({ name }) {
     case 'clock': return (
       <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
     );
+    case 'scales': return (
+      <svg {...common}><path d="M12 3v18M5 21h14M5 7h14M5 7l-3 7a4 4 0 0 0 6 0L5 7Zm14 0-3 7a4 4 0 0 0 6 0l-3-7Z"/></svg>
+    );
     default: return null;
   }
 }
@@ -66,7 +69,7 @@ const FEATURES = [
   { icon: 'wallet', accent: 'var(--brand)', title: 'Every account, one live balance',
     desc: 'Bank, MoMo, USD, cash — all visible at once. Log income or an expense and the linked balance updates itself. No reconciliation, no stale spreadsheet.' },
   { icon: 'cube',   accent: 'var(--gold)',  title: 'Beyond accounts — everything you own',
-    desc: 'Land, bonds, shares, livestock, vehicles, receivables. Valued in RWF, USD or both, with official BNR rates baked in so the total is honest.' },
+    desc: 'Land, bonds, shares, livestock, vehicles, receivables. Your estimated values, converted to RWF or USD at official BNR rates — so the totals stay consistent across currencies.' },
   { icon: 'target', accent: 'var(--clay)',  title: 'Debts cleared, goals reached',
     desc: 'Loans tracked beside the house you are saving for. Straight math on what you owe and how close you really are — not motivational fluff.' },
   { icon: 'flow',   accent: 'var(--sky)',   title: 'See where your money goes',
@@ -74,7 +77,7 @@ const FEATURES = [
   { icon: 'spark',  accent: 'var(--brand)', title: 'An advisor that knows your numbers',
     desc: 'Ask anything. The AI advisor reads your own portfolio first, then answers in context — grounded in your actual money, not generic web advice.' },
   { icon: 'doc',    accent: 'var(--plum)',  title: 'RRA-ready, all year round',
-    desc: 'Imari estimates your tax as you earn, not the week before the deadline. Export a clean report when April comes — no scrambling.' },
+    desc: 'Imari estimates your tax year-round using official RRA depreciation rules (5% buildings & machinery, 25% other business assets, 50% computers; land and fine arts not depreciated). Export a clean report when April comes — no scrambling.' },
 ];
 
 const TRUST = [
@@ -147,9 +150,10 @@ export default function Landing({ onSignIn }) {
           </h1>
           <p className="landing-sub">
             If your money is spread across banks, MoMo, USD cash, land and a few investments,
-            you are estimating your net worth — not knowing it. Imari ends the guesswork: every
-            account and every asset in one live picture, in RWF and USD, showing exactly where
-            you stand today and whether you are ahead of last quarter.
+            you are estimating your net worth in your head — and usually getting it wrong.
+            Imari ends the guesswork: every account and every asset in one live picture, in RWF
+            and USD, based on the values you enter — so you can see where you stand today and
+            whether you are ahead of last quarter.
           </p>
           <div className="landing-hero-ctas">
             <button onClick={goSignup} className="btn btn-primary landing-cta">
@@ -276,6 +280,21 @@ export default function Landing({ onSignIn }) {
               </div>
             </article>
           ))}
+
+          {/* Featured honesty card — spans both columns, addresses valuation credibility head-on */}
+          <article className="landing-trust-card landing-trust-card--featured">
+            <div className="landing-trust-icon"><Icon name="scales" /></div>
+            <div>
+              <h3 className="landing-trust-title">Estimates, not market quotes</h3>
+              <p className="landing-trust-desc">
+                Imari does the math on what you enter. For property, vehicles, livestock and
+                unlisted assets, valuations stay as <strong>your estimates</strong> — we never
+                pretend to know real-time market prices. Depreciation follows official RRA rules.
+                BNR rates handle FX. We are honest about what can be known precisely, and what
+                cannot.
+              </p>
+            </div>
+          </article>
         </div>
 
         <div className="landing-trust-foot">

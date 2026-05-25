@@ -1108,6 +1108,23 @@ input:focus, select:focus, textarea:focus {
   color: var(--ink-3);
   margin: 0;
 }
+/* Featured trust card — spans full grid width, gold accent for emphasis.
+   Used for the valuation-honesty card: legally important, deserves weight. */
+.landing-trust-card--featured {
+  grid-column: 1 / -1;
+  background: var(--gold-softer);
+  border-color: var(--gold-soft);
+}
+.landing-trust-card--featured .landing-trust-icon {
+  background: var(--gold-soft);
+  color: var(--gold);
+  border-color: var(--gold-soft);
+}
+.landing-trust-card--featured .landing-trust-desc strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .landing-trust-foot {
   display: flex;
   align-items: center;
