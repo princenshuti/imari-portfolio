@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { CURRENCIES, MILESTONES } from '../data.js';
+import { CURRENCIES, MILESTONES, LIVE_FX } from '../data.js';
+import { fetchMarket } from '../services/market.js';
 import { exportJSON, importJSONFile } from '../store.js';
 import { getApiKey, setApiKey, hasEnvKey } from '../ai.js';
 import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, isConfigured } from '../cloud.js';
@@ -68,18 +69,26 @@ function MembersSection({ portfolioId, role, session }) {
       await refresh();
       // Auto-copy invite link
       const link = `${window.location.origin}${window.location.pathname}?invite=${inv.token}`;
-      navigator.clipboard.writeText(link).catch(() => {});
-      setCopiedToken(inv.token);
-      setTimeout(() => setCopiedToken(null), 3000);
+      try {
+        await navigator.clipboard.writeText(link);
+        setCopiedToken(inv.token);
+        setTimeout(() => setCopiedToken(null), 3000);
+      } catch {
+        // Clipboard unavailable (http context, permissions) — invite still created, just not auto-copied
+      }
     } catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
 
-  const copyLink = (token) => {
+  const copyLink = async (token) => {
     const link = `${window.location.origin}${window.location.pathname}?invite=${token}`;
-    navigator.clipboard.writeText(link);
-    setCopiedToken(token);
-    setTimeout(() => setCopiedToken(null), 2500);
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(null), 2500);
+    } catch {
+      setError('Could not copy to clipboard. Long-press the link to copy manually: ' + link);
+    }
   };
 
   const handleRoleChange = async (memberId, newRole) => {
@@ -272,6 +281,17 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
   const [apiKey, setApiKeyLocal]      = useState(getApiKey());
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [bnrInfo, setBnrInfo]         = useState(null); // { date, rates: {USD:{buy,sell,avg}, ...} }
+
+  // Refresh BNR rates info on mount (sessionStorage cache makes this near-free).
+  useEffect(() => {
+    let cancelled = false;
+    fetchMarket().then(m => {
+      if (cancelled || !m?.bnrRates) return;
+      setBnrInfo({ date: m.fxAsOf, rates: m.bnrRates, source: m.fxSource });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const handleAvatarFile = async (file) => {
     if (!file) return;
@@ -523,10 +543,38 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         )}
       </Section>
 
-      <Section title="Exchange rates" subtitle="Edit if the FX values look off. All amounts convert via these rates.">
+      <Section title="Exchange rates" subtitle="Auto-synced daily from the National Bank of Rwanda. Your manual values below are used only as a fallback.">
+        {bnrInfo?.date && bnrInfo?.source === 'bnr' && (
+          <div style={{
+            display:'flex', alignItems:'center', gap:10, marginBottom:14,
+            padding:'10px 14px', borderRadius:10,
+            background:'color-mix(in oklab, var(--up) 10%, var(--paper))',
+            border:'1px solid color-mix(in oklab, var(--up) 22%, transparent)',
+          }}>
+            <div style={{ width:8, height:8, borderRadius:'50%', background:'var(--up)', flexShrink:0 }} />
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:'var(--up)' }}>
+                BNR rates · as of {bnrInfo.date}
+              </div>
+              <div className="muted" style={{ fontSize:11, marginTop:4, fontFamily:'Geist Mono, monospace' }}>
+                {Object.entries(bnrInfo.rates).map(([c, r]) =>
+                  `${c}: buy ${r.buy.toFixed(2)} / sell ${r.sell.toFixed(2)}`
+                ).join('  ·  ')}
+              </div>
+              <div className="muted" style={{ fontSize:10, marginTop:4, lineHeight:1.5 }}>
+                Buying rate values foreign → RWF · selling rate values RWF → foreign.
+              </div>
+            </div>
+          </div>
+        )}
+        {bnrInfo?.source && bnrInfo.source !== 'bnr' && (
+          <div className="muted" style={{ fontSize:11, marginBottom:14 }}>
+            BNR feed unavailable — using {bnrInfo.source} as fallback.
+          </div>
+        )}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap: 12 }}>
           {CURRENCIES.filter(c => c.code !== 'RWF').map(c => (
-            <Field key={c.code} label={`1 ${c.code} = ? RWF`} hint={c.label}>
+            <Field key={c.code} label={`1 ${c.code} = ? RWF`} hint={`${c.label} · manual override`}>
               <input type="number" value={fxLocal[c.code]} onChange={e => setFxLocal(s => ({ ...s, [c.code]: e.target.value }))}
                 style={{ ...inputStyle, fontFamily:'Geist Mono, monospace' }}/>
             </Field>

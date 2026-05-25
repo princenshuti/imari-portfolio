@@ -1,12 +1,24 @@
 // data.js — asset classes, valuation rules, currencies, trend data.
 
 // ───── Currencies + FX (RWF as base) ──────────────────────────
+// FX = manual / fallback rates (symmetric). Mutated by reducer when the user
+// edits rates in Settings; mirrors the per-portfolio `state.fx` map.
 export const FX = {
   RWF: 1,
   USD: 1380,
   EUR: 1490,
   KES: 10.7,
 };
+
+// LIVE_FX = asymmetric rates from BNR (populated by market.js once per session).
+// Shape: { USD: { buy, sell, avg, date }, ... }. RWF is implicit (1).
+// Convention: BNR buying rate values foreign→RWF; selling rate values RWF→foreign.
+export const LIVE_FX = {};
+
+export function setLiveFX(rates) {
+  for (const k of Object.keys(LIVE_FX)) delete LIVE_FX[k];
+  Object.assign(LIVE_FX, rates || {});
+}
 
 export const CURRENCIES = [
   { code:'RWF', symbol:'RWF', label:'Rwandan Franc',  flag:'🇷🇼' },
@@ -15,11 +27,17 @@ export const CURRENCIES = [
   { code:'KES', symbol:'KSh', label:'Kenyan Shilling',flag:'🇰🇪' },
 ];
 
+// foreign → RWF: BNR will *buy* foreign currency at the buying rate.
 export function toBase(amount, currency) {
-  return amount * (FX[currency] ?? 1);
+  if (currency === 'RWF') return amount;
+  const live = LIVE_FX[currency]?.buy;
+  return amount * (live ?? FX[currency] ?? 1);
 }
+// RWF → foreign: BNR will *sell* foreign currency at the selling rate.
 export function fromBase(amountRWF, currency) {
-  return amountRWF / (FX[currency] ?? 1);
+  if (currency === 'RWF') return amountRWF;
+  const live = LIVE_FX[currency]?.sell;
+  return amountRWF / (live ?? FX[currency] ?? 1);
 }
 export function fmt(amount, currency = 'RWF', opts = {}) {
   if (amount == null || isNaN(amount)) return '—';
@@ -313,7 +331,13 @@ export const MOMO_PROVIDERS = [
   'Airtel Money',
 ];
 
-export function id() { return Math.random().toString(36).slice(2, 9); }
+// UUID v4 — collision-resistant (Math.random + 7 chars used to silently
+// overwrite rows via upsert when two ids collided).
+export function id() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Fallback for ancient environments
+  return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+}
 
 // ───── Liability types ─────────────────────────────────────────
 export const LIABILITY_TYPES = [

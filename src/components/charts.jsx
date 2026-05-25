@@ -68,9 +68,17 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
 
   const nwArr = snapshots.map(s => s.netWorth);
   const cbArr = snapshots.map(s => s.costBasis);
-  const allVals = [...nwArr, ...cbArr];
-  const minV = Math.min(...allVals) * 0.96;
-  const maxV = Math.max(...allVals) * 1.02;
+  // Avoid Math.min(...allVals) — spread of 800+ args risks the JS arg-count
+  // limit. Iterate explicitly.
+  let minV = Infinity, maxV = -Infinity;
+  for (let i = 0; i < nwArr.length; i++) {
+    if (nwArr[i] < minV) minV = nwArr[i];
+    if (nwArr[i] > maxV) maxV = nwArr[i];
+    if (cbArr[i] < minV) minV = cbArr[i];
+    if (cbArr[i] > maxV) maxV = cbArr[i];
+  }
+  minV *= 0.96;
+  maxV *= 1.02;
   const range = maxV - minV || 1;
 
   const xOf = (i) => PAD.l + (i / (snapshots.length - 1)) * CW;
@@ -90,15 +98,20 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
   const ticks = 4;
   const yTicks = Array.from({ length: ticks + 1 }, (_, i) => minV + (range * i) / ticks);
 
-  // X-axis — show every Nth label to avoid clutter
+  // X-axis — show every Nth label to avoid clutter.
+  // Use the original index from the source array (snapshots.indexOf was O(n²)).
   const xStep = Math.max(1, Math.floor(snapshots.length / 6));
-  const xLabels = snapshots
-    .filter((_, i) => i === 0 || i === snapshots.length - 1 || i % xStep === 0)
-    .map((s, _, arr) => ({
-      date: s.date,
-      x: xOf(snapshots.indexOf(s)),
-      label: new Date(s.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-    }));
+  const xLabels = [];
+  for (let i = 0; i < snapshots.length; i++) {
+    if (i === 0 || i === snapshots.length - 1 || i % xStep === 0) {
+      const s = snapshots[i];
+      xLabels.push({
+        date: s.date,
+        x: xOf(i),
+        label: new Date(s.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+      });
+    }
+  }
 
   const handleMouseMove = useCallback((e) => {
     const svg = svgRef.current;
@@ -121,7 +134,8 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
         style={{ width: '100%', height, display: 'block', overflow: 'visible', cursor: 'crosshair' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHover(null)}
-        aria-label="Portfolio growth chart"
+        role="img"
+        aria-label={`Portfolio growth chart — ${snapshots.length} data points from ${snapshots[0]?.date} to ${snapshots[snapshots.length-1]?.date}. Latest net worth ${fmtBase(snapshots[snapshots.length-1]?.netWorth, displayCurrency, { compact: true })}.`}
       >
         <defs>
           <linearGradient id="pcGradNW" x1="0" y1="0" x2="0" y2="1">

@@ -1,11 +1,6 @@
 import { CLASSES, fmt, fmtBase, suggestValue, toBase, yearsBetween } from '../data.js';
 import AssetIcon from './AssetIcon.jsx';
 
-const iconBtnStyle = {
-  width: 26, height: 26, borderRadius: 6, border: 0, background: 'transparent',
-  color: 'var(--ink-3)', cursor: 'pointer', fontSize: 14, padding: 0,
-};
-
 export default function AssetRow({ asset, displayCurrency, isSelected, onToggle, onEdit, onDelete }) {
   const cls = CLASSES.find(c => c.kind === asset.kind) || CLASSES[CLASSES.length - 1];
   const suggested = suggestValue(asset);
@@ -17,14 +12,16 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
 
   return (
     <div style={{
-      display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 60px',
+      display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
       alignItems:'center', padding: '14px 22px', gap: 12,
       background: isSelected ? 'color-mix(in oklab, var(--down) 6%, transparent)' : 'transparent',
       transition: 'background 0.15s',
     }}>
-      <input type="checkbox" checked={!!isSelected} onChange={onToggle}
+      <input
+        type="checkbox" checked={!!isSelected} onChange={onToggle}
         onClick={e => e.stopPropagation()}
-        style={{ cursor: 'pointer', accentColor: 'var(--down)', margin: 0 }}
+        aria-label={`Select ${asset.name}`}
+        style={{ cursor: 'pointer', accentColor: 'var(--down)', margin: 0, width: 18, height: 18 }}
       />
       <div className="row" style={{ gap: 12, minWidth: 0 }}>
         <AssetIcon kind={asset.kind} color={cls.color} size={38} />
@@ -62,17 +59,27 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
       </div>
 
       <div className="col" style={{ alignItems:'flex-end', gap: 2 }}>
-        <div className="num" style={{ fontSize: 12, fontWeight: 600, color: gain >= 0 ? 'var(--up)' : 'var(--down)' }}>
+        <div className="num" style={{ fontSize: 12, fontWeight: 600, color: gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)' }}>
           {gain >= 0 ? '+' : ''}{gainPct.toFixed(1)}%
         </div>
-        <div className="num" style={{ fontSize: 10, color: gain >= 0 ? 'var(--up)' : 'var(--down)' }}>
+        <div className="num" style={{ fontSize: 10, color: gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)' }}>
           {gain >= 0 ? '+' : ''}{fmt(gain, asset.currency, { compact: true })}
         </div>
       </div>
 
-      <div className="row" style={{ gap: 4, justifyContent:'flex-end' }}>
-        <button onClick={() => onEdit(asset)} title="Edit" style={iconBtnStyle}>✎</button>
-        <button onClick={() => onDelete(asset)} title="Delete" style={{ ...iconBtnStyle, color:'var(--down)' }}>×</button>
+      <div className="row" style={{ gap: 2, justifyContent:'flex-end' }}>
+        <button
+          type="button"
+          onClick={() => onEdit(asset)}
+          aria-label={`Edit ${asset.name}`}
+          className="btn-icon-sm"
+        ><span aria-hidden="true">✎</span></button>
+        <button
+          type="button"
+          onClick={() => onDelete(asset)}
+          aria-label={`Delete ${asset.name}`}
+          className="btn-icon-sm is-danger"
+        ><span aria-hidden="true">×</span></button>
       </div>
     </div>
   );

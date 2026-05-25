@@ -10,7 +10,7 @@ function renderMD(s) {
   return escapeHTML(s)
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code style="font-family:Geist Mono;font-size:0.92em;padding:1px 4px;background:var(--bg-2);border-radius:3px">$1</code>');
+    .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>');
 }
 
 function buildTemplates(assets, profile) {
@@ -121,16 +121,22 @@ function TemplateSidebar({ templates, onPick, disabled }) {
             </div>
             <div className="col" style={{ gap: 5 }}>
               {group.items.map((q, i) => (
-                <div key={i} onClick={() => !disabled && onPick(q)} style={{
-                  padding: '9px 11px', borderRadius: 8,
-                  background: 'var(--bg-2)', border:'1px solid transparent',
-                  cursor: disabled ? 'default' : 'pointer',
-                  fontSize: 12, color:'var(--ink-2)', lineHeight: 1.45,
-                  transition: 'all .12s', opacity: disabled ? 0.5 : 1,
-                }}
-                onMouseEnter={e => { if (disabled) return; e.currentTarget.style.background='var(--brand-soft)'; e.currentTarget.style.borderColor='var(--brand)'; e.currentTarget.style.color='var(--brand)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background='var(--bg-2)'; e.currentTarget.style.borderColor='transparent'; e.currentTarget.style.color='var(--ink-2)'; }}
-                >{q}</div>
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => !disabled && onPick(q)}
+                  disabled={disabled}
+                  style={{
+                    padding: '9px 11px', borderRadius: 8,
+                    background: 'var(--bg-2)', border:'1px solid transparent',
+                    cursor: disabled ? 'default' : 'pointer',
+                    fontSize: 12, color:'var(--ink-2)', lineHeight: 1.45,
+                    transition: 'all .12s', opacity: disabled ? 0.5 : 1,
+                    textAlign: 'left', fontFamily: 'inherit', width: '100%',
+                  }}
+                  onMouseEnter={e => { if (disabled) return; e.currentTarget.style.background='var(--brand-soft)'; e.currentTarget.style.borderColor='var(--brand)'; e.currentTarget.style.color='var(--brand)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background='var(--bg-2)'; e.currentTarget.style.borderColor='transparent'; e.currentTarget.style.color='var(--ink-2)'; }}
+                >{q}</button>
               ))}
             </div>
           </div>
@@ -264,13 +270,18 @@ You are a financial advisor. Only answer financial questions grounded in the dat
                 </div>
                 <div className="col" style={{ gap: 8 }}>
                   {suggestions.map(s => (
-                    <div key={s} onClick={() => ask(s)} style={{
-                      padding:'12px 14px', borderRadius: 10, background:'var(--paper)', border:'1px solid var(--line)',
-                      cursor:'pointer', fontSize: 13, color:'var(--ink-2)', transition:'all .12s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background='var(--brand-soft)'; e.currentTarget.style.borderColor='var(--brand)'; e.currentTarget.style.color='var(--brand)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background='var(--paper)'; e.currentTarget.style.borderColor='var(--line)'; e.currentTarget.style.color='var(--ink-2)'; }}
-                    >→ {s}</div>
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => ask(s)}
+                      style={{
+                        padding:'12px 14px', borderRadius: 10, background:'var(--paper)', border:'1px solid var(--line)',
+                        cursor:'pointer', fontSize: 13, color:'var(--ink-2)', transition:'all .12s',
+                        textAlign: 'left', fontFamily: 'inherit', width: '100%',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background='var(--brand-soft)'; e.currentTarget.style.borderColor='var(--brand)'; e.currentTarget.style.color='var(--brand)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background='var(--paper)'; e.currentTarget.style.borderColor='var(--line)'; e.currentTarget.style.color='var(--ink-2)'; }}
+                    ><span aria-hidden="true">→ </span>{s}</button>
                   ))}
                 </div>
               </div>

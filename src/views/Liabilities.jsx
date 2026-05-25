@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { LIABILITY_TYPES, CURRENCIES, toBase, fmt, fmtBase, valueRWF, id } from '../data.js';
 import { Field, inputStyle } from '../components/Field.jsx';
+import Modal from '../components/Modal.jsx';
 
 const EMPTY_LIABILITY = {
   kind: 'personal-loan', name: '', currency: 'RWF',
@@ -25,35 +26,41 @@ function LiabilityEditor({ liability, onSave, onCancel }) {
   };
 
   return (
-    <div onClick={onCancel} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20,
-    }}>
-      <div onClick={e => e.stopPropagation()} className="card" style={{
-        width: '100%', maxWidth: 640, maxHeight: '90vh', overflow: 'auto',
-        padding: 28, background: 'var(--paper)', boxShadow: 'var(--shadow-pop)',
-      }}>
+    <Modal open onClose={onCancel} maxWidth={640} title={isNew ? 'Add liability' : 'Edit liability'}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
             <div className="muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               {isNew ? 'Add liability' : 'Edit liability'}
             </div>
-            <div className="font-serif" style={{ fontSize: 24, marginTop: 2 }}>{l.name || 'Untitled debt'}</div>
+            <h2 className="font-serif" style={{ fontSize: 24, marginTop: 2, margin: 0, fontWeight: 400 }}>{l.name || 'Untitled debt'}</h2>
           </div>
-          <button onClick={onCancel} style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--bg-2)', border: 0, fontSize: 16, cursor: 'pointer' }}>×</button>
+          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
         {/* Liability type selector */}
         <Field label="Type">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-            {LIABILITY_TYPES.map(t => (
-              <div key={t.kind} onClick={() => u('kind', t.kind)} style={{
-                padding: '9px 12px', borderRadius: 9, cursor: 'pointer', fontSize: 12, fontWeight: 500,
-                background: t.kind === l.kind ? 'var(--down-soft)' : 'var(--bg-2)',
-                color: t.kind === l.kind ? 'var(--down)' : 'var(--ink-2)',
-                border: t.kind === l.kind ? '1px solid var(--down-soft)' : '1px solid transparent',
-              }}>{t.label}</div>
-            ))}
+          <div role="radiogroup" aria-label="Liability type" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            {LIABILITY_TYPES.map(t => {
+              const selected = t.kind === l.kind;
+              return (
+                <button
+                  key={t.kind}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => u('kind', t.kind)}
+                  style={{
+                    padding: '9px 12px', borderRadius: 9, cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                    background: selected ? 'var(--down-soft)' : 'var(--bg-2)',
+                    color: selected ? 'var(--down-ink)' : 'var(--ink-2)',
+                    border: selected ? '1px solid var(--down-soft)' : '1px solid transparent',
+                    fontFamily: 'inherit', textAlign: 'left',
+                  }}
+                >{t.label}</button>
+              );
+            })}
           </div>
         </Field>
 
@@ -92,14 +99,12 @@ function LiabilityEditor({ liability, onSave, onCancel }) {
         </Field>
 
         <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} className="btn btn-ghost">Cancel</button>
-          <button onClick={handleSave} className="btn" disabled={!l.name}
-            style={{ background: 'var(--down)', color: '#fff', border: 0, padding: '10px 20px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600 }}>
+          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
+          <button type="button" onClick={handleSave} className="btn btn-danger" disabled={!l.name}>
             {isNew ? 'Add liability' : 'Save changes'}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -154,10 +159,7 @@ export default function LiabilitiesView({ state, dispatch }) {
 
       {/* ── Actions ── */}
       <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
-        <button onClick={() => setEditing({})} className="btn" style={{
-          background: 'var(--down)', color: '#fff', border: 0,
-          padding: '9px 18px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-        }}>＋ Add liability</button>
+        <button type="button" onClick={() => setEditing({})} className="btn btn-danger">＋ Add liability</button>
       </div>
 
       {/* ── Liability groups ── */}
@@ -208,15 +210,11 @@ export default function LiabilitiesView({ state, dispatch }) {
                         </div>
                       </div>
                       <div className="row" style={{ gap: 6 }}>
-                        <button onClick={() => setEditing(l)} style={{
-                          padding: '5px 10px', fontSize: 11, borderRadius: 6, border: '1px solid var(--line)',
-                          background: 'var(--paper)', cursor: 'pointer', color: 'var(--ink-2)',
-                        }}>Edit</button>
-                        <button onClick={() => {
+                        <button type="button" onClick={() => setEditing(l)} aria-label={`Edit ${l.name}`} className="btn btn-ghost btn-xs">Edit</button>
+                        <button type="button" onClick={() => {
                           if (confirm(`Delete "${l.name}"?`)) dispatch({ type: 'deleteLiability', id: l.id });
-                        }} style={{
-                          padding: '5px 10px', fontSize: 11, borderRadius: 6, border: '1px solid var(--down-soft)',
-                          background: 'transparent', cursor: 'pointer', color: 'var(--down)',
+                        }} aria-label={`Delete ${l.name}`} className="btn btn-xs" style={{
+                          border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down-ink)',
                         }}>Delete</button>
                       </div>
                     </div>

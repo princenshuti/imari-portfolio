@@ -10,6 +10,7 @@ import { useToast, ToastContainer } from './components/Toast.jsx';
 import FloatingAdvisor from './components/FloatingAdvisor.jsx';
 // Always-needed auth/onboarding screens (tiny, no lazy needed)
 import Login from './views/Login.jsx';
+import Landing from './views/Landing.jsx';
 import NamePrompt from './views/NamePrompt.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
 // All views — lazy loaded on first navigation
@@ -58,8 +59,7 @@ class ErrorBoundary extends Component {
         <div className="muted" style={{ fontSize: 12, marginBottom: 20, maxWidth: 420, lineHeight: 1.6 }}>
           {this.state.error.message}
         </div>
-        <button onClick={() => window.location.reload()} className="btn"
-          style={{ background: 'var(--brand)', color: '#fff', border: 0, padding: '10px 24px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600 }}>
+        <button onClick={() => window.location.reload()} className="btn btn-primary">
           Reload app
         </button>
       </div>
@@ -240,6 +240,17 @@ export default function App() {
     return VALID_VIEWS.has(h) ? h : 'dashboard';
   }
   const [nav, setNav] = useState(hashToNav);
+  // Pre-auth routing:
+  //   ''        → Landing (default for signed-out users)
+  //   '#login'  → Login form
+  //   '#landing'→ Force-preview Landing at any time (works even when signed in)
+  const readAuthHash = () => {
+    const h = window.location.hash;
+    if (h === '#login')   return 'login';
+    if (h === '#landing') return 'preview';
+    return 'landing';
+  };
+  const [authPage, setAuthPage] = useState(readAuthHash);
   const [portfolioId, setPortfolioId] = useState(null);
   const [role, setRole] = useState('owner');
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
@@ -276,7 +287,10 @@ export default function App() {
     setNav(view);
   }
   useEffect(() => {
-    const onHash = () => setNav(hashToNav());
+    const onHash = () => {
+      setNav(hashToNav());
+      setAuthPage(readAuthHash());
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -333,12 +347,28 @@ export default function App() {
       .finally(() => setAcceptingInvite(false));
   }, [session, pendingInvite]);
 
-  // ─ Load portfolio from cloud after login ──────────────────
+  // ─ Normalize the URL on successful sign-in ────────────────
+  // If the hash is '#login' (or empty) when a session arrives, replace it with
+  // '#dashboard' so the address bar matches the view that's about to render.
   useEffect(() => {
     if (!session?.user) return;
+    const h = window.location.hash;
+    if (h === '' || h === '#' || h === '#login' || h === '#landing') {
+      window.location.hash = 'dashboard';
+    }
+  }, [session?.user?.id]);
+
+  // ─ Load portfolio from cloud after login ──────────────────
+  // Aborted-flag pattern: if the user signs out (or switches accounts) before
+  // loadOrCreatePortfolio resolves, the stale promise must not dispatch the
+  // wrong portfolio into state.
+  useEffect(() => {
+    if (!session?.user) return;
+    let aborted = false;
     setLoadingPortfolio(true);
     loadOrCreatePortfolio(session.user)
       .then(({ portfolioId, role, state: cloudState }) => {
+        if (aborted) return;
         skipNextSave.current = true;
         if (cloudState.fx) Object.assign(FX, cloudState.fx);
         dispatch({ type: 'replaceAll', state: cloudState });
@@ -347,9 +377,27 @@ export default function App() {
         setStateReady(true); // cloud state loaded — safe to evaluate milestones now
       })
       .catch(e => {
+        if (aborted) return;
         showToast('Failed to load portfolio: ' + e.message, 'error');
       })
-      .finally(() => setLoadingPortfolio(false));
+      .finally(() => {
+        if (!aborted) setLoadingPortfolio(false);
+      });
+    return () => { aborted = true; };
+  }, [session?.user?.id]);
+
+  // ─ Prime BNR exchange rates after sign-in ─────────────────
+  // Loads asymmetric buying/selling rates into LIVE_FX so converters use
+  // BNR official rates instead of the symmetric manual fallback. Cached in
+  // sessionStorage — re-runs cost ~nothing on subsequent boots.
+  useEffect(() => {
+    if (!session?.user) return;
+    import('./services/market.js')
+      .then(({ fetchMarket }) => fetchMarket())
+      .catch(err => {
+        // Surface in dev so silent FX fallbacks are diagnosable
+        if (import.meta.env.DEV) console.warn('BNR prime failed:', err);
+      });
   }, [session?.user?.id]);
 
   // ─ Subscribe to realtime updates ──────────────────────────
@@ -405,20 +453,32 @@ export default function App() {
   }, [state.assets, state.liabilities]);
 
   // ─ Daily snapshot ─────────────────────────────────────────
+  // Fires when profile name first arrives, then once per calendar day.
+  // visibilitychange catches long-running tabs that cross midnight.
+  const lastSnapDayRef = useRef(null);
   useEffect(() => {
     if (!state.profile.name) return;
     const snaps = state.snapshots || [];
     const today = new Date().toISOString().slice(0, 10);
+    if (lastSnapDayRef.current === today) return;
     const hasToday = snaps.some(s => s.date === today);
-    if (hasToday) return;
+    if (hasToday) { lastSnapDayRef.current = today; return; }
     // Seed synthetic history on first run (< 2 snapshots)
     if (snaps.length < 2 && netWorth > 0) {
       const seeded = seedHistory(netWorth, totalCost, 60);
       dispatch({ type: 'seedSnapshots', snapshots: seeded });
-    } else {
+    } else if (netWorth > 0) {
       dispatch({ type: 'addSnapshot', netWorth, costBasis: totalCost });
     }
-  }, [state.profile.name]);
+    lastSnapDayRef.current = today;
+  }, [state.profile.name, netWorth, totalCost, state.snapshots]);
+
+  // Re-evaluate snapshot when the tab becomes visible (covers cross-midnight cases)
+  useEffect(() => {
+    const onVis = () => { if (!document.hidden) lastSnapDayRef.current = null; };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   // ─ Net-worth milestone alerts ─────────────────────────────
   // Only fires when net worth actually crosses a threshold this session.
@@ -450,22 +510,32 @@ export default function App() {
   }, [netWorth, stateReady]);
 
   // ─ Asset maturity / overdue alerts ────────────────────────
+  // Persisted per-asset dedupe key — `${id}|${dateStr}` so the same maturity
+  // doesn't re-toast every session, but a *new* maturity date triggers anew.
+  const alertedMaturitiesRef = useRef(new Set());
   useEffect(() => {
-    if (!state.profile.name) return;
+    if (!stateReady || !state.profile.name) return;
     const today = new Date();
     const WARN_DAYS = 30;
     state.assets.forEach(a => {
       const checkDate = (dateStr, label) => {
         if (!dateStr) return;
+        const key = `${a.id}|${dateStr}|${label}`;
+        if (alertedMaturitiesRef.current.has(key)) return;
         const d = new Date(dateStr);
         const days = Math.ceil((d - today) / 86400000);
-        if (days < 0) showToast(`⚠ "${a.name}" ${label} ${Math.abs(days)} days ago`, 'warning');
-        else if (days <= WARN_DAYS) showToast(`⏰ "${a.name}" ${label} in ${days} days`, 'info');
+        if (days < 0) {
+          showToast(`⚠ "${a.name}" ${label} ${Math.abs(days)} days ago`, 'warning');
+          alertedMaturitiesRef.current.add(key);
+        } else if (days <= WARN_DAYS) {
+          showToast(`⏰ "${a.name}" ${label} in ${days} days`, 'info');
+          alertedMaturitiesRef.current.add(key);
+        }
       };
       if (a.kind === 'bond')        checkDate(a.maturity, 'matures');
       if (a.kind === 'receivable')  checkDate(a.dueDate,  'was due');
     });
-  }, [state.profile.name]);
+  }, [stateReady, state.profile.name, state.assets]);
 
   // ─ Render flow ────────────────────────────────────────────
   // session === undefined  → auth check in progress (show spinner, not blank)
@@ -474,7 +544,18 @@ export default function App() {
   // profile.name empty     → need onboarding name
   if (session === undefined) return <FullScreenLoader message="Checking session…" />;
   if (isRecoveryMode) return <ResetPassword session={session} onDone={() => { setIsRecoveryMode(false); }} />;
-  if (isConfigured && !session) return <Login pendingInvite={pendingInvite} />;
+
+  // Force-preview the landing at any time via #landing (signed in or not).
+  // Lets local-only users review the marketing page without clearing their data.
+  if (authPage === 'preview') {
+    return <Landing onSignIn={() => { window.location.hash = session ? 'dashboard' : 'login'; }} />;
+  }
+
+  if (isConfigured && !session) {
+    // Invite links carry clear intent — skip the landing and go straight to login.
+    if (pendingInvite || authPage === 'login') return <Login pendingInvite={pendingInvite} />;
+    return <Landing onSignIn={() => setAuthPage('login')} />;
+  }
   if (!stateReady) return <FullScreenLoader message="Loading your portfolio…" />;
 
   if (!state.profile.name) {
@@ -532,6 +613,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <a href="#main-content" className="skip-to-main">Skip to main content</a>
       <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
         <Sidebar
           active={nav} onNav={navigateTo}
@@ -551,11 +633,11 @@ export default function App() {
               />
             </div>
           )}
-          <div key={nav} className="page-view">
+          <main id="main-content" key={nav} className="page-view" tabIndex={-1}>
             <Suspense fallback={<FullScreenLoader />}>
               {view}
             </Suspense>
-          </div>
+          </main>
         </div>
         <MobileTabBar active={nav} onNav={navigateTo} />
         <div data-noprint><ToastContainer toasts={toasts} dismiss={dismiss} /></div>

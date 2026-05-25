@@ -59,15 +59,17 @@ export default function TrendsView() {
   const [status,    setStatus]    = useState('loading'); // 'loading' | 'done' | 'error'
   const [fetchedAt, setFetchedAt] = useState(null);
 
+  const [errorMsg, setErrorMsg] = useState(null);
   const load = useCallback(async (force = false) => {
-    setStatus('loading');
+    setStatus('loading'); setErrorMsg(null);
     try {
       const m = await fetchMarket(force);
       setMarket(m);
       setOverrides(buildOverrides(m));
       setFetchedAt(m.fetchedAt ? new Date(m.fetchedAt) : new Date());
       setStatus('done');
-    } catch {
+    } catch (e) {
+      setErrorMsg(e?.message || 'Could not reach market data sources.');
       setStatus('error');
     }
   }, []);
@@ -128,9 +130,9 @@ export default function TrendsView() {
               </span>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, color: 'var(--gold)' }}>
-              <span style={{ fontSize: 12 }}>◆</span>
-              Live APIs unreachable — showing reference values
+            <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, color: 'var(--gold-ink)' }}>
+              <span aria-hidden="true" style={{ fontSize: 12 }}>◆</span>
+              {errorMsg ? `${errorMsg} — showing reference values` : 'Live APIs unreachable — showing reference values'}
             </div>
           )}
 

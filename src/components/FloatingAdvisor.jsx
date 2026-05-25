@@ -18,7 +18,8 @@ function escapeHTML(s) {
 function renderMD(s) {
   return escapeHTML(s)
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>');
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -273,24 +274,27 @@ You are an AI financial advisor. Only answer questions about the portfolio data 
 
             {chat.length > 0 && (
               <button
+                type="button"
                 onClick={() => dispatch({ type: 'clearChat' })}
-                title="Clear chat"
+                aria-label="Clear chat history"
                 style={{
                   fontSize: 11, color: 'var(--ink-3)', background: 'transparent', border: 0,
                   cursor: 'pointer', padding: '4px 7px', borderRadius: 6,
                   fontFamily: 'inherit',
                 }}
-              >↻</button>
+              ><span aria-hidden="true">↻</span></button>
             )}
 
             <button
+              type="button"
               onClick={() => setOpen(false)}
+              aria-label="Close Advisor"
               style={{
                 width: 26, height: 26, borderRadius: 7, border: 0,
                 background: 'var(--bg-2)', color: 'var(--ink-3)',
                 cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
-            >×</button>
+            ><span aria-hidden="true">×</span></button>
           </div>
 
           {/* Messages area */}
@@ -307,13 +311,20 @@ You are an AI financial advisor. Only answer questions about the portfolio data 
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {QUICK_PROMPTS.map(q => (
-                    <div key={q} className="fa-chip" onClick={() => ask(q)} style={{
-                      padding: '8px 11px', borderRadius: 8, cursor: 'pointer',
-                      background: 'var(--bg-2)', border: '1px solid transparent',
-                      fontSize: 11.5, color: 'var(--ink-2)', lineHeight: 1.4,
-                    }}>
-                      → {q}
-                    </div>
+                    <button
+                      key={q}
+                      type="button"
+                      className="fa-chip"
+                      onClick={() => ask(q)}
+                      style={{
+                        padding: '8px 11px', borderRadius: 8, cursor: 'pointer',
+                        background: 'var(--bg-2)', border: '1px solid transparent',
+                        fontSize: 11.5, color: 'var(--ink-2)', lineHeight: 1.4,
+                        textAlign: 'left', fontFamily: 'inherit',
+                      }}
+                    >
+                      <span aria-hidden="true">→ </span>{q}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -366,7 +377,9 @@ You are an AI financial advisor. Only answer questions about the portfolio data 
                 border: '1px solid var(--line)',
               }}
             >
+              <label htmlFor="fa-input" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Ask Imari Advisor</label>
               <input
+                id="fa-input"
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 placeholder="Ask about your portfolio…"

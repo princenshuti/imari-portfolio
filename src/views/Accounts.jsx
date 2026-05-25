@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { CURRENCIES, RWANDA_BANKS, MOMO_PROVIDERS, fmt, fmtBase, toBase, id } from '../data.js';
 import { Field, Input, inputStyle } from '../components/Field.jsx';
+import Modal from '../components/Modal.jsx';
 
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
 
@@ -44,38 +45,41 @@ function AccountEditor({ account, onSave, onCancel }) {
   };
 
   return (
-    <div onClick={onCancel} style={{
-      position:'fixed', inset: 0, background:'rgba(20,20,16,0.55)', backdropFilter:'blur(4px)',
-      display:'flex', alignItems:'center', justifyContent:'center', zIndex: 2147483640, padding: 20,
-    }}>
-      <div onClick={e => e.stopPropagation()} className="card" style={{
-        width: '100%', maxWidth: 520, maxHeight: '90vh', overflow:'auto',
-        padding: 28, background:'var(--paper)', boxShadow:'var(--shadow-pop)',
-      }}>
+    <Modal open onClose={onCancel} maxWidth={520} title={isNew ? 'Add account' : 'Edit account'}>
         <div className="row" style={{ justifyContent:'space-between', alignItems:'flex-start', marginBottom: 18 }}>
           <div>
             <div className="muted" style={{ fontSize: 11, letterSpacing:'0.08em', textTransform:'uppercase' }}>{isNew ? 'Add account' : 'Edit account'}</div>
-            <div className="font-serif" style={{ fontSize: 26, marginTop: 2 }}>{institution || 'New account'}</div>
+            <h2 className="font-serif" style={{ fontSize: 26, marginTop: 2, margin: 0, fontWeight: 400 }}>{institution || 'New account'}</h2>
           </div>
-          <button onClick={onCancel} style={{
-            width: 30, height: 30, borderRadius: 8, background:'var(--bg-2)', border: 0, fontSize: 16, cursor:'pointer', color:'var(--ink-3)',
-          }}>×</button>
+          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
         <Field label="Account type" top={4}>
-          <div className="row" style={{ gap: 6 }}>
+          <div role="radiogroup" aria-label="Account type" className="row" style={{ gap: 6 }}>
             {[
               { v: 'bank',  label: '⌬ Bank account' },
               { v: 'momo',  label: '○ Mobile money' },
-            ].map(o => (
-              <div key={o.v} onClick={() => { setType(o.v); const l = o.v === 'bank' ? RWANDA_BANKS : MOMO_PROVIDERS; setInstitutionPick(l[0]); }} style={{
-                flex: 1, padding: '11px 12px', borderRadius: 9, cursor:'pointer', textAlign:'center',
-                background: type === o.v ? 'var(--brand-soft)' : 'var(--bg-2)',
-                color: type === o.v ? 'var(--brand)' : 'var(--ink-2)',
-                border: type === o.v ? '1px solid var(--brand)' : '1px solid transparent',
-                fontSize: 13, fontWeight: 500,
-              }}>{o.label}</div>
-            ))}
+            ].map(o => {
+              const selected = type === o.v;
+              return (
+                <button
+                  key={o.v}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => { setType(o.v); const l = o.v === 'bank' ? RWANDA_BANKS : MOMO_PROVIDERS; setInstitutionPick(l[0]); }}
+                  style={{
+                    flex: 1, padding: '11px 12px', borderRadius: 9, cursor:'pointer', textAlign:'center',
+                    background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
+                    color: selected ? 'var(--brand)' : 'var(--ink-2)',
+                    border: selected ? '1px solid var(--brand)' : '1px solid transparent',
+                    fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
+                  }}
+                ><span aria-hidden="true">{o.label.split(' ')[0]} </span>{o.label.split(' ').slice(1).join(' ')}</button>
+              );
+            })}
           </div>
         </Field>
 
@@ -114,13 +118,12 @@ function AccountEditor({ account, onSave, onCancel }) {
         )}
 
         <div className="row" style={{ gap: 10, marginTop: 22, justifyContent:'flex-end' }}>
-          <button onClick={onCancel} className="btn btn-ghost">Cancel</button>
-          <button onClick={handleSave} className="btn btn-primary" disabled={!canSave}>
+          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
+          <button type="button" onClick={handleSave} className="btn btn-primary" disabled={!canSave}>
             {isNew ? 'Add account' : 'Save changes'}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -159,19 +162,18 @@ function AccountCard({ acc, displayCurrency, cfCount, onEdit, onDelete }) {
         <div className="muted num" style={{ fontSize: 11 }}>
           {acc.currency !== displayCurrency && `≈ ${fmtBase(toBase(balance, acc.currency), displayCurrency, { compact: true })}`}
         </div>
-        <div className="row" style={{ gap: 4, marginTop: 6 }}>
-          <button onClick={() => onEdit(acc)} title="Edit" style={iconBtnStyle}>✎</button>
-          <button onClick={() => onDelete(acc)} title="Delete" style={{ ...iconBtnStyle, color:'var(--down)' }}>×</button>
+        <div className="row" style={{ gap: 2, marginTop: 6 }}>
+          <button type="button" onClick={() => onEdit(acc)} aria-label={`Edit ${acc.bank || acc.wallet || 'account'}`} className="btn-icon-sm">
+            <span aria-hidden="true">✎</span>
+          </button>
+          <button type="button" onClick={() => onDelete(acc)} aria-label={`Delete ${acc.bank || acc.wallet || 'account'}`} className="btn-icon-sm is-danger">
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
       </div>
     </div>
   );
 }
-
-const iconBtnStyle = {
-  width: 26, height: 26, borderRadius: 6, border: 0, background: 'transparent',
-  color: 'var(--ink-3)', cursor: 'pointer', fontSize: 14, padding: 0,
-};
 
 export default function AccountsView({ state, dispatch }) {
   const { assets, profile } = state;

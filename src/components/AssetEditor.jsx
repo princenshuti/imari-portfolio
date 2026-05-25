@@ -7,6 +7,7 @@ import {
 } from '../data.js';
 import { Field, Input, inputStyle } from './Field.jsx';
 import AssetIcon from './AssetIcon.jsx';
+import Modal from './Modal.jsx';
 
 // ─── Image compression ──────────────────────────────────────
 async function compressImage(file, maxPx = 800, quality = 0.78) {
@@ -88,33 +89,37 @@ function Accordion({ icon, label, badge, children, defaultOpen = false }) {
 }
 
 // ─── Toggle switch ──────────────────────────────────────────
+// Native <button role="switch"> — keyboard works for free, focus ring inherits.
 function Toggle({ value, onChange, label }) {
   return (
-    <div className="row" style={{ gap: 12, alignItems: 'center' }}>
-      <div
+    <label className="row" style={{ gap: 12, alignItems: 'center', cursor: 'pointer' }}>
+      <button
+        type="button"
         role="switch"
         aria-checked={value}
         onClick={() => onChange(!value)}
         style={{
           width: 44, height: 24, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
           background: value ? 'var(--brand)' : 'var(--bg-2)',
-          border: '1px solid ' + (value ? 'var(--brand)' : 'var(--border)'),
+          border: '1px solid ' + (value ? 'var(--brand)' : 'var(--line-strong)'),
           position: 'relative', transition: 'background 0.18s, border-color 0.18s',
+          padding: 0,
         }}
       >
-        <div style={{
+        <span aria-hidden="true" style={{
           position: 'absolute', top: 2, left: value ? 20 : 2,
           width: 18, height: 18, borderRadius: '50%',
           background: value ? 'var(--brand-ink)' : 'var(--ink-4)',
           transition: 'left 0.18s cubic-bezier(0.23,1,0.32,1)',
+          display: 'block',
         }} />
-      </div>
+      </button>
       <span style={{ fontSize: 13 }}>{label}</span>
-    </div>
+    </label>
   );
 }
 
-export default function AssetEditor({ asset, onSave, onCancel }) {
+export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
   const isNew = !asset.id;
 
   const [a, setA] = useState({
@@ -238,7 +243,9 @@ export default function AssetEditor({ asset, onSave, onCancel }) {
       const MAX_SIZE = 2 * 1024 * 1024;
       const oversized = Array.from(files).filter(f => f.size > MAX_SIZE);
       if (oversized.length) {
-        alert(`Skipped (over 2 MB): ${oversized.map(f => f.name).join(', ')}`);
+        const msg = `Skipped (over 2 MB): ${oversized.map(f => f.name).join(', ')}`;
+        if (showToast) showToast(msg, 'warning');
+        else alert(msg); // fallback if hosted without toast context
       }
       const valid = Array.from(files)
         .filter(f => f.size <= MAX_SIZE)
@@ -262,44 +269,47 @@ export default function AssetEditor({ asset, onSave, onCancel }) {
 
   // ── Render ───────────────────────────────────────────────
   return (
-    <div onClick={onCancel} style={{
-      position: 'fixed', inset: 0, background: 'rgba(20,20,16,0.55)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2147483640, padding: 20,
-    }}>
-      <div onClick={e => e.stopPropagation()} className="card" style={{
-        width: '100%', maxWidth: 720, maxHeight: '90vh', overflow: 'auto',
-        padding: 28, background: 'var(--paper)', boxShadow: 'var(--shadow-pop)',
-      }}>
-
+    <Modal open onClose={onCancel} maxWidth={720} title={isNew ? 'Add asset' : 'Edit asset'}>
         {/* Header */}
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div>
             <div className="muted" style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               {isNew ? 'Add asset' : 'Edit asset'}
             </div>
-            <div className="font-serif" style={{ fontSize: 26, marginTop: 2 }}>{a.name || 'Untitled asset'}</div>
+            <h2 className="font-serif" style={{ fontSize: 26, marginTop: 2, margin: 0, fontWeight: 400 }}>{a.name || 'Untitled asset'}</h2>
           </div>
-          <button onClick={onCancel} style={{
-            width: 30, height: 30, borderRadius: 8, background: 'var(--bg-2)',
-            border: 0, fontSize: 16, cursor: 'pointer', color: 'var(--ink-3)',
-          }}>×</button>
+          <button
+            type="button" onClick={onCancel} aria-label="Close dialog"
+            className="btn-icon-sm"
+          ><span aria-hidden="true">×</span></button>
         </div>
 
-        {/* Asset class grid */}
+        {/* Asset class — radiogroup, keyboard accessible */}
         <Field label="Asset class">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-            {CLASSES.map(c => (
-              <div key={c.kind} onClick={() => update('kind', c.kind)} style={{
-                padding: '10px 12px', borderRadius: 9, cursor: 'pointer',
-                background: c.kind === a.kind ? 'var(--brand-soft)' : 'var(--bg-2)',
-                color: c.kind === a.kind ? 'var(--brand)' : 'var(--ink-2)',
-                border: c.kind === a.kind ? '1px solid var(--brand)' : '1px solid transparent',
-                fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <AssetIcon kind={c.kind} color={c.kind === a.kind ? 'var(--brand)' : c.color} size={22} />
-                <span>{c.label}</span>
-              </div>
-            ))}
+          <div role="radiogroup" aria-label="Asset class" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            {CLASSES.map(c => {
+              const selected = c.kind === a.kind;
+              return (
+                <button
+                  key={c.kind}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => update('kind', c.kind)}
+                  style={{
+                    padding: '10px 12px', borderRadius: 9, cursor: 'pointer',
+                    background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
+                    color: selected ? 'var(--brand)' : 'var(--ink-2)',
+                    border: selected ? '1px solid var(--brand)' : '1px solid transparent',
+                    fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8,
+                    fontFamily: 'inherit', textAlign: 'left',
+                  }}
+                >
+                  <AssetIcon kind={c.kind} color={selected ? 'var(--brand)' : c.color} size={22} />
+                  <span>{c.label}</span>
+                </button>
+              );
+            })}
           </div>
         </Field>
 
@@ -721,16 +731,22 @@ export default function AssetEditor({ asset, onSave, onCancel }) {
 
         {/* Action row */}
         <div className="row" style={{ gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} className="btn btn-ghost">Cancel</button>
+          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
           <button
+            type="button"
             onClick={handleSave}
             className="btn btn-primary"
             disabled={!a.name || !a.purchasePrice}
+            aria-describedby={(!a.name || !a.purchasePrice) ? 'asset-save-hint' : undefined}
           >
             {isNew ? 'Add asset' : 'Save changes'}
           </button>
+          {(!a.name || !a.purchasePrice) && (
+            <span id="asset-save-hint" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>
+              Fill in name and purchase price to enable saving
+            </span>
+          )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

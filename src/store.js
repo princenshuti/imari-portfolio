@@ -8,16 +8,18 @@ export function loadState() {
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (e) {
-    console.warn('portfolio: failed to load state', e);
+    if (import.meta.env.DEV) console.warn('portfolio: failed to load state', e);
     return null;
   }
 }
 
 export function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Strip transient routing state — _nav is reducer-internal, not user data
+    const { _nav, ...persistable } = state;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
   } catch (e) {
-    console.warn('portfolio: failed to save state', e);
+    if (import.meta.env.DEV) console.warn('portfolio: failed to save state', e);
   }
 }
 

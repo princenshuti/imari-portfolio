@@ -87,7 +87,14 @@ function DashboardInsight({ state, dispatch }) {
     };
   }, [assets, profile]);
 
-  const snapshotKey = useMemo(() => JSON.stringify(snapshot.totals) + ':' + assets.length, [snapshot, assets.length]);
+  // Stable hash of user-controlled inputs only — purchasePrice/currentValue/kind/currency
+  // per asset. Excludes time-derived suggestValue() output so timestamp drift across
+  // page loads doesn't trigger needless AI regeneration.
+  const snapshotKey = useMemo(() => JSON.stringify(
+    assets.map(a => [a.id, a.kind, a.currency, a.purchasePrice, a.currentValue, a.yieldPct, a.purchaseDate])
+  ), [assets]);
+
+  const INSIGHT_TTL_MS = 24 * 60 * 60 * 1000; // 24h hard refresh ceiling
 
   const generate = async () => {
     if (pending) return;
@@ -118,14 +125,16 @@ ${JSON.stringify(snapshot, null, 2)}`;
 
   useEffect(() => {
     if (assets.length === 0 || !getApiKey()) return;
-    if (!insight || insight.key !== snapshotKey) {
+    const expired = insight?.generatedAt && (Date.now() - insight.generatedAt > INSIGHT_TTL_MS);
+    if (!insight || insight.key !== snapshotKey || expired) {
       const t = setTimeout(() => generate(), 600);
       return () => clearTimeout(t);
     }
   }, [snapshotKey, assets.length]);
 
   if (assets.length === 0) return null;
-  const stale = insight && insight.key !== snapshotKey;
+  const expired = insight?.generatedAt && (Date.now() - insight.generatedAt > INSIGHT_TTL_MS);
+  const stale = insight && (insight.key !== snapshotKey || expired);
   const bullets = insight?.content ? insight.content.split(/\n+/).filter(l => l.trim()) : [];
 
   return (
@@ -180,9 +189,9 @@ ${JSON.stringify(snapshot, null, 2)}`;
         </div>
       )}
       {!pending && error && (
-        <div style={{ padding: 14, borderRadius: 'var(--r-md)', background: 'var(--down-soft)', color: 'var(--down)', fontSize: 12.5, lineHeight: 1.5 }}>
+        <div role="alert" style={{ padding: 14, borderRadius: 'var(--r-md)', background: 'var(--down-soft)', color: 'var(--down-ink)', fontSize: 12.5, lineHeight: 1.5 }}>
           {error}{!error.includes('Settings') && (
-            <span onClick={generate} style={{ textDecoration: 'underline', cursor: 'pointer', marginLeft: 6 }}>Try again</span>
+            <button type="button" onClick={generate} className="btn-link" style={{ marginLeft: 6, color: 'var(--down-ink)', textDecoration: 'underline' }}>Try again</button>
           )}
         </div>
       )}
@@ -212,25 +221,31 @@ ${JSON.stringify(snapshot, null, 2)}`;
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-/** Single KPI tile in the executive strip */
+/** Single KPI tile in the executive strip — semantic <button> when clickable */
 function KpiTile({ label, value, sub, accent, delay, onClick }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div onClick={onClick} style={{
-      padding: '16px 20px', borderRadius: 'var(--r-md)',
-      background: 'var(--paper)', border: '0.5px solid var(--line)',
-      boxShadow: 'var(--shadow-1)',
-      cursor: onClick ? 'pointer' : 'default',
-      transition: 'box-shadow 0.15s ease-out, transform 0.15s ease-out',
-      animation: 'imari-slideUp 240ms cubic-bezier(0.23,1,0.32,1) both',
-      animationDelay: `${delay}ms`,
-    }}
-    onMouseEnter={e => { if (onClick) { e.currentTarget.style.boxShadow = 'var(--shadow-2)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-1)'; e.currentTarget.style.transform = 'none'; }}
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      aria-label={onClick ? `${label}: ${value}. ${sub || ''}` : undefined}
+      style={{
+        padding: '16px 20px', borderRadius: 'var(--r-md)',
+        background: 'var(--paper)', border: '0.5px solid var(--line)',
+        boxShadow: 'var(--shadow-1)',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'box-shadow 0.15s ease-out, transform 0.15s ease-out',
+        animation: 'imari-slideUp 240ms cubic-bezier(0.23,1,0.32,1) both',
+        animationDelay: `${delay}ms`,
+        textAlign: 'left', fontFamily: 'inherit', width: '100%', display: 'block',
+      }}
+      onMouseEnter={e => { if (onClick) { e.currentTarget.style.boxShadow = 'var(--shadow-2)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-1)'; e.currentTarget.style.transform = 'none'; }}
     >
       <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
       <div className="num" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: accent || 'var(--ink)', lineHeight: 1.1 }}>{value}</div>
       {sub && <div className="muted" style={{ fontSize: 10.5, marginTop: 5, lineHeight: 1.4 }}>{sub}</div>}
-    </div>
+    </Tag>
   );
 }
 
@@ -302,7 +317,7 @@ function CategoryBars({ groups, totalValue }) {
         const alloc = totalValue > 0 ? (g.value / totalValue * 100).toFixed(0) : '0';
         return (
           <div key={g.group} style={{
-            animation: 'imari-slideUp 260px cubic-bezier(0.23,1,0.32,1) both',
+            animation: 'imari-slideUp 260ms cubic-bezier(0.23,1,0.32,1) both',
             animationDelay: `${i * 55}ms`,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>

@@ -1,35 +1,64 @@
+import { Children, cloneElement, isValidElement, useId } from 'react';
 import { Sparkline } from './charts.jsx';
 
 export const inputStyle = {
   width: '100%', padding: '9px 12px', borderRadius: 'var(--r-sm)',
   border: '1px solid var(--line-strong)',
   background: 'var(--paper-2)', color: 'var(--ink)',
-  fontFamily: 'inherit', fontSize: 13, outline: 'none',
+  fontFamily: 'inherit', fontSize: 13,
   transition: 'border-color 0.14s, box-shadow 0.14s',
 };
 
-export function Input({ value, onChange, type = 'text', placeholder }) {
+export function Input({ value, onChange, type = 'text', placeholder, id, ...rest }) {
   return (
     <input
-      type={type} value={value}
+      type={type} value={value} id={id}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       style={inputStyle}
+      {...rest}
     />
   );
 }
 
-export function Field({ label, hint, children, top = 14 }) {
+/**
+ * Field — wraps a label + input. Automatically generates an `id` and forwards
+ * it to the child input so the <label htmlFor> association is correct for
+ * screen readers (WCAG 1.3.1 Info & Relationships, 3.3.2 Labels).
+ */
+export function Field({ label, hint, children, top = 14, error }) {
+  const fieldId = useId();
+  const hintId  = `${fieldId}-hint`;
+  const errId   = `${fieldId}-err`;
+
+  // Inject id + aria-describedby + aria-invalid into the first valid React
+  // element child (input/select/textarea). Callers can opt out by passing a
+  // child with an explicit id, in which case we leave it untouched.
+  const enhancedChildren = Children.map(children, child => {
+    if (!isValidElement(child)) return child;
+    const props = { ...child.props };
+    if (!props.id) props.id = fieldId;
+    const desc = [hint && hintId, error && errId].filter(Boolean).join(' ');
+    if (desc) props['aria-describedby'] = desc;
+    if (error) props['aria-invalid'] = true;
+    return cloneElement(child, props);
+  });
+
   return (
     <div style={{ marginTop: top }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-        <label style={{
+        <label htmlFor={fieldId} style={{
           fontSize: 11, fontWeight: 600, color: 'var(--ink-2)',
           letterSpacing: '0.02em',
         }}>{label}</label>
-        {hint && <span className="muted" style={{ fontSize: 10 }}>{hint}</span>}
+        {hint && <span id={hintId} className="muted" style={{ fontSize: 10 }}>{hint}</span>}
       </div>
-      {children}
+      {enhancedChildren}
+      {error && (
+        <div id={errId} role="alert" style={{ fontSize: 11, color: 'var(--down)', marginTop: 4 }}>
+          {error}
+        </div>
+      )}
     </div>
   );
 }
@@ -68,13 +97,13 @@ export function TrendCard({ d, big = false, override = null }) {
 
   // Badge logic
   // 'live'      → green pill with pulsing dot
-  // 'reference' → gold pill
+  // 'reference' → gold pill (uses --gold-ink for AA contrast)
   // 'modeled'   → muted pill
   const kind = isLive ? 'live' : (d.dataKind ?? 'modeled');
   const BADGE = {
-    live:      { bg: 'color-mix(in oklab, var(--up) 14%, transparent)',   color: 'var(--up)',   label: 'Live'      },
-    reference: { bg: 'color-mix(in oklab, var(--gold) 14%, transparent)', color: 'var(--gold)', label: 'Reference' },
-    modeled:   { bg: 'var(--bg-2)',                                        color: 'var(--ink-4)',label: 'Modeled'   },
+    live:      { bg: 'color-mix(in oklab, var(--up) 14%, transparent)',   color: 'var(--up-ink)',   label: 'Live'      },
+    reference: { bg: 'color-mix(in oklab, var(--gold) 14%, transparent)', color: 'var(--gold-ink)', label: 'Reference' },
+    modeled:   { bg: 'var(--bg-2)',                                        color: 'var(--ink-3)',   label: 'Modeled'   },
   };
   const badge = BADGE[kind] || BADGE.modeled;
 
@@ -91,7 +120,7 @@ export function TrendCard({ d, big = false, override = null }) {
           background: badge.bg, fontSize: 9, fontWeight: 700, color: badge.color,
         }}>
           {kind === 'live' && (
-            <span style={{
+            <span aria-hidden="true" style={{
               width: 5, height: 5, borderRadius: '50%', background: badge.color, flexShrink: 0,
               animation: 'imari-dot-pulse 2s ease-in-out infinite',
             }} />
@@ -113,9 +142,9 @@ export function TrendCard({ d, big = false, override = null }) {
         {hasChange && (
           <div className="num" style={{
             fontSize: 11, fontWeight: 600,
-            color: isUp ? 'var(--up)' : 'var(--down)',
+            color: isUp ? 'var(--up-ink)' : 'var(--down-ink)',
           }}>
-            {isUp ? '▲' : '▼'} {Math.abs(change).toFixed(2)}{d.unit === '%' ? 'pp' : '%'}
+            <span aria-hidden="true">{isUp ? '▲' : '▼'}</span> {Math.abs(change).toFixed(2)}{d.unit === '%' ? 'pp' : '%'}
           </div>
         )}
         {!hasChange && kind === 'live' && (
@@ -123,7 +152,7 @@ export function TrendCard({ d, big = false, override = null }) {
         )}
       </div>
 
-      <div style={{ marginTop: 8, color: d.color }}>
+      <div style={{ marginTop: 8, color: d.color }} aria-hidden="true">
         <Sparkline data={d.series} w={big ? 240 : 160} h={big ? 40 : 30} stroke={d.color} fill />
       </div>
       <div className="muted" style={{ fontSize: 9.5, marginTop: 4, lineHeight: 1.4 }}>

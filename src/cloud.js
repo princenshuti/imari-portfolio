@@ -73,11 +73,12 @@ export async function loadOrCreatePortfolio(user) {
   if (!supabase) throw new Error('Not configured');
 
   // 1. List portfolios the user is a member of (via RLS this only returns ones they can see).
-  const { data: memberships, error: memErr } = await supabase
+  const { data: memberRows, error: memErr } = await supabase
     .from('portfolio_members')
     .select('portfolio_id, role')
     .eq('user_id', user.id);
   if (memErr) throw memErr;
+  const memberships = memberRows ?? [];
 
   // 2. If they're a member of one or more, prefer the one they own; otherwise pick first.
   const ownedId = memberships.find(m => m.role === 'owner')?.portfolio_id;
@@ -215,7 +216,9 @@ export async function listInvitations(portfolioId) {
 }
 
 export async function createInvitation(portfolioId, email, role) {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
+  if (!user) throw new Error('Session expired. Please sign in again.');
   const { data, error } = await supabase
     .from('portfolio_invitations')
     .insert({

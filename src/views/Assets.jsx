@@ -19,7 +19,7 @@ const SORT_OPTIONS = [
   { value: 'name-asc',   label: 'Name: A → Z'         },
 ];
 
-export default function AssetsView({ state, dispatch }) {
+export default function AssetsView({ state, dispatch, showToast }) {
   const { assets, profile } = state;
   const [editing, setEditing]           = useState(null);
   const [typeFilter, setTypeFilter]     = useState('all');
@@ -387,10 +387,7 @@ export default function AssetsView({ state, dispatch }) {
           <button onClick={() => setSelected(new Set())} className="btn btn-ghost" style={{ fontSize: 12 }}>
             Deselect all
           </button>
-          <button onClick={handleBulkDelete} style={{
-            fontSize: 12, background: 'var(--down)', color: '#fff', border: 0,
-            padding: '6px 14px', borderRadius: 7, cursor: 'pointer',
-          }}>
+          <button type="button" onClick={handleBulkDelete} className="btn btn-danger btn-sm">
             Delete {selected.size} asset{selected.size === 1 ? '' : 's'}
           </button>
         </div>
@@ -471,7 +468,7 @@ export default function AssetsView({ state, dispatch }) {
 
             {/* Column headers */}
             <div className="row muted" style={{
-              display: 'grid', gridTemplateColumns: '28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 60px',
+              display: 'grid', gridTemplateColumns: '28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
               padding: '8px 22px', fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
               textTransform: 'uppercase', gap: 12, alignItems: 'center',
             }}>
@@ -547,6 +544,7 @@ export default function AssetsView({ state, dispatch }) {
           asset={editing}
           onSave={a => { dispatch({ type: 'upsertAsset', asset: a }); setEditing(null); }}
           onCancel={() => setEditing(null)}
+          showToast={showToast}
         />
       )}
     </div>

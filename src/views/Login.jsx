@@ -5,7 +5,6 @@ export default function Login({ pendingInvite }) {
   const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState(pendingInvite?.email || '');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
@@ -70,7 +69,7 @@ export default function Login({ pendingInvite }) {
         alignItems:'center', justifyContent:'center', padding:20,
       }}>
         <div className="card" style={{ padding: 32, maxWidth: 480 }}>
-          <div className="font-serif" style={{ fontSize: 26, marginBottom: 8 }}>Configuration required</div>
+          <h1 className="font-serif" style={{ fontSize: 26, marginBottom: 8, marginTop: 0, fontWeight: 400 }}>Configuration required</h1>
           <div className="muted" style={{ fontSize: 13, lineHeight: 1.55, marginBottom: 16 }}>
             Imari is not connected to a backend. Set <code>VITE_SUPABASE_URL</code> and{' '}
             <code>VITE_SUPABASE_ANON_KEY</code> at build time to enable login and shared portfolios.
@@ -83,25 +82,44 @@ export default function Login({ pendingInvite }) {
     );
   }
 
+  // Shared input style — uses --line-strong + brand focus ring from styles.css.
   const inputStyle = {
-    width:'100%', padding:'12px 14px', borderRadius: 9, border:'1px solid var(--line)',
-    background:'var(--paper-2)', fontSize: 14, fontFamily:'inherit', outline:'none', color:'var(--ink)',
+    width:'100%', padding:'12px 14px', borderRadius: 9, border:'1px solid var(--line-strong)',
+    background:'var(--paper-2)', fontSize: 14, fontFamily:'inherit', color:'var(--ink)',
   };
+
+  const errorId   = 'login-error';
+  const messageId = 'login-message';
 
   return (
     <div style={{
       position:'fixed', inset:0, background:'var(--bg)', display:'flex',
       alignItems:'center', justifyContent:'center', padding:20,
     }}>
+      <button
+        type="button"
+        onClick={() => { window.location.hash = ''; }}
+        aria-label="Back to home"
+        style={{
+          position:'absolute', top: 20, left: 20, background:'transparent', border: 0,
+          color:'var(--ink-3)', fontSize: 13, cursor:'pointer', padding:'8px 12px',
+          borderRadius:'var(--r-md)', display:'inline-flex', alignItems:'center', gap: 6,
+          transition:'color 160ms ease, background 160ms ease',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.color = 'var(--ink)'; e.currentTarget.style.background = 'var(--bg-2)'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = 'var(--ink-3)'; e.currentTarget.style.background = 'transparent'; }}
+      >
+        <span aria-hidden="true">←</span> Back to home
+      </button>
       <div className="card" style={{ padding: 36, width:'100%', maxWidth: 460 }}>
-        <div style={{
+        <div aria-hidden="true" style={{
           width: 48, height: 48, borderRadius: 12, background:'var(--brand)', color:'var(--brand-ink)',
           display:'flex', alignItems:'center', justifyContent:'center',
           fontFamily:'Instrument Serif, serif', fontSize: 28, marginBottom: 18,
         }}>●</div>
-        <div className="font-serif" style={{ fontSize: 32, lineHeight: 1.1, letterSpacing:'-0.02em' }}>
-          {mode === 'signin' ? 'Welcome to Imali.' : mode === 'signup' ? 'Create your account.' : 'Reset your password.'}
-        </div>
+        <h1 className="font-serif" style={{ fontSize: 32, lineHeight: 1.1, letterSpacing:'-0.02em', margin: 0, fontWeight: 400 }}>
+          {mode === 'signin' ? 'Welcome to Imari.' : mode === 'signup' ? 'Create your account.' : 'Reset your password.'}
+        </h1>
         <div className="muted" style={{ fontSize: 13, marginTop: 6, marginBottom: 22, lineHeight: 1.5 }}>
           {mode === 'forgot'
             ? "Enter your email and we'll send you a link to reset your password."
@@ -113,26 +131,40 @@ export default function Login({ pendingInvite }) {
         </div>
 
         <form onSubmit={submit} className="col" style={{ gap: 12 }}>
-          <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+          <label htmlFor="login-email" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Email address</label>
+          <input
+            id="login-email"
+            type="email" required value={email} onChange={e => setEmail(e.target.value)}
             placeholder="you@example.com" autoComplete="email" style={inputStyle}
-            disabled={!!pendingInvite?.email} />
+            disabled={!!pendingInvite?.email}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : message ? messageId : undefined}
+          />
           {mode !== 'forgot' && (
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-              placeholder={mode === 'signup' ? 'At least 8 characters' : 'Password'}
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} style={inputStyle} />
+            <>
+              <label htmlFor="login-password" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Password</label>
+              <input
+                id="login-password"
+                type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                placeholder={mode === 'signup' ? 'At least 8 characters' : 'Password'}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} style={inputStyle}
+                aria-invalid={!!error}
+                aria-describedby={error ? errorId : undefined}
+                minLength={mode === 'signup' ? 8 : undefined}
+              />
+            </>
           )}
 
           {mode === 'signin' && (
             <div style={{ textAlign:'right', marginTop: -4 }}>
-              <span onClick={() => switchMode('forgot')}
-                style={{ fontSize: 12, color:'var(--brand)', cursor:'pointer' }}>
+              <button type="button" onClick={() => switchMode('forgot')} className="btn-link" style={{ fontSize: 12 }}>
                 Forgot password?
-              </span>
+              </button>
             </div>
           )}
 
-          {error   && <div style={{ padding: 10, borderRadius: 8, background:'var(--down-soft)', color:'var(--down)', fontSize: 12.5 }}>{error}</div>}
-          {message && <div style={{ padding: 10, borderRadius: 8, background:'var(--up-soft)',   color:'var(--up)',   fontSize: 12.5 }}>{message}</div>}
+          {error   && <div id={errorId}   role="alert"  style={{ padding: 10, borderRadius: 8, background:'var(--down-soft)', color:'var(--down-ink)', fontSize: 12.5 }}>{error}</div>}
+          {message && <div id={messageId} role="status" style={{ padding: 10, borderRadius: 8, background:'var(--up-soft)',   color:'var(--up-ink)',   fontSize: 12.5 }}>{message}</div>}
 
           <button type="submit" disabled={loading} className="btn btn-primary" style={{ width:'100%', marginTop: 6 }}>
             {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in →' : mode === 'forgot' ? 'Send reset link →' : 'Create account →'}
@@ -143,15 +175,14 @@ export default function Login({ pendingInvite }) {
           {mode === 'forgot' ? (
             <>
               <span className="muted">Remember your password?</span>{' '}
-              <span onClick={() => switchMode('signin')} style={{ color:'var(--brand)', cursor:'pointer', fontWeight: 500 }}>Sign in</span>
+              <button type="button" onClick={() => switchMode('signin')} className="btn-link">Sign in</button>
             </>
           ) : (
             <>
               <span className="muted">{mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}</span>{' '}
-              <span onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
-                style={{ color:'var(--brand)', cursor:'pointer', fontWeight: 500 }}>
+              <button type="button" onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')} className="btn-link">
                 {mode === 'signin' ? 'Create one' : 'Sign in'}
-              </span>
+              </button>
             </>
           )}
         </div>

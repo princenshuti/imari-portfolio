@@ -2,7 +2,8 @@
  * market.js — Live market data fetcher.
  *
  * Sources used (all free, CORS-enabled, no API key required):
- *   • FX rates   → open.er-api.com/v6/latest/USD  (updated every 24h, includes RWF)
+ *   • FX rates   → Supabase `exchange_rates` (BNR official, refreshed daily by Edge Function).
+ *                  Fallback → open.er-api.com/v6/latest/USD when Supabase is empty/offline.
  *   • Crypto     → api.coingecko.com              (updated in real time, includes 24h change)
  *   • Gold       → api.metals.live/v1/spot/gold   (spot price in USD/troy oz)
  *   • S&P 500    → query1.finance.yahoo.com       (best-effort; may fail due to CORS)
@@ -12,9 +13,12 @@
  *
  * Results are cached in sessionStorage for CACHE_TTL to avoid hammering free tiers.
  */
+import { supabase, isConfigured as supabaseConfigured } from '../supabase.js';
+import { setLiveFX } from '../data.js';
 
 const CACHE_KEY = 'imari:market:v2';
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const BNR_CURRENCIES = ['USD', 'EUR', 'KES'];
 
 function loadCache() {
   try {
@@ -45,6 +49,40 @@ async function safeFetch(url, timeoutMs = 7000) {
 }
 
 /**
+ * Pull the most recent BNR rate row for each tracked currency.
+ * Returns { USD: { buy, sell, avg, date }, ... } or null if Supabase isn't
+ * configured / table is empty / network failed.
+ */
+async function fetchBnrRates() {
+  if (!supabaseConfigured || !supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('exchange_rates')
+      .select('currency, rate_date, buying_rate, average_rate, selling_rate')
+      .in('currency', BNR_CURRENCIES)
+      .order('rate_date', { ascending: false })
+      .limit(BNR_CURRENCIES.length * 12); // small over-fetch so we always have one per ccy
+    if (error || !Array.isArray(data) || data.length === 0) return null;
+
+    const latest = {};
+    for (const row of data) {
+      const prev = latest[row.currency];
+      if (!prev || row.rate_date > prev.date) {
+        latest[row.currency] = {
+          buy:  +row.buying_rate,
+          sell: +row.selling_rate,
+          avg:  +row.average_rate,
+          date: row.rate_date,
+        };
+      }
+    }
+    return Object.keys(latest).length ? latest : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch all available live market data.
  * Returns a result object — any field may be missing if its API failed.
  *
@@ -53,31 +91,65 @@ async function safeFetch(url, timeoutMs = 7000) {
 export async function fetchMarket(forceRefresh = false) {
   if (!forceRefresh) {
     const cached = loadCache();
-    if (cached) return cached.data;
+    if (cached) {
+      // Cache hit doesn't include LIVE_FX in module state — repopulate from
+      // whatever rates the cache holds so converters keep working after reload.
+      if (cached.data?.bnrRates) setLiveFX(cached.data.bnrRates);
+      return cached.data;
+    }
   }
 
   const result = {};
 
-  // ── 1. FX rates (USD base) — ExchangeRate-API ───────────────────────────
-  // Returns 170+ world currencies including RWF, KES, EUR.
-  // Updated every 24h. Free tier, no API key, CORS-enabled.
-  const fx = await safeFetch('https://open.er-api.com/v6/latest/USD');
-  if (fx?.result === 'success' && fx.rates) {
-    const r = fx.rates;
-    if (r.RWF) {
-      result.usdRwf      = Math.round(r.RWF);        // 1 USD = X RWF
-      result.usdRwfLive  = true;
-    }
-    if (r.EUR) result.eurRwf = +(r.RWF / r.EUR).toFixed(0);  // 1 EUR = X RWF
-    if (r.KES) result.kesRwf = +(r.RWF / r.KES).toFixed(2);  // 1 KES = X RWF
-    // Derived FX map (RWF base) for the in-app currency converter
-    if (r.RWF && r.EUR && r.KES) {
-      result.fxRates = {
-        RWF: 1,
-        USD: Math.round(r.RWF),
-        EUR: Math.round(r.RWF / r.EUR),
-        KES: +(r.RWF / r.KES).toFixed(2),
-      };
+  // ── 1a. BNR official rates (preferred FX source) ────────────────────────
+  // Refreshed daily by the bnr-rates Edge Function. Includes asymmetric
+  // buying / selling spread that the converters use directly.
+  const bnr = await fetchBnrRates();
+  if (bnr) {
+    setLiveFX(bnr);
+    result.bnrRates = bnr;
+    result.fxSource = 'bnr';
+    result.fxAsOf   = Object.values(bnr).map(r => r.date).sort().pop();
+    if (bnr.USD) { result.usdRwf = Math.round(bnr.USD.avg); result.usdRwfLive = true; }
+    if (bnr.EUR) result.eurRwf = Math.round(bnr.EUR.avg);
+    if (bnr.KES) result.kesRwf = +bnr.KES.avg.toFixed(2);
+    result.fxRates = {
+      RWF: 1,
+      USD: bnr.USD ? Math.round(bnr.USD.avg) : undefined,
+      EUR: bnr.EUR ? Math.round(bnr.EUR.avg) : undefined,
+      KES: bnr.KES ? +bnr.KES.avg.toFixed(2)  : undefined,
+    };
+  }
+
+  // ── 1b. Fallback FX (USD base) — ExchangeRate-API ───────────────────────
+  // Only consulted when BNR isn't available. Symmetric (single rate per pair).
+  if (!result.fxRates) {
+    const fx = await safeFetch('https://open.er-api.com/v6/latest/USD');
+    if (fx?.result === 'success' && fx.rates) {
+      const r = fx.rates;
+      if (r.RWF) {
+        result.usdRwf      = Math.round(r.RWF);
+        result.usdRwfLive  = true;
+      }
+      if (r.EUR) result.eurRwf = +(r.RWF / r.EUR).toFixed(0);
+      if (r.KES) result.kesRwf = +(r.RWF / r.KES).toFixed(2);
+      if (r.RWF && r.EUR && r.KES) {
+        result.fxRates = {
+          RWF: 1,
+          USD: Math.round(r.RWF),
+          EUR: Math.round(r.RWF / r.EUR),
+          KES: +(r.RWF / r.KES).toFixed(2),
+        };
+        result.fxSource = 'open.er-api.com';
+        // Mirror the symmetric fallback into LIVE_FX so converters still work
+        // asymmetrically (buy === sell when source has no spread).
+        const mirror = {};
+        for (const c of BNR_CURRENCIES) {
+          const v = result.fxRates[c];
+          if (v) mirror[c] = { buy: v, sell: v, avg: v, date: null };
+        }
+        setLiveFX(mirror);
+      }
     }
   }
 

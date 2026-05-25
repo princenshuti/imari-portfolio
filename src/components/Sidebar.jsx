@@ -1,39 +1,9 @@
 import { fmtBase, toBase } from '../data.js';
 import { signOut } from '../cloud.js';
 import { MaxventuresIcon } from './MaxventuresLogo.jsx';
+import { navItemsByGroup } from '../nav.js';
 
-const NAV_GROUPS = [
-  {
-    label: 'Overview',
-    items: [
-      { id: 'dashboard',   label: 'Dashboard',   glyph: '◐' },
-    ],
-  },
-  {
-    label: 'Wealth',
-    items: [
-      { id: 'assets',      label: 'Assets',      glyph: '◆' },
-      { id: 'liabilities', label: 'Liabilities', glyph: '↓' },
-      { id: 'cashflow',    label: 'Cash Flow',   glyph: '⇄' },
-      { id: 'goals',       label: 'Goals',       glyph: '◎' },
-    ],
-  },
-  {
-    label: 'Finance',
-    items: [
-      { id: 'accounts',    label: 'Accounts',    glyph: '⌬' },
-      { id: 'trends',      label: 'Trends',      glyph: '↗' },
-      { id: 'tax',         label: 'Tax Report',  glyph: '§' },
-    ],
-  },
-  {
-    label: 'Tools',
-    items: [
-      { id: 'advisor',     label: 'AI Advisor',  glyph: '✦' },
-      { id: 'settings',    label: 'Settings',    glyph: '⚙' },
-    ],
-  },
-];
+const NAV_GROUPS = navItemsByGroup();
 
 export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [] }) {
   const totalDebt = liabilities.reduce((s, l) => s + toBase(l.remainingAmount || 0, l.currency || 'RWF'), 0);
@@ -88,15 +58,15 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div className="col" style={{ gap: 1 }}>
             <div className="muted" style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>Assets</div>
-            <div className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--up)' }}>
+            <div className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--up-ink)' }}>
               {fmtBase(netWorth + totalDebt, displayCurrency, { compact: true })}
             </div>
           </div>
           {totalDebt > 0 && (
             <div className="col" style={{ gap: 1 }}>
               <div className="muted" style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>Debt</div>
-              <div className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--down)' }}>
-                −{fmtBase(totalDebt, displayCurrency, { compact: true })}
+              <div className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--down-ink)' }}>
+                <span aria-hidden="true">−</span>{fmtBase(totalDebt, displayCurrency, { compact: true })}
               </div>
             </div>
           )}
@@ -104,12 +74,8 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
 
         {totalCost > 0 && (
           <div className="row" style={{ gap: 7, alignItems: 'center', marginTop: 8 }}>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-pill)',
-              background: up ? 'var(--up-soft)' : 'var(--down-soft)',
-              color: up ? 'var(--up)' : 'var(--down)',
-            }}>
-              {up ? '▲' : '▼'} {Math.abs(gainPct).toFixed(1)}%
+            <span className={`pill ${up ? 'pill-up' : 'pill-down'}`} style={{ fontSize: 10 }}>
+              <span aria-hidden="true">{up ? '▲' : '▼'}</span> {Math.abs(gainPct).toFixed(1)}%
             </span>
             <span className="muted" style={{ fontSize: 10 }}>
               {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })}
@@ -138,7 +104,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
                   onClick={() => onNav(it.id)}
                   aria-current={it.id === active ? 'page' : undefined}
                 >
-                  <span style={{ width: 18, textAlign: 'center', fontSize: 13, opacity: it.id === active ? 1 : 0.65 }}>{it.glyph}</span>
+                  <span aria-hidden="true" style={{ width: 18, textAlign: 'center', fontSize: 13, opacity: it.id === active ? 1 : 0.65 }}>{it.glyph}</span>
                   <span>{it.label}</span>
                 </button>
               ))}
@@ -151,7 +117,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
       <div className="col" style={{ marginTop: 'auto', gap: 8 }}>
         <div style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg-2)', fontSize: 10.5 }}>
           <div className="row" style={{ gap: 6 }}>
-            <span style={{
+            <span aria-hidden="true" style={{
               width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
               background: session ? 'var(--up)' : 'var(--gold)',
               boxShadow: session ? '0 0 0 2px var(--up-soft)' : '0 0 0 2px var(--gold-soft)',
@@ -188,7 +154,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
               fontSize: 11, fontFamily: 'inherit', color: 'var(--ink-3)',
               transition: 'background 0.12s, color 0.12s',
             }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--down-soft)'; e.currentTarget.style.color = 'var(--down)'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--down-soft)'; e.currentTarget.style.color = 'var(--down-ink)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--paper)'; e.currentTarget.style.color = 'var(--ink-3)'; }}
             >Sign out</button>
           </div>

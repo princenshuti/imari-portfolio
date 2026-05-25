@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CURRENCIES, toBase, fmtBase, fmt, id } from '../data.js';
 import { Field, inputStyle } from '../components/Field.jsx';
+import Modal, { ImageLightbox } from '../components/Modal.jsx';
 import { parseCSV, detectColumns, rowsToDrafts } from '../services/bankImport.js';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
@@ -62,17 +63,12 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
   };
 
   return (
-    <div onClick={onCancel} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20,
-    }}>
-      <div onClick={ev => ev.stopPropagation()} className="card" style={{
-        width: '100%', maxWidth: 540, maxHeight: '92vh', overflow: 'auto',
-        padding: 28, background: 'var(--paper)', boxShadow: 'var(--shadow-pop)',
-      }}>
+    <Modal open onClose={onCancel} maxWidth={540} title={isNew ? 'Add entry' : 'Edit entry'}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
-          <div className="font-serif" style={{ fontSize: 22 }}>{isNew ? 'Add entry' : 'Edit entry'}</div>
-          <button onClick={onCancel} style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--bg-2)', border: 0, cursor: 'pointer' }}>×</button>
+          <h2 className="font-serif" style={{ fontSize: 22, margin: 0, fontWeight: 400 }}>{isNew ? 'Add entry' : 'Edit entry'}</h2>
+          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
         {/* Income / Expense toggle */}
@@ -185,23 +181,15 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
         </Field>
 
         <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} className="btn btn-ghost">Cancel</button>
-          <button onClick={() => onSave({ ...e, amount: +e.amount || 0 })} className="btn btn-primary" disabled={!e.amount}>
+          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
+          <button type="button" onClick={() => onSave({ ...e, amount: +e.amount || 0 })} className="btn btn-primary" disabled={!e.amount}>
             {isNew ? 'Add entry' : 'Save'}
           </button>
         </div>
-      </div>
 
-      {/* Full-size attachment viewer */}
-      {showFull && e.attachment && (
-        <div onClick={() => setShowFull(false)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-        }}>
-          <img src={e.attachment.data} alt="attachment full" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 10 }} />
-        </div>
-      )}
-    </div>
+        {/* Full-size attachment viewer */}
+        <ImageLightbox open={showFull && !!e.attachment} onClose={() => setShowFull(false)} src={e.attachment?.data} alt={`Attachment: ${e.attachment?.name || 'receipt'}`} />
+    </Modal>
   );
 }
 
@@ -276,24 +264,19 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
   const expCats = EXPENSE_CATEGORIES;
 
   return (
-    <div onClick={onCancel} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16,
-    }}>
-      <div onClick={ev => ev.stopPropagation()} className="card" style={{
-        width: '100%', maxWidth: step === 'preview' ? 900 : 560, maxHeight: '92vh', overflow: 'auto',
-        padding: 28, background: 'var(--paper)', boxShadow: 'var(--shadow-pop)',
-      }}>
+    <Modal open onClose={onCancel} maxWidth={step === 'preview' ? 900 : 560} title="Import bank statement">
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
           <div>
             <div className="muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Step {step === 'upload' ? 1 : step === 'map' ? 2 : 3} of 3
             </div>
-            <div className="font-serif" style={{ fontSize: 22, marginTop: 2 }}>
+            <h2 className="font-serif" style={{ fontSize: 22, marginTop: 2, margin: 0, fontWeight: 400 }}>
               {step === 'upload' ? 'Upload bank statement' : step === 'map' ? 'Map columns' : `Review ${drafts.length} transactions`}
-            </div>
+            </h2>
           </div>
-          <button onClick={onCancel} style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--bg-2)', border: 0, cursor: 'pointer' }}>×</button>
+          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
         {err && (
@@ -424,16 +407,15 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
                 {drafts.filter(d => d.type === 'income').length} income · {drafts.filter(d => d.type === 'expense').length} expenses
               </div>
               <div className="row" style={{ gap: 10 }}>
-                <button onClick={() => setStep('map')} className="btn btn-ghost">← Back</button>
-                <button onClick={doImport} className="btn btn-primary" disabled={!drafts.length}>
+                <button type="button" onClick={() => setStep('map')} className="btn btn-ghost">← Back</button>
+                <button type="button" onClick={doImport} className="btn btn-primary" disabled={!drafts.length}>
                   Import {drafts.length} entries →
                 </button>
               </div>
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -473,14 +455,7 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
           <button onClick={() => onDelete(cf.id)} style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down)', cursor: 'pointer' }}>×</button>
         </div>
       </div>
-      {showImg && cf.attachment && (
-        <div onClick={() => setShowImg(false)} style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 10000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-        }}>
-          <img src={cf.attachment.data} alt="receipt" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 10 }} />
-        </div>
-      )}
+      <ImageLightbox open={showImg && !!cf.attachment} onClose={() => setShowImg(false)} src={cf.attachment?.data} alt="Cashflow receipt" />
     </div>
   );
 }

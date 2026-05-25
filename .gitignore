@@ -1,3 +1,14 @@
 node_modules/
 dist/
 .DS_Store
+
+# Environment & secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Supabase local CLI state (may contain pooler URLs / linked-project metadata)
+supabase/.temp/
+
+# Local dev tooling (Claude Code launch configs, etc.)
+.claude/

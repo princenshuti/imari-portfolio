@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { GOAL_CATEGORIES, CURRENCIES, toBase, fmtBase, fmt, id, valueRWF, costRWF } from '../data.js';
 import { Field, inputStyle } from '../components/Field.jsx';
+import Modal from '../components/Modal.jsx';
 
 const EMPTY_GOAL = {
   category: 'investment', title: '', targetAmount: '', currency: 'RWF',
@@ -14,32 +15,38 @@ function GoalEditor({ goal, onSave, onCancel }) {
   const cat = GOAL_CATEGORIES.find(c => c.id === g.category) || GOAL_CATEGORIES[0];
 
   return (
-    <div onClick={onCancel} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20,
-    }}>
-      <div onClick={e => e.stopPropagation()} className="card" style={{
-        width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto',
-        padding: 28, background: 'var(--paper)', boxShadow: 'var(--shadow-pop)',
-      }}>
+    <Modal open onClose={onCancel} maxWidth={560} title={isNew ? 'New goal' : 'Edit goal'}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
-          <div className="font-serif" style={{ fontSize: 22 }}>{isNew ? 'New goal' : 'Edit goal'}</div>
-          <button onClick={onCancel} style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--bg-2)', border: 0, cursor: 'pointer' }}>×</button>
+          <h2 className="font-serif" style={{ fontSize: 22, margin: 0, fontWeight: 400 }}>{isNew ? 'New goal' : 'Edit goal'}</h2>
+          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
         <Field label="Category">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
-            {GOAL_CATEGORIES.map(c => (
-              <div key={c.id} onClick={() => u('category', c.id)} style={{
-                padding: '8px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 11,
-                background: c.id === g.category ? 'var(--brand-soft)' : 'var(--bg-2)',
-                color: c.id === g.category ? 'var(--brand)' : 'var(--ink-2)',
-                border: c.id === g.category ? '1px solid var(--brand)' : '1px solid transparent',
-              }}>
-                <div style={{ fontSize: 18, marginBottom: 2 }}>{c.icon}</div>
-                <div style={{ lineHeight: 1.2 }}>{c.label}</div>
-              </div>
-            ))}
+          <div role="radiogroup" aria-label="Goal category" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+            {GOAL_CATEGORIES.map(c => {
+              const selected = c.id === g.category;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => u('category', c.id)}
+                  style={{
+                    padding: '8px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 11,
+                    background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
+                    color: selected ? 'var(--brand)' : 'var(--ink-2)',
+                    border: selected ? '1px solid var(--brand)' : '1px solid transparent',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <div aria-hidden="true" style={{ fontSize: 18, marginBottom: 2 }}>{c.icon}</div>
+                  <div style={{ lineHeight: 1.2 }}>{c.label}</div>
+                </button>
+              );
+            })}
           </div>
         </Field>
 
@@ -69,14 +76,13 @@ function GoalEditor({ goal, onSave, onCancel }) {
         </Field>
 
         <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} className="btn btn-ghost">Cancel</button>
-          <button onClick={() => onSave({ ...g, targetAmount: +g.targetAmount || 0 })}
+          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
+          <button type="button" onClick={() => onSave({ ...g, targetAmount: +g.targetAmount || 0 })}
             className="btn btn-primary" disabled={!g.title || !g.targetAmount}>
             {isNew ? 'Create goal' : 'Save changes'}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -121,8 +127,10 @@ function GoalCard({ goal, netWorth, displayCurrency, onEdit, onDelete }) {
           </div>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <button onClick={onEdit} style={{ padding: '5px 10px', fontSize: 11, borderRadius: 6, border: '1px solid var(--line)', background: 'var(--paper)', cursor: 'pointer' }}>Edit</button>
-          <button onClick={onDelete} style={{ padding: '5px 10px', fontSize: 11, borderRadius: 6, border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down)', cursor: 'pointer' }}>Delete</button>
+          <button type="button" onClick={onEdit} aria-label={`Edit ${goal.title}`} className="btn btn-ghost btn-xs">Edit</button>
+          <button type="button" onClick={onDelete} aria-label={`Delete ${goal.title}`} className="btn btn-xs" style={{
+            border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down-ink)',
+          }}>Delete</button>
         </div>
       </div>
 

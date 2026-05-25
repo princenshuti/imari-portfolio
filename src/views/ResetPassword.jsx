@@ -28,7 +28,7 @@ export default function ResetPassword({ onDone, session }) {
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 6) return setError('Password must be at least 6 characters.');
+    if (password.length < 8) return setError('Password must be at least 8 characters.');
     if (password !== confirm) return setError('Passwords do not match.');
     setLoading(true);
     try {
@@ -59,7 +59,7 @@ export default function ResetPassword({ onDone, session }) {
           Set new password.
         </div>
         <div className="muted" style={{ fontSize: 13, marginTop: 6, marginBottom: 22, lineHeight: 1.5 }}>
-          Choose a strong password for your Imali account.
+          Choose a strong password for your Imari account.
         </div>
 
         {!ready ? (
@@ -75,7 +75,7 @@ export default function ResetPassword({ onDone, session }) {
             <input
               type="password" required value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="New password (min. 6 characters)"
+              placeholder="New password (min. 8 characters)"
               autoComplete="new-password" style={inputStyle}
             />
             <input

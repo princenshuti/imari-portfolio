@@ -77,7 +77,20 @@ async function callProxy(systemPrompt, messages, userQuestion, model) {
       model,
     },
   });
-  if (error) throw new Error(error.message || 'AI request failed');
+  if (error) {
+    // FunctionsHttpError carries the response on error.context — read its body
+    // so the user sees the real cause (e.g. "AI service not configured")
+    // instead of the generic "non-2xx status code".
+    if (error.context && typeof error.context.json === 'function') {
+      try {
+        const body = await error.context.json();
+        if (body?.error) throw new Error(body.error);
+      } catch (e) {
+        if (e.message && e.message !== 'Unexpected end of JSON input') throw e;
+      }
+    }
+    throw new Error(error.message || 'AI request failed');
+  }
   if (data?.error) throw new Error(data.error);
   return data.text;
 }
@@ -114,7 +127,7 @@ export async function completeText(_apiKey, prompt) {
   if (isConfigured && supabase) {
     return callProxy(null, [], prompt, 'claude-haiku-4-5-20251001');
   }
-  const key = ENV_KEY || localStorage.getItem(API_KEY_STORAGE) || '';
+  const key = ENV_KEY || _memKey;
   if (!key) throw new Error('No API key available');
   return callDirect(key, null, [], prompt, 'claude-haiku-4-5-20251001');
 }
@@ -123,7 +136,7 @@ export async function completeChat(_apiKey, systemPrompt, messages, userQuestion
   if (isConfigured && supabase) {
     return callProxy(systemPrompt, messages, userQuestion, 'claude-sonnet-4-6');
   }
-  const key = ENV_KEY || localStorage.getItem(API_KEY_STORAGE) || '';
+  const key = ENV_KEY || _memKey;
   if (!key) throw new Error('No API key available');
   return callDirect(key, systemPrompt, messages, userQuestion, 'claude-sonnet-4-6');
 }
