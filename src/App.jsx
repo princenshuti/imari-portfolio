@@ -8,6 +8,7 @@ import TopBar from './components/TopBar.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
 import { useToast, ToastContainer } from './components/Toast.jsx';
 import FloatingAdvisor from './components/FloatingAdvisor.jsx';
+import { ViewSkeleton } from './components/Skeleton.jsx';
 // Always-needed auth/onboarding screens (tiny, no lazy needed)
 import Login from './views/Login.jsx';
 import Landing from './views/Landing.jsx';
@@ -628,7 +629,7 @@ export default function App() {
             </div>
           )}
           <main id="main-content" key={nav} className="page-view" tabIndex={-1}>
-            <Suspense fallback={<FullScreenLoader />}>
+            <Suspense fallback={<ViewSkeleton />}>
               {view}
             </Suspense>
           </main>

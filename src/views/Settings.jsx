@@ -6,6 +6,7 @@ import { getApiKey, setApiKey, hasEnvKey } from '../ai.js';
 import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, isConfigured } from '../cloud.js';
 import { Field, inputStyle } from '../components/Field.jsx';
 import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
+import { RowSkeleton } from '../components/Skeleton.jsx';
 
 /** Resize + center-crop an image File to a square JPEG data URI. */
 async function resizeAvatar(file, px = 160) {
@@ -49,9 +50,18 @@ function MembersSection({ portfolioId, role, session }) {
   const [error, setError] = useState(null);
 
   const refresh = async () => {
-    setLoading(true);
+    setLoading(true); setError(null);
+    // 5-second hard timeout so a silent RPC failure surfaces as "retry" instead
+    // of an indefinite skeleton. listMembers/listInvitations can hang quietly
+    // when Supabase RLS is misconfigured or the network's flaky.
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timed out loading members. Please retry.')), 5000)
+    );
     try {
-      const [m, i] = await Promise.all([listMembers(portfolioId), listInvitations(portfolioId)]);
+      const [m, i] = await Promise.race([
+        Promise.all([listMembers(portfolioId), listInvitations(portfolioId)]),
+        timeout,
+      ]);
       setMembers(m); setInvitations(i);
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
@@ -132,10 +142,30 @@ function MembersSection({ portfolioId, role, session }) {
         </form>
       )}
 
-      {error && <div style={{ padding: 10, borderRadius: 8, background:'var(--down-soft)', color:'var(--down)', fontSize: 12, marginBottom: 14 }}>{error}</div>}
+      {error && (
+        <div style={{
+          padding: 12, borderRadius: 8, background:'var(--down-soft)', color:'var(--down)',
+          fontSize: 12.5, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        }}>
+          <span>{error}</span>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            style={{
+              padding: '6px 12px', borderRadius: 6,
+              border: '1px solid currentColor', background: 'transparent',
+              color: 'var(--down)', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+              cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {loading ? 'Retrying…' : 'Retry'}
+          </button>
+        </div>
+      )}
 
       {loading ? (
-        <div className="muted" style={{ fontSize: 13 }}>Loading…</div>
+        <RowSkeleton count={3} showAvatar />
       ) : (
         <>
           <div className="muted" style={{ fontSize: 10.5, fontWeight: 600, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom: 8 }}>
