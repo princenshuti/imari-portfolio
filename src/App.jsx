@@ -241,12 +241,14 @@ export default function App() {
   }
   const [nav, setNav] = useState(hashToNav);
   // Pre-auth routing:
-  //   ''        → Landing (default for signed-out users)
-  //   '#login'  → Login form
-  //   '#landing'→ Force-preview Landing at any time (works even when signed in)
+  //   ''         → Landing (default for signed-out users)
+  //   '#login'   → Login form, Sign-in mode
+  //   '#signup'  → Login form, Create-account mode
+  //   '#landing' → Force-preview Landing at any time (works even when signed in)
   const readAuthHash = () => {
     const h = window.location.hash;
     if (h === '#login')   return 'login';
+    if (h === '#signup')  return 'signup';
     if (h === '#landing') return 'preview';
     return 'landing';
   };
@@ -353,7 +355,7 @@ export default function App() {
   useEffect(() => {
     if (!session?.user) return;
     const h = window.location.hash;
-    if (h === '' || h === '#' || h === '#login' || h === '#landing') {
+    if (h === '' || h === '#' || h === '#login' || h === '#signup' || h === '#landing') {
       window.location.hash = 'dashboard';
     }
   }, [session?.user?.id]);
@@ -553,7 +555,9 @@ export default function App() {
 
   if (isConfigured && !session) {
     // Invite links carry clear intent — skip the landing and go straight to login.
-    if (pendingInvite || authPage === 'login') return <Login pendingInvite={pendingInvite} />;
+    if (pendingInvite || authPage === 'login' || authPage === 'signup') {
+      return <Login pendingInvite={pendingInvite} initialMode={authPage === 'signup' ? 'signup' : 'signin'} />;
+    }
     return <Landing onSignIn={() => setAuthPage('login')} />;
   }
   if (!stateReady) return <FullScreenLoader message="Loading your portfolio…" />;

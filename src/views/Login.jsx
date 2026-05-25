@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import { signIn, signUp, resetPassword, isConfigured } from '../cloud.js';
 
-export default function Login({ pendingInvite }) {
-  const [mode, setMode] = useState('signin');
+export default function Login({ pendingInvite, initialMode = 'signin' }) {
+  const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState(pendingInvite?.email || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
 
-  const switchMode = (next) => { setMode(next); setError(null); setMessage(null); };
+  const switchMode = (next) => {
+    setMode(next); setError(null); setMessage(null);
+    // Mirror the mode in the URL hash so reloads preserve intent and links are shareable.
+    // (forgot is local-only — no hash, since reset flow lives inside this same screen.)
+    if (next === 'signup')  window.location.hash = 'signup';
+    else if (next === 'signin') window.location.hash = 'login';
+  };
 
   const submit = async (e) => {
     e.preventDefault();

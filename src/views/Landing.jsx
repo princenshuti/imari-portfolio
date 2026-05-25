@@ -54,44 +54,44 @@ function Icon({ name }) {
 }
 
 const PAINS = [
-  { icon: 'scatter', title: 'Scattered everywhere',
-    desc: 'Three banks, two MoMo wallets, USD cash, a land title, that bond from last year. No tool shows them together — so you guess.' },
-  { icon: 'calc',    title: 'The math is always off',
-    desc: 'Mental FX between RWF and USD is a coin toss. So is the gut feel of "am I better off this quarter than last?" Both deserve real numbers.' },
+  { icon: 'scatter', title: 'Your wealth is scattered',
+    desc: 'Three banks, two MoMo wallets, USD cash, a land title, a bond from last year. Nothing shows them in one place — so the only net-worth figure you have is a guess.' },
+  { icon: 'calc',    title: 'The math never adds up',
+    desc: 'Converting RWF and USD in your head is a coin toss. So is the question “am I better off than last quarter?” Both deserve a real number, not a feeling.' },
   { icon: 'clock',   title: 'Tax season is chaos',
-    desc: 'When RRA asks, you reconstruct twelve months from receipts and screenshots. There’s a calmer way to do this.' },
+    desc: 'When RRA asks, you rebuild twelve months from receipts, SMS and screenshots — every single year. There is a far calmer way to keep records.' },
 ];
 
 const FEATURES = [
-  { icon: 'wallet', accent: 'var(--brand)', title: 'Every account, one balance',
-    desc: 'Bank, MoMo, USD, cash — visible at once. Log income or an expense and the linked balance updates itself. No reconciliation tax.' },
-  { icon: 'cube',   accent: 'var(--gold)',  title: 'Beyond accounts: what you really own',
-    desc: 'Land, bonds, livestock, vehicles, receivables. In RWF, USD or both — with BNR official rates baked in so the totals are honest.' },
-  { icon: 'target', accent: 'var(--clay)',  title: 'Debts paid, goals chased',
-    desc: 'Loans tracked alongside the house you’re saving for. Honest math on what you owe and how close you actually are — not motivational fluff.' },
-  { icon: 'flow',   accent: 'var(--sky)',   title: 'Where your money actually goes',
-    desc: 'Income vs expenses, savings rate, month by month. Not a budget that nags you — a mirror that shows you.' },
+  { icon: 'wallet', accent: 'var(--brand)', title: 'Every account, one live balance',
+    desc: 'Bank, MoMo, USD, cash — all visible at once. Log income or an expense and the linked balance updates itself. No reconciliation, no stale spreadsheet.' },
+  { icon: 'cube',   accent: 'var(--gold)',  title: 'Beyond accounts — everything you own',
+    desc: 'Land, bonds, shares, livestock, vehicles, receivables. Valued in RWF, USD or both, with official BNR rates baked in so the total is honest.' },
+  { icon: 'target', accent: 'var(--clay)',  title: 'Debts cleared, goals reached',
+    desc: 'Loans tracked beside the house you are saving for. Straight math on what you owe and how close you really are — not motivational fluff.' },
+  { icon: 'flow',   accent: 'var(--sky)',   title: 'See where your money goes',
+    desc: 'Income against expenses, savings rate, month by month. Not a budget that nags you — a mirror that shows you the truth.' },
   { icon: 'spark',  accent: 'var(--brand)', title: 'An advisor that knows your numbers',
-    desc: 'Ask anything. Claude reads your portfolio first, then answers in context. No generic web advice — answers grounded in your actual money.' },
-  { icon: 'doc',    accent: 'var(--plum)',  title: 'RRA-ready, all year',
-    desc: 'Imali estimates your tax as you earn, not the week before deadline. Export a clean report when April comes — no scrambling.' },
+    desc: 'Ask anything. The AI advisor reads your own portfolio first, then answers in context — grounded in your actual money, not generic web advice.' },
+  { icon: 'doc',    accent: 'var(--plum)',  title: 'RRA-ready, all year round',
+    desc: 'Imari estimates your tax as you earn, not the week before the deadline. Export a clean report when April comes — no scrambling.' },
 ];
 
 const TRUST = [
-  { icon: 'lock',     title: 'Encrypted, end to end',
-    desc: 'TLS in transit. Postgres with row-level security at rest. Your portfolio sits under your account on Supabase — no one else, including us, can read it without your sign-in.' },
-  { icon: 'key-off',  title: 'No bank passwords, ever',
-    desc: 'Imali never asks for your bank or MoMo credentials. You enter balances; we do the math. There’s nothing to phish, nothing to leak, nothing to steal.' },
+  { icon: 'lock',     title: 'Encrypted in transit and at rest',
+    desc: 'Every connection runs over TLS. Your portfolio is stored in Supabase Postgres, encrypted on disk and isolated by row-level security — reachable only through your signed-in account.' },
+  { icon: 'key-off',  title: 'No bank passwords. Not ever.',
+    desc: 'Imari never asks for your bank or MoMo login. You enter balances; the app does the math. There are no banking credentials here to phish, leak or steal.' },
   { icon: 'download', title: 'Your data, your control',
-    desc: 'Export everything to Excel any time. Delete your account and your data goes with it. We don’t sell, share, or run analytics on what you store here.' },
+    desc: 'Export everything to Excel any time. Delete your account and your data goes with it. We never sell it, share it, or run analytics on what you store.' },
   { icon: 'eye',      title: 'Read-only when you share',
-    desc: 'Invite your spouse, family or accountant as viewers. They see the numbers, they can’t edit. Revoke access in one click whenever you want.' },
+    desc: 'Invite a spouse, family member or accountant as a viewer. They see the numbers; they cannot edit them. Revoke access in one click, any time.' },
 ];
 
 const STEPS = [
-  { n: '01', title: 'Create your account',     desc: 'One email, one password, eight seconds. Your encrypted portfolio is provisioned on the spot.' },
-  { n: '02', title: 'Pour in what you own',    desc: 'Accounts, assets, debts, goals — RWF, USD, or both. The first hour gives you the picture; the rest builds itself.' },
-  { n: '03', title: 'Let Imali do the rest',   desc: 'Daily snapshots, FX updates, tax estimates, advisor insights — running quietly in the background. You just look in when you want to know.' },
+  { n: '01', title: 'Create your account',   desc: 'One email, one password, eight seconds. Your private portfolio is provisioned on the spot.' },
+  { n: '02', title: 'Add what you own',      desc: 'Accounts, assets, debts and goals — in RWF, USD or both. The first hour gives you the full picture; after that it maintains itself.' },
+  { n: '03', title: 'Let Imari do the rest', desc: 'Daily snapshots, FX updates, tax estimates and advisor insights run quietly in the background. You just check in when you want to know.' },
 ];
 
 export default function Landing({ onSignIn }) {
@@ -102,9 +102,19 @@ export default function Landing({ onSignIn }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const goLogin = () => {
-    window.location.hash = 'login';
-    onSignIn?.();
+  // mode: 'signup' lands on the Create-account form, 'signin' on the Sign-in form.
+  // Hash is the single source of truth — App listens on hashchange and re-renders.
+  // (We deliberately don't also call onSignIn() so the mode prop reaches Login on the
+  // very first render with the correct value, instead of after a flip.)
+  const goLogin = (mode = 'signin') => {
+    window.location.hash = mode === 'signup' ? 'signup' : 'login';
+  };
+  const goSignup = () => goLogin('signup');
+
+  // Brand link: scroll to top without dirtying the URL hash (which would unmount Landing).
+  const goTop = (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -112,15 +122,15 @@ export default function Landing({ onSignIn }) {
       {/* Nav */}
       <nav className={`landing-nav ${scrolled ? 'is-scrolled' : ''}`} data-noprint>
         <div className="landing-nav-inner">
-          <a href="#" className="landing-brand" aria-label="Imali home">
+          <a href="#" onClick={goTop} className="landing-brand" aria-label="Imari home">
             <span className="landing-brand-mark" aria-hidden>●</span>
-            <span className="landing-brand-name font-serif">Imali</span>
+            <span className="landing-brand-name font-serif">Imari</span>
           </a>
           <div className="landing-nav-actions">
-            <a href="#why" className="landing-link">Why Imali</a>
+            <a href="#why" className="landing-link">Why Imari</a>
             <a href="#features" className="landing-link">Features</a>
             <a href="#security" className="landing-link">Security</a>
-            <button onClick={goLogin} className="btn btn-primary landing-cta-sm">Sign in</button>
+            <button onClick={() => goLogin('signin')} className="btn btn-primary landing-cta-sm">Sign in</button>
           </div>
         </div>
       </nav>
@@ -129,27 +139,29 @@ export default function Landing({ onSignIn }) {
       <header className="landing-hero">
         <div className="landing-hero-inner">
           <span className="landing-eyebrow">
-            <span className="landing-dot" aria-hidden /> Wealth tracking · Built for Rwanda
+            <span className="landing-dot" aria-hidden /> Personal wealth tracker · Built for Rwanda
           </span>
           <h1 className="landing-headline font-serif">
             Stop guessing<br />
             <em className="landing-headline-em">what you’re worth.</em>
           </h1>
           <p className="landing-sub">
-            Bank, MoMo, USD, land, bonds — most people guess. Imali tracks every franc and every asset you own,
-            and tells you exactly where you stand. Today. This quarter. And where you’re heading.
+            If your money is spread across banks, MoMo, USD cash, land and a few investments,
+            you are estimating your net worth — not knowing it. Imari ends the guesswork: every
+            account and every asset in one live picture, in RWF and USD, showing exactly where
+            you stand today and whether you are ahead of last quarter.
           </p>
           <div className="landing-hero-ctas">
-            <button onClick={goLogin} className="btn btn-primary landing-cta">
+            <button onClick={goSignup} className="btn btn-primary landing-cta">
               Get started — it’s free <Icon name="arrow" />
             </button>
-            <button onClick={goLogin} className="btn btn-ghost landing-cta-ghost">
+            <button onClick={() => goLogin('signin')} className="btn btn-ghost landing-cta-ghost">
               I already have an account
             </button>
           </div>
           <div className="landing-trust">
             <Icon name="shield" />
-            <span>Bank-grade encryption. Your data, your account, your control.</span>
+            <span>Free to start. No card, no bank passwords — encrypted in transit and at rest.</span>
           </div>
         </div>
 
@@ -202,8 +214,9 @@ export default function Landing({ onSignIn }) {
           <span className="landing-section-eyebrow">The problem</span>
           <h2 className="font-serif landing-section-title">Tracking wealth in Rwanda is broken.</h2>
           <p className="landing-section-sub">
-            Spreadsheets go stale. Banking apps show one slice. Generic finance tools don’t know what MoMo is,
-            don’t speak RWF, and can’t tell you what RRA expects in April.
+            Spreadsheets go stale the day you close them. Banking apps each show one slice. Generic
+            finance tools don’t know what MoMo is, don’t speak RWF, and can’t tell you what RRA
+            expects in April. So you are left doing the hardest job yourself — and guessing.
           </p>
         </div>
         <div className="landing-pains">
@@ -221,10 +234,10 @@ export default function Landing({ onSignIn }) {
       <section id="features" className="landing-section landing-section-alt">
         <div className="landing-section-head">
           <span className="landing-section-eyebrow">The solution</span>
-          <h2 className="font-serif landing-section-title">The full picture, finally.</h2>
+          <h2 className="font-serif landing-section-title">One app for your whole financial picture.</h2>
           <p className="landing-section-sub">
-            Six tools, one rhythm. Built around how money actually works in Rwanda — multi-currency, multi-asset,
-            and aware of the institutions you already use.
+            Imari brings every account, asset, debt and goal into a single dashboard — multi-currency,
+            multi-asset, and built around the banks, wallets and rules you already use in Rwanda.
           </p>
         </div>
 
@@ -245,10 +258,11 @@ export default function Landing({ onSignIn }) {
       <section id="security" className="landing-section">
         <div className="landing-section-head">
           <span className="landing-section-eyebrow">Built for trust</span>
-          <h2 className="font-serif landing-section-title">Your money is private. Your data is yours.</h2>
+          <h2 className="font-serif landing-section-title">Your money is private. Your data stays yours.</h2>
           <p className="landing-section-sub">
-            Imali holds the kind of information your bank holds. We treat it that way — with encryption,
-            isolation, and the simple discipline of never asking for more than we need.
+            Imari holds the kind of information your bank holds — so we protect it the same way:
+            encryption in transit and at rest, strict per-account isolation, and the discipline of
+            never collecting more than the app actually needs.
           </p>
         </div>
 
@@ -267,8 +281,8 @@ export default function Landing({ onSignIn }) {
         <div className="landing-trust-foot">
           <Icon name="shield" />
           <span>
-            Built on <strong>Supabase</strong> (Postgres + row-level security) and protected end-to-end with TLS.
-            We never see your password — auth tokens are issued by Supabase, not stored by us.
+            Built on <strong>Supabase</strong> — Postgres with row-level security, encrypted on disk,
+            with TLS on every connection. Sign-in is handled by Supabase Auth: we never see or store your password.
           </span>
         </div>
       </section>
@@ -277,7 +291,7 @@ export default function Landing({ onSignIn }) {
       <section id="how" className="landing-section landing-section-alt">
         <div className="landing-section-head">
           <span className="landing-section-eyebrow">How it works</span>
-          <h2 className="font-serif landing-section-title">From zero to a full picture, in an afternoon.</h2>
+          <h2 className="font-serif landing-section-title">From zero to a full picture, in one afternoon.</h2>
         </div>
 
         <ol className="landing-steps">
@@ -298,14 +312,14 @@ export default function Landing({ onSignIn }) {
             Know what you’re worth.<br />Starting today.
           </h2>
           <p className="landing-footer-sub">
-            Free to start. No card. No bank credentials. Just the first complete picture
-            of your money — built in Rwanda, for the way money actually moves here.
+            Free to start — no card, no bank credentials. Just the first complete, honest picture
+            of your money, built in Rwanda for the way money actually moves here.
           </p>
           <div className="landing-hero-ctas" style={{ justifyContent: 'center' }}>
-            <button onClick={goLogin} className="btn btn-primary landing-cta">
+            <button onClick={goSignup} className="btn btn-primary landing-cta">
               Create your account <Icon name="arrow" />
             </button>
-            <button onClick={goLogin} className="btn btn-ghost landing-cta-ghost">
+            <button onClick={() => goLogin('signin')} className="btn btn-ghost landing-cta-ghost">
               Sign in
             </button>
           </div>
@@ -314,7 +328,7 @@ export default function Landing({ onSignIn }) {
         <footer className="landing-footer">
           <div className="landing-footer-brand">
             <span className="landing-brand-mark" aria-hidden>●</span>
-            <span className="font-serif">Imali</span>
+            <span className="font-serif">Imari</span>
           </div>
           <div className="landing-footer-meta">
             <span>Powered by</span>
