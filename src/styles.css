@@ -459,7 +459,7 @@ input:focus, select:focus, textarea:focus {
   .dash-grid-3 > :first-child { grid-column: 1 / -1; }
 }
 @media (max-width: 768px) {
-  .dash-grid-3 { grid-template-columns: 1fr; }
+  .dash-grid-3 { grid-template-columns: 1fr; gap: 12px; }
   .dash-grid-3 > :first-child { grid-column: auto; }
 }
 
@@ -471,6 +471,53 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 960px)  { .dash-grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px)  { .dash-grid-4 { grid-template-columns: 1fr 1fr; } }
 
+/* 2-column dash grid — collapses to single column on tablets/phones */
+.dash-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 900px) {
+  .dash-grid-2 { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* ── Dashboard page wrapper — responsive outer padding ────────── */
+.dash-page {
+  padding: 28px;
+  padding-top: 24px;
+  background: var(--bg);
+  min-height: calc(100vh - 64px);
+}
+@media (max-width: 960px) { .dash-page { padding: 22px 18px; } }
+@media (max-width: 560px) { .dash-page { padding: 16px 12px 24px; } }
+@media (max-width: 380px) { .dash-page { padding: 14px 10px 24px; } }
+
+/* Hero card — responsive padding + headline size */
+.dash-hero-card { padding: 28px; }
+@media (max-width: 560px) {
+  .dash-hero-card { padding: 18px 16px; }
+}
+.dash-hero-amount {
+  font-size: clamp(30px, 8vw, 50px);
+}
+
+/* AI Insight card — tighter padding on narrow viewports */
+.dash-insight-card { padding: 24px; }
+@media (max-width: 560px) {
+  .dash-insight-card { padding: 16px 14px; }
+}
+
+/* Generic dashboard section card — tighten padding on phones */
+@media (max-width: 560px) {
+  .dash-section-card { padding: 16px 14px !important; }
+}
+
+/* Make any chart/SVG inside a dash card never push beyond its container.
+   Note: do NOT apply overflow:hidden to .card here — the PortfolioChart
+   tooltip is absolutely positioned and must escape its card. .card-hero
+   defines its own overflow below for the radial glow blob. */
+.dash-page svg { max-width: 100%; }
+
 /* ── Mobile layout ────────────────────────────────────────────── */
 .sidebar-desktop { display: flex; }
 .mobile-tab-bar  { display: none; }
@@ -479,6 +526,30 @@ input:focus, select:focus, textarea:focus {
   .sidebar-desktop { display: none !important; }
   .mobile-tab-bar  { display: flex !important; }
   .main-scroll     { padding-bottom: 80px; }
+}
+
+/* ── TopBar — responsive padding ──────────────────────────────── */
+.topbar-row {
+  padding: 16px 28px;
+  min-height: 64px;
+}
+@media (max-width: 768px) {
+  .topbar-row { padding: 12px 16px; min-height: 56px; gap: 8px; }
+  .topbar-title { font-size: 20px !important; }
+}
+@media (max-width: 480px) {
+  .topbar-row { padding: 10px 12px; }
+  .topbar-title { font-size: 18px !important; }
+  .topbar-subtitle { font-size: 9px !important; }
+}
+
+/* Hero card — minimum styles for the absolute-positioned glow blob inside.
+   Visual styling (shadow/border) intentionally NOT applied — original design
+   intent was a borderless card; only ensure positioning + overflow clipping. */
+.card-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-lg);
 }
 
 /* ── Mobile tab bar ───────────────────────────────────────────── */

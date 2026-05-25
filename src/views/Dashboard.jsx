@@ -138,8 +138,8 @@ ${JSON.stringify(snapshot, null, 2)}`;
   const bullets = insight?.content ? insight.content.split(/\n+/).filter(l => l.trim()) : [];
 
   return (
-    <div style={{
-      marginBottom: 16, padding: 24, borderRadius: 'var(--r-xl)',
+    <div className="dash-insight-card" style={{
+      marginBottom: 16, borderRadius: 'var(--r-xl)',
       background: 'linear-gradient(135deg, var(--paper) 0%, var(--brand-softer) 120%)',
       border: '0.5px solid var(--brand-soft)', boxShadow: 'var(--shadow-2)',
     }}>
@@ -868,7 +868,7 @@ export default function DashboardView({ state, dispatch }) {
       <div className="dash-grid-3">
 
         {/* Net Worth Hero */}
-        <div className="card-hero" style={{ padding: 28 }}>
+        <div className="card-hero dash-hero-card">
           <div style={{
             position: 'absolute', top: -40, right: -40,
             width: 160, height: 160, borderRadius: '50%',
@@ -876,7 +876,7 @@ export default function DashboardView({ state, dispatch }) {
             pointerEvents: 'none',
           }} />
           <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Net worth</div>
-          <div className="font-serif" style={{ fontSize: 50, lineHeight: 1, letterSpacing: '-0.025em' }}>
+          <div className="font-serif dash-hero-amount" style={{ lineHeight: 1, letterSpacing: '-0.025em' }}>
             {fmtBase(trueNetWorth, profile.displayCurrency, { compact: trueNetWorth > 1e8 })}
           </div>
           <div className="row" style={{ gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
@@ -888,7 +888,7 @@ export default function DashboardView({ state, dispatch }) {
             </span>
           </div>
           <div style={{ marginTop: 18, color: 'var(--brand)' }}>
-            <AreaChart data={trend} w={680} h={140} stroke="var(--brand)" accent="var(--brand)" />
+            <AreaChart data={trend} w={680} h={140} stroke="var(--brand)" accent="var(--brand)" responsive />
           </div>
           <div className="row" style={{ justifyContent: 'space-between', fontSize: 9, color: 'var(--ink-4)', paddingTop: 4, letterSpacing: '0.02em' }}>
             <span>24m ago</span><span>18m</span><span>12m</span><span>6m</span><span>Today</span>
@@ -1176,7 +1176,7 @@ export default function DashboardView({ state, dispatch }) {
     })() : null,
 
     chart: (
-      <div className="card" style={{ padding: '22px 24px' }}>
+      <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
           <div>
             <div className="font-serif" style={{ fontSize: 19 }}>Net worth timeline</div>
@@ -1200,7 +1200,7 @@ export default function DashboardView({ state, dispatch }) {
     ),
 
     category: stats.groups.length > 0 ? (
-      <div className="card" style={{ padding: '22px 24px' }}>
+      <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18 }}>
           <div>
             <div className="font-serif" style={{ fontSize: 19 }}>Category performance</div>
@@ -1215,7 +1215,7 @@ export default function DashboardView({ state, dispatch }) {
     ) : null,
 
     movers: (gainers.length > 0 || losers.length > 0) ? (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div className="dash-grid-2">
         <div className="card" style={{ padding: '20px 22px' }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, alignItems: 'center' }}>
             <div>
@@ -1263,7 +1263,7 @@ export default function DashboardView({ state, dispatch }) {
     ) : null,
 
     benchmarks: (
-      <div style={{ display: 'grid', gridTemplateColumns: activeGoals.length > 0 ? '1fr 1fr' : '1fr', gap: 16 }}>
+      <div className={activeGoals.length > 0 ? 'dash-grid-2' : ''} style={activeGoals.length > 0 ? undefined : { display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
         <div className="card" style={{ padding: '20px 22px' }}>
           <div className="font-serif" style={{ fontSize: 17, marginBottom: 4 }}>vs. Benchmarks</div>
           <div className="muted" style={{ fontSize: 11, marginBottom: 16 }}>
@@ -1352,7 +1352,7 @@ export default function DashboardView({ state, dispatch }) {
   };
 
   return (
-    <div style={{ padding: 28, paddingTop: 24, background: 'var(--bg)', minHeight: 'calc(100vh - 64px)' }}>
+    <div className="dash-page">
 
       {/* Keyframes */}
       <style>{`

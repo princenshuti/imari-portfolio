@@ -4,8 +4,7 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
   const initials = (profile.name || 'You').split(' ').slice(0,2).map(s => s[0] || '').join('').toUpperCase().slice(0,2);
 
   return (
-    <div className="row" style={{
-      padding: '16px 28px',
+    <div className="row topbar-row" style={{
       justifyContent: 'space-between',
       alignItems: 'center',
       borderBottom: '0.5px solid var(--line)',
@@ -15,17 +14,16 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
       zIndex: 40,
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
-      minHeight: 64,
     }}>
       {/* Title area */}
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, flex: 1 }}>
         {subtitle && (
-          <div className="muted" style={{
+          <div className="muted topbar-subtitle" style={{
             fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase',
             fontWeight: 600, marginBottom: 2,
           }}>{subtitle}</div>
         )}
-        <div className="font-serif" style={{
+        <div className="font-serif topbar-title" style={{
           fontSize: 24, lineHeight: 1.1,
           letterSpacing: '-0.02em',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',

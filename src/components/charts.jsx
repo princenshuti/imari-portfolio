@@ -16,7 +16,7 @@ export function Sparkline({ data, w = 80, h = 26, stroke = 'currentColor', fill 
   );
 }
 
-export function AreaChart({ data, w = 320, h = 120, stroke = 'currentColor', accent = 'currentColor', showGuides = true }) {
+export function AreaChart({ data, w = 320, h = 120, stroke = 'currentColor', accent = 'currentColor', showGuides = true, responsive = false }) {
   if (!data || data.length < 2) return null;
   const min = Math.min(...data) * 0.97, max = Math.max(...data) * 1.02;
   const range = max - min || 1;
@@ -27,8 +27,11 @@ export function AreaChart({ data, w = 320, h = 120, stroke = 'currentColor', acc
   const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
   const area = path + ` L${w},${h} L0,${h} Z`;
   const lastY = pts[pts.length - 1][1];
+  const svgSize = responsive
+    ? { width: '100%', style: { display: 'block', maxWidth: '100%', height: 'auto' } }
+    : { width: w, height: h, style: { display: 'block' } };
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display:'block' }}>
+    <svg {...svgSize} viewBox={`0 0 ${w} ${h}`}>
       {showGuides && [0, 0.25, 0.5, 0.75, 1].map((p, i) => (
         <line key={i} x1="0" x2={w} y1={p * h} y2={p * h} stroke="var(--line-soft)" strokeDasharray={i === 0 || i === 4 ? '' : '2 3'} />
       ))}
