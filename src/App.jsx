@@ -11,6 +11,7 @@ import FloatingAdvisor from './components/FloatingAdvisor.jsx';
 // Always-needed auth/onboarding screens (tiny, no lazy needed)
 import Login from './views/Login.jsx';
 import NamePrompt from './views/NamePrompt.jsx';
+import ResetPassword from './views/ResetPassword.jsx';
 // All views — lazy loaded on first navigation
 const DashboardView   = lazy(() => import('./views/Dashboard.jsx'));
 const AssetsView      = lazy(() => import('./views/Assets.jsx'));
@@ -220,6 +221,7 @@ function clearInviteFromURL() {
 
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = loading
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [pendingInvite, setPendingInvite] = useState(null);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
   const [state, dispatch] = useReducer(reducer, null, () => {
@@ -285,9 +287,14 @@ export default function App() {
       setSession(s);
       if (!s) setStateReady(true); // logged out — local state is authoritative
     });
-    const unsub = onAuthStateChange(s => {
+    const unsub = onAuthStateChange((s, event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+        setSession(s);
+        return;
+      }
       setSession(s);
-      if (!s) setStateReady(true);
+      if (!s) { setIsRecoveryMode(false); setStateReady(true); }
     });
     return unsub;
   }, []);
@@ -460,6 +467,7 @@ export default function App() {
   // stateReady === false   → logged in but portfolio still loading from cloud
   // profile.name empty     → need onboarding name
   if (session === undefined) return <FullScreenLoader message="Checking session…" />;
+  if (isRecoveryMode) return <ResetPassword onDone={() => { setIsRecoveryMode(false); }} />;
   if (isConfigured && !session) return <Login pendingInvite={pendingInvite} />;
   if (!stateReady) return <FullScreenLoader message="Loading your portfolio…" />;
 
