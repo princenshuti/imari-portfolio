@@ -35,7 +35,7 @@ export default function Login({ pendingInvite }) {
       if (mode === 'signin') {
         await signIn(email, password);
       } else {
-        if (password.length < 6) throw new Error('Password must be at least 6 characters.');
+        if (password.length < 8) throw new Error('Password must be at least 8 characters.');
         const data = await signUp(email, password);
         if (data.user && !data.session) {
           setMessage('Check your email for a confirmation link to finish signup.');
@@ -118,7 +118,7 @@ export default function Login({ pendingInvite }) {
             disabled={!!pendingInvite?.email} />
           {mode !== 'forgot' && (
             <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-              placeholder={mode === 'signup' ? 'At least 6 characters' : 'Password'}
+              placeholder={mode === 'signup' ? 'At least 8 characters' : 'Password'}
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} style={inputStyle} />
           )}
 
