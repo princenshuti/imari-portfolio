@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { CLASSES, valueRWF, costRWF, fmtBase } from '../data.js';
 import AssetRow from '../components/AssetRow.jsx';
 import AssetEditor from '../components/AssetEditor.jsx';
+import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { downloadAssetTemplate, parseAssetExcel, findExistingByNaturalKey } from '../excel.js';
 
 // Canonical group order from CLASSES definition
@@ -28,6 +29,9 @@ export default function AssetsView({ state, dispatch, showToast }) {
   const [search, setSearch]             = useState('');
   const [importResult, setImportResult] = useState(null);
   const [selected, setSelected]         = useState(new Set());
+  // Pending destructive action awaiting modal confirm. `{kind:'single', asset}` for row deletes,
+  // `{kind:'bulk', ids}` for bulk-action-bar deletes. Null = no modal.
+  const [pendingDelete, setPendingDelete] = useState(null);
   const fileRef = useRef(null);
   const today   = new Date();
 
@@ -41,9 +45,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
   }
 
   function handleBulkDelete() {
-    if (!confirm(`Permanently delete ${selected.size} asset${selected.size === 1 ? '' : 's'}?`)) return;
-    dispatch({ type: 'bulkDeleteAssets', ids: selected });
-    setSelected(new Set());
+    setPendingDelete({ kind: 'bulk', ids: new Set(selected) });
   }
 
   /* ── Excel import ─────────────────────────────────────────────── */
@@ -504,9 +506,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
                   isSelected={selected.has(a.id)}
                   onToggle={() => toggleOne(a.id)}
                   onEdit={asset => setEditing(asset)}
-                  onDelete={asset => {
-                    if (confirm(`Delete "${asset.name}"?`)) dispatch({ type: 'deleteAsset', id: asset.id });
-                  }}
+                  onDelete={asset => setPendingDelete({ kind: 'single', asset })}
                 />
               </React.Fragment>
             ))}
@@ -547,6 +547,46 @@ export default function AssetsView({ state, dispatch, showToast }) {
           showToast={showToast}
         />
       )}
+
+      <ConfirmDestructive
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete?.kind === 'single') {
+            dispatch({ type: 'deleteAsset', id: pendingDelete.asset.id });
+          } else if (pendingDelete?.kind === 'bulk') {
+            dispatch({ type: 'bulkDeleteAssets', ids: pendingDelete.ids });
+            setSelected(new Set());
+          }
+          setPendingDelete(null);
+        }}
+        title={
+          pendingDelete?.kind === 'bulk'
+            ? `Delete ${pendingDelete.ids.size} asset${pendingDelete.ids.size === 1 ? '' : 's'}?`
+            : 'Delete this asset?'
+        }
+        description={
+          pendingDelete?.kind === 'single' ? (
+            <span>
+              <strong style={{ color: 'var(--ink)' }}>{pendingDelete.asset.name}</strong>
+              {' · '}
+              <span className="num">{fmtBase(valueRWF(pendingDelete.asset, new Date()), profile.displayCurrency, { compact: true })}</span>
+              <br />
+              This removes the asset permanently. You can't undo this.
+            </span>
+          ) : (
+            <span>
+              This removes <strong style={{ color: 'var(--ink)' }}>{pendingDelete?.ids?.size}</strong> assets permanently.
+              You can't undo this.
+            </span>
+          )
+        }
+        confirmLabel={
+          pendingDelete?.kind === 'bulk'
+            ? `Delete ${pendingDelete.ids.size}`
+            : 'Delete asset'
+        }
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { LIABILITY_TYPES, CURRENCIES, toBase, fmt, fmtBase, valueRWF, id } from '../data.js';
 import { Field, inputStyle } from '../components/Field.jsx';
 import Modal from '../components/Modal.jsx';
+import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 
 const EMPTY_LIABILITY = {
   kind: 'personal-loan', name: '', currency: 'RWF',
@@ -111,6 +112,7 @@ function LiabilityEditor({ liability, onSave, onCancel }) {
 export default function LiabilitiesView({ state, dispatch }) {
   const { liabilities = [], assets, profile } = state;
   const [editing, setEditing] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
   const today = new Date();
 
   const totalDebt = useMemo(() =>
@@ -211,9 +213,8 @@ export default function LiabilitiesView({ state, dispatch }) {
                       </div>
                       <div className="row" style={{ gap: 6 }}>
                         <button type="button" onClick={() => setEditing(l)} aria-label={`Edit ${l.name}`} className="btn btn-ghost btn-xs">Edit</button>
-                        <button type="button" onClick={() => {
-                          if (confirm(`Delete "${l.name}"?`)) dispatch({ type: 'deleteLiability', id: l.id });
-                        }} aria-label={`Delete ${l.name}`} className="btn btn-xs" style={{
+                        <button type="button" onClick={() => setPendingDelete(l)}
+                          aria-label={`Delete ${l.name}`} className="btn btn-xs" style={{
                           border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down-ink)',
                         }}>Delete</button>
                       </div>
@@ -257,6 +258,25 @@ export default function LiabilitiesView({ state, dispatch }) {
           onCancel={() => setEditing(null)}
         />
       )}
+
+      <ConfirmDestructive
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          dispatch({ type: 'deleteLiability', id: pendingDelete.id });
+          setPendingDelete(null);
+        }}
+        title="Delete this liability?"
+        description={pendingDelete && (
+          <span>
+            <strong style={{ color: 'var(--ink)' }}>{pendingDelete.name}</strong>
+            {pendingDelete.remainingAmount ? <> · <span className="num">{fmt(pendingDelete.remainingAmount, pendingDelete.currency || 'RWF')}</span> remaining</> : null}
+            <br />
+            This removes the debt from your portfolio permanently. You can't undo this.
+          </span>
+        )}
+        confirmLabel="Delete liability"
+      />
     </div>
   );
 }

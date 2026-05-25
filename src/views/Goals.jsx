@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { GOAL_CATEGORIES, CURRENCIES, toBase, fmtBase, fmt, id, valueRWF, costRWF } from '../data.js';
 import { Field, inputStyle } from '../components/Field.jsx';
 import Modal from '../components/Modal.jsx';
+import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 
 const EMPTY_GOAL = {
   category: 'investment', title: '', targetAmount: '', currency: 'RWF',
@@ -173,6 +174,7 @@ function GoalCard({ goal, netWorth, displayCurrency, onEdit, onDelete }) {
 }
 
 export default function GoalsView({ state, dispatch }) {
+  const [pendingDelete, setPendingDelete] = useState(null);
   const { goals = [], profile } = state;
   const [editing, setEditing] = useState(null);
   const today = new Date();
@@ -232,7 +234,7 @@ export default function GoalsView({ state, dispatch }) {
       {active.map(g => (
         <GoalCard key={g.id} goal={g} netWorth={netWorth} displayCurrency={profile.displayCurrency}
           onEdit={() => setEditing(g)}
-          onDelete={() => { if (confirm(`Delete "${g.title}"?`)) dispatch({ type: 'deleteGoal', id: g.id }); }}
+          onDelete={() => setPendingDelete(g)}
         />
       ))}
 
@@ -245,7 +247,7 @@ export default function GoalsView({ state, dispatch }) {
           {achieved.map(g => (
             <GoalCard key={g.id} goal={g} netWorth={netWorth} displayCurrency={profile.displayCurrency}
               onEdit={() => setEditing(g)}
-              onDelete={() => { if (confirm(`Delete "${g.title}"?`)) dispatch({ type: 'deleteGoal', id: g.id }); }}
+              onDelete={() => setPendingDelete(g)}
             />
           ))}
         </>
@@ -269,6 +271,25 @@ export default function GoalsView({ state, dispatch }) {
           onCancel={() => setEditing(null)}
         />
       )}
+
+      <ConfirmDestructive
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          dispatch({ type: 'deleteGoal', id: pendingDelete.id });
+          setPendingDelete(null);
+        }}
+        title="Delete this goal?"
+        description={pendingDelete && (
+          <span>
+            <strong style={{ color: 'var(--ink)' }}>{pendingDelete.title}</strong>
+            {pendingDelete.targetAmount ? <> · target <span className="num">{fmt(pendingDelete.targetAmount, pendingDelete.currency || 'RWF')}</span></> : null}
+            <br />
+            Your progress history for this goal will be lost. You can't undo this.
+          </span>
+        )}
+        confirmLabel="Delete goal"
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { CURRENCIES, RWANDA_BANKS, MOMO_PROVIDERS, fmt, fmtBase, toBase, id } from '../data.js';
 import { Field, Input, inputStyle } from '../components/Field.jsx';
 import Modal from '../components/Modal.jsx';
+import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
 
@@ -207,11 +208,8 @@ export default function AccountsView({ state, dispatch }) {
     setEditing(null);
   };
 
-  const handleDelete = (acc) => {
-    if (confirm(`Delete "${acc.bank || acc.wallet}"? This removes it from your portfolio.`)) {
-      dispatch({ type: 'deleteAsset', id: acc.id });
-    }
-  };
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const handleDelete = (acc) => setPendingDelete(acc);
 
   return (
     <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)' }}>
@@ -286,6 +284,25 @@ export default function AccountsView({ state, dispatch }) {
       </div>
 
       {editing && <AccountEditor account={editing} onSave={handleSave} onCancel={() => setEditing(null)} />}
+
+      <ConfirmDestructive
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          dispatch({ type: 'deleteAsset', id: pendingDelete.id });
+          setPendingDelete(null);
+        }}
+        title="Delete this account?"
+        description={pendingDelete && (
+          <span>
+            <strong style={{ color: 'var(--ink)' }}>{pendingDelete.bank || pendingDelete.wallet || pendingDelete.name}</strong>
+            {pendingDelete.currentValue || pendingDelete.purchasePrice ? <> · <span className="num">{fmt(pendingDelete.currentValue || pendingDelete.purchasePrice, pendingDelete.currency || 'RWF')}</span></> : null}
+            <br />
+            This removes the account from your portfolio and your net worth permanently. You can't undo this.
+          </span>
+        )}
+        confirmLabel="Delete account"
+      />
     </div>
   );
 }

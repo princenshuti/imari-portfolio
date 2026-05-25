@@ -7,6 +7,7 @@ import { listMembers, listInvitations, createInvitation, revokeInvitation, remov
 import { Field, inputStyle } from '../components/Field.jsx';
 import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
 import { RowSkeleton } from '../components/Skeleton.jsx';
+import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 
 /** Resize + center-crop an image File to a square JPEG data URI. */
 async function resizeAvatar(file, px = 160) {
@@ -311,6 +312,8 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
   const [apiKey, setApiKeyLocal]      = useState(getApiKey());
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
+  // Danger-zone modal state: 'reset' | 'clear' | null
+  const [dangerAction, setDangerAction] = useState(null);
   // BNR rate info derived from the shared MarketContext — no duplicate fetch.
   const { market } = useMarket();
   const bnrInfo = market?.bnrRates
@@ -628,13 +631,43 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
       </Section>
 
       <Section title="Danger zone">
-        <button onClick={() => {
-          if (confirm('Reset to seed assets? Your current data will be replaced.')) dispatch({ type:'reset' });
-        }} className="btn btn-ghost">↻ Reset to sample portfolio</button>
-        <button onClick={() => {
-          if (confirm('Delete ALL your assets? This cannot be undone.')) dispatch({ type:'clearAssets' });
-        }} className="btn btn-ghost" style={{ marginLeft: 8, color:'var(--down)', borderColor:'var(--down-soft)' }}>✕ Delete all assets</button>
+        <button onClick={() => setDangerAction('reset')} className="btn btn-ghost">↻ Reset to sample portfolio</button>
+        <button onClick={() => setDangerAction('clear')} className="btn btn-danger" style={{ marginLeft: 8 }}>✕ Delete all assets</button>
+        <div className="muted" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
+          Both actions are irreversible. Deleting requires typing <strong style={{ fontFamily: 'monospace', color: 'var(--down)' }}>DELETE</strong> to confirm.
+        </div>
       </Section>
+
+      <ConfirmDestructive
+        open={dangerAction === 'reset'}
+        onClose={() => setDangerAction(null)}
+        onConfirm={() => { dispatch({ type: 'reset' }); setDangerAction(null); showToast?.('Portfolio reset to sample data.', 'success'); }}
+        title="Reset to sample portfolio?"
+        description={
+          <span>
+            Your current data ({state.assets.length} assets, {(state.liabilities||[]).length} liabilities,
+            {' '}{(state.goals||[]).length} goals) will be replaced with the demo seed.
+            <br />Type <strong style={{ fontFamily: 'monospace' }}>DELETE</strong> to confirm.
+          </span>
+        }
+        confirmLabel="Reset everything"
+        requireType="DELETE"
+      />
+      <ConfirmDestructive
+        open={dangerAction === 'clear'}
+        onClose={() => setDangerAction(null)}
+        onConfirm={() => { dispatch({ type: 'clearAssets' }); setDangerAction(null); showToast?.('All assets deleted.', 'success'); }}
+        title="Delete ALL your assets?"
+        description={
+          <span>
+            All <strong style={{ color: 'var(--ink)' }}>{state.assets.length}</strong> assets will be permanently removed
+            from your portfolio. Liabilities, goals, and cashflows are kept.
+            <br />Type <strong style={{ fontFamily: 'monospace' }}>DELETE</strong> to confirm.
+          </span>
+        }
+        confirmLabel="Delete all assets"
+        requireType="DELETE"
+      />
 
       {/* About / brand footer */}
       <div style={{ marginTop: 30, padding: 20, background: 'var(--bg-2)', borderRadius: 'var(--r-lg)', lineHeight: 1.55 }}>

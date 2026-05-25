@@ -3,6 +3,7 @@ import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CURRENCIES, toBase, fmtBase, fmt
 import { Field, inputStyle } from '../components/Field.jsx';
 import Modal, { ImageLightbox } from '../components/Modal.jsx';
 import { parseCSV, detectColumns, rowsToDrafts } from '../services/bankImport.js';
+import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
@@ -543,7 +544,11 @@ export default function CashFlowView({ state, dispatch }) {
     setImporting(false);
   };
 
-  const handleDelete = (cfId) => dispatch({ type: 'deleteCashflow', id: cfId });
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const handleDelete = (cfId) => {
+    const entry = (state.cashflows || []).find(c => c.id === cfId);
+    setPendingDelete(entry || null);
+  };
 
   return (
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
@@ -677,6 +682,27 @@ export default function CashFlowView({ state, dispatch }) {
       {importing && (
         <ImportModal accounts={accounts} currency={profile.displayCurrency} onImport={handleImport} onCancel={() => setImporting(false)} />
       )}
+
+      <ConfirmDestructive
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          dispatch({ type: 'deleteCashflow', id: pendingDelete.id });
+          setPendingDelete(null);
+        }}
+        title="Delete this cash flow entry?"
+        description={pendingDelete && (
+          <span>
+            <strong style={{ color: 'var(--ink)' }}>{pendingDelete.description || pendingDelete.category || pendingDelete.type}</strong>
+            {' · '}
+            <span className="num">{fmt(pendingDelete.amount, pendingDelete.currency || 'RWF')}</span>
+            <br />
+            {pendingDelete.accountId && 'Any linked account balance will recompute. '}
+            You can't undo this.
+          </span>
+        )}
+        confirmLabel="Delete entry"
+      />
     </div>
   );
 }

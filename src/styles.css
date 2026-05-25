@@ -267,6 +267,27 @@ body {
   color: var(--ink);
 }
 
+/* Destructive — for delete / reset / catastrophic actions.
+   Distinct red styling so users can't visually mistake it for primary/ghost. */
+.btn-danger {
+  background: var(--down);
+  color: #FEFCF7;
+  box-shadow: 0 1px 2px rgba(176, 52, 40, 0.18), 0 4px 12px rgba(176, 52, 40, 0.16);
+  border: 0;
+}
+.btn-danger:hover {
+  background: #C03A2D;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(176, 52, 40, 0.22), 0 8px 20px rgba(176, 52, 40, 0.18);
+}
+.btn-danger:active { transform: scale(0.97); }
+.btn-danger:disabled { transform: none !important; box-shadow: none !important; cursor: not-allowed; }
+
+@keyframes imari-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 .btn-danger {
   background: var(--down);
   color: #fff;
