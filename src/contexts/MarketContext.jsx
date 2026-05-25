@@ -31,9 +31,22 @@ function buildOverrides(market) {
   const out = {};
 
   if (market.usdRwf && market.usdRwfLive) {
+    // BNR publishes three rates daily: buying, average (mid), selling. The app
+    // uses BUY for foreign→RWF conversions and SELL for RWF→foreign (see
+    // toBase/fromBase in data.js). Display all three so the user understands
+    // the spread instead of seeing one rate while the math uses two others.
+    const bnrUSD = market.bnrRates?.USD;
     out['usdrwf'] = {
-      value: market.usdRwf, change: null, live: true, fetchedAt,
-      source: 'ExchangeRate-API · updated every 24h · BNR-tracked rate',
+      // Headline value uses the precise mid; falls back to the rounded usdRwf
+      // when the source is the symmetric open.er-api fallback (no spread).
+      value: bnrUSD?.avg ?? market.usdRwf,
+      change: null,
+      live: true,
+      fetchedAt,
+      source: bnrUSD
+        ? 'BNR official daily rate · buying / mid / selling spread'
+        : 'ExchangeRate-API · updated every 24h · BNR-tracked rate',
+      spread: bnrUSD ?? null,  // { buy, sell, avg, date } when from BNR
     };
   }
   if (market.goldUsd && market.goldUsdLive) {

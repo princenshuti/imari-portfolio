@@ -136,7 +136,7 @@ export function TrendCard({ d, big = false, override = null }) {
           lineHeight: 1,
         }}>
           {d.unit === '$' ? '$' : ''}
-          {(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+          {(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: override?.spread ? 4 : 2 })}
           {d.unit && d.unit !== '$' ? d.unit : ''}
         </div>
         {hasChange && (
@@ -147,10 +147,30 @@ export function TrendCard({ d, big = false, override = null }) {
             <span aria-hidden="true">{isUp ? '▲' : '▼'}</span> {Math.abs(change).toFixed(2)}{d.unit === '%' ? 'pp' : '%'}
           </div>
         )}
-        {!hasChange && kind === 'live' && (
+        {!hasChange && !override?.spread && kind === 'live' && (
           <div className="muted" style={{ fontSize: 10 }}>live rate</div>
         )}
+        {override?.spread && (
+          <div className="muted" style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            mid
+          </div>
+        )}
       </div>
+
+      {/* BNR buy/sell spread — shown only when MarketContext attached spread data.
+          App uses BUY rate for foreign→RWF conversions, SELL rate for RWF→foreign,
+          so surfacing both makes the conversion math transparent. */}
+      {override?.spread && (
+        <div
+          className="num"
+          style={{ marginTop: 6, fontSize: 11, color: 'var(--ink-3)', display: 'flex', gap: 10, flexWrap: 'wrap' }}
+          title="Buy = bank buys foreign currency from you; Sell = bank sells foreign currency to you. Imari uses Buy for foreign→RWF totals and Sell for RWF→foreign payouts."
+        >
+          <span>Buy <strong style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{override.spread.buy.toLocaleString('en-US', { maximumFractionDigits: 4 })}</strong></span>
+          <span style={{ opacity: 0.4 }} aria-hidden="true">·</span>
+          <span>Sell <strong style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{override.spread.sell.toLocaleString('en-US', { maximumFractionDigits: 4 })}</strong></span>
+        </div>
+      )}
 
       <div style={{ marginTop: 8, color: d.color }} aria-hidden="true">
         <Sparkline data={d.series} w={big ? 240 : 160} h={big ? 40 : 30} stroke={d.color} fill />
