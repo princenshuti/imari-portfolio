@@ -51,7 +51,17 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
         <div className="num" style={{ fontSize: 13, fontWeight: 500 }}>
           {fmt(current, asset.currency, { compact: true })}
         </div>
-        <div className="muted" style={{ fontSize: 10 }}>{asset.currency} · {asset.currentValue ? 'your value' : 'suggested'}</div>
+        <div
+          className="muted"
+          style={{ fontSize: 10, cursor: 'help' }}
+          title={
+            asset.currentValue
+              ? 'Your value — the figure you entered for this asset.'
+              : `Estimated — Imari's starting suggestion using ${cls.note || 'the default rule'}. Edit the asset to set your own value.`
+          }
+        >
+          {asset.currency} · {asset.currentValue ? 'your value' : 'estimated'}
+        </div>
       </div>
 
       <div className="num" style={{ fontSize: 12.5, color:'var(--ink-2)' }}>

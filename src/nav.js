@@ -9,14 +9,14 @@ export const NAV_ITEMS = {
   liabilities: { id: 'liabilities', labelDesktop: 'Liabilities', labelMobile: 'Liabilities', glyph: '↓', group: 'Wealth'   },
   cashflow:    { id: 'cashflow',    labelDesktop: 'Cash Flow',   labelMobile: 'Cash Flow', glyph: '⇄', group: 'Wealth'   },
   goals:       { id: 'goals',       labelDesktop: 'Goals',       labelMobile: 'Goals',     glyph: '◎', group: 'Wealth'   },
-  accounts:    { id: 'accounts',    labelDesktop: 'Accounts',    labelMobile: 'Accounts',  glyph: '⌬', group: 'Finance'  },
-  trends:      { id: 'trends',      labelDesktop: 'Trends',      labelMobile: 'Trends',    glyph: '↗', group: 'Finance'  },
-  tax:         { id: 'tax',         labelDesktop: 'Tax Report',  labelMobile: 'Tax Report', glyph: '§', group: 'Finance'  },
+  accounts:    { id: 'accounts',    labelDesktop: 'Accounts',    labelMobile: 'Accounts',  glyph: '⌬', group: 'Money & Markets'  },
+  trends:      { id: 'trends',      labelDesktop: 'Trends',      labelMobile: 'Trends',    glyph: '↗', group: 'Money & Markets'  },
+  tax:         { id: 'tax',         labelDesktop: 'Tax Report',  labelMobile: 'Tax Report', glyph: '§', group: 'Money & Markets'  },
   advisor:     { id: 'advisor',     labelDesktop: 'AI Advisor',  labelMobile: 'AI Advisor', glyph: '✦', group: 'Tools'    },
   settings:    { id: 'settings',    labelDesktop: 'Settings',    labelMobile: 'Settings',  glyph: '⚙', group: 'Tools'    },
 };
 
-export const NAV_GROUPS = ['Overview', 'Wealth', 'Finance', 'Tools'];
+export const NAV_GROUPS = ['Overview', 'Wealth', 'Money & Markets', 'Tools'];
 
 export function navItemsByGroup() {
   return NAV_GROUPS.map(label => ({

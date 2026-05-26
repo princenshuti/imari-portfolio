@@ -40,10 +40,13 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
         )}
         {right}
 
-        {/* Currency selector */}
+        {/* Currency selector — display-only conversion. Stored values keep
+            their original currency; this just switches the display format. */}
         <select
           value={displayCurrency}
           onChange={e => onCurrency(e.target.value)}
+          aria-label="Display currency (converts totals for view only)"
+          title="Display only — your stored values stay in their original currency."
           style={{
             padding: '7px 10px', borderRadius: 'var(--r-md)',
             border: '0.5px solid var(--line-strong)',

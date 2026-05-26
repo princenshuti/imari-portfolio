@@ -22,16 +22,28 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
       height: '100vh', position: 'sticky', top: 0, overflowY: 'auto',
     }}>
 
-      {/* ── Brand mark ── */}
-      <div className="col" style={{ gap: 6, padding: '2px 6px' }}>
-        <div className="row" style={{ gap: 10 }}>
-          <MaxventuresIcon size={38} id="sidebar-mv" />
-          <div>
-            <div className="font-serif" style={{ fontSize: 21, lineHeight: 1, letterSpacing: '-0.02em' }}>Imari</div>
-            <div className="muted" style={{ fontSize: 9.5, marginTop: 2, letterSpacing: '0.03em' }}>by Maxventures</div>
-          </div>
+      {/* ── Brand mark — clickable home link ── */}
+      <button
+        type="button"
+        onClick={() => onNav('dashboard')}
+        aria-label="Go to Dashboard"
+        className="sidebar-brand"
+        style={{
+          all: 'unset',
+          display: 'flex', gap: 10, alignItems: 'center',
+          padding: '6px 6px', borderRadius: 'var(--r-md)',
+          cursor: 'pointer',
+          transition: 'background 0.14s ease',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-2)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+      >
+        <MaxventuresIcon size={38} id="sidebar-mv" />
+        <div>
+          <div className="font-serif" style={{ fontSize: 21, lineHeight: 1, letterSpacing: '-0.02em' }}>Imari</div>
+          <div className="muted" style={{ fontSize: 9.5, marginTop: 2, letterSpacing: '0.03em' }}>by Maxventures</div>
         </div>
-      </div>
+      </button>
 
       {/* ── Net worth card ── */}
       <button onClick={() => onNav('dashboard')} style={{

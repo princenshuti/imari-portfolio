@@ -191,12 +191,15 @@ function reducer(state, action) {
   }
 }
 
+// Kinyarwanda greetings keyed to time of day. Previous version returned
+// 'Mwiriwe' (good afternoon) for h<5 — wrong at 2 AM. Now uses Muraho for the
+// catch-all night hours and Muramuke as evening (post-sunset) greeting.
 function greetingFor() {
   const h = new Date().getHours();
-  if (h < 5) return 'Mwiriwe';
-  if (h < 12) return 'Mwaramutse';
-  if (h < 18) return 'Mwiriwe';
-  return 'Muraho';
+  if (h < 5)  return 'Muraho';     // late night / early hours — neutral greeting
+  if (h < 12) return 'Mwaramutse'; // morning
+  if (h < 17) return 'Mwiriwe';    // afternoon
+  return 'Muramuke';               // evening
 }
 
 // ─ Theme management ───────────────────────────────────────────

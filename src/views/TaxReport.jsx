@@ -240,9 +240,9 @@ export default function TaxReportView({ state }) {
           highlight
         />
         <KpiCard
-          label="Est. CGT on full disposal"
+          label="Est. CGT if you sold everything today"
           value={fmtBase(totalCGTAll, c, { compact: true })}
-          sub="Only triggered when assets sold"
+          sub="Hypothetical — CGT only fires on actual sale"
           color="var(--ink-3)"
         />
       </div>
@@ -286,7 +286,12 @@ export default function TaxReportView({ state }) {
                 mono: true, bold: r.annualTax > 0,
                 color: r.annualTax > 0 ? 'var(--down)' : 'var(--up)',
               },
-              { value: r.note, color: 'var(--ink-3)' },
+              // Collapse repeated "Exempt if agricultural/forestry land ≤ 2 ha"
+              // note into a compact info marker — full text lives in the
+              // FormulaBox above and on tooltip hover.
+              r.note
+                ? { value: <span title={r.note} style={{ cursor: 'help' }} aria-label={r.note}>ⓘ</span>, color: 'var(--ink-3)' }
+                : { value: '', color: 'var(--ink-3)' },
             ])}
             footerRow={[
               'Total', '', '', '', '',  '',
@@ -316,7 +321,9 @@ export default function TaxReportView({ state }) {
             ))}
           </div>
           <div className="muted" style={{ fontSize: 10, marginTop: 8, lineHeight: 1.5 }}>
-            Plus 1.5% monthly interest from 31 March. Maximum surcharge: RWF 100,000.
+            Surcharge bands above are <strong>cumulative</strong> with the 1.5%/month late
+            interest from 31 March: total owed = base tax + band surcharge + (1.5% × months late × base tax).
+            The surcharge itself is capped at <strong>RWF 100,000</strong>; monthly interest has no cap.
           </div>
         </div>
       </Section>
