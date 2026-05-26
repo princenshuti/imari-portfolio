@@ -183,18 +183,25 @@ You are an AI financial advisor. Only answer questions about the portfolio data 
     : { left: 0,  right: 'auto' };
 
   // ── Render ────────────────────────────────────────────────────────────────
+  // `fa-wrap` carries a responsive `bottom` override (in styles.css) so the
+  // FAB clears the mobile tab bar on screens ≤ 768px instead of sitting on
+  // top of it. Inline `pos` still wins on desktop because the media query
+  // only adjusts `bottom` (not `top`) and only for bottom-* corners.
   return (
-    <div style={{
-      position: 'fixed',
-      zIndex: 9990,
-      ...pos,
-      transition: [
-        'top    0.24s cubic-bezier(0.23,1,0.32,1)',
-        'bottom 0.24s cubic-bezier(0.23,1,0.32,1)',
-        'left   0.24s cubic-bezier(0.23,1,0.32,1)',
-        'right  0.24s cubic-bezier(0.23,1,0.32,1)',
-      ].join(', '),
-    }}>
+    <div
+      className={`fa-wrap fa-wrap-${corner}`}
+      style={{
+        position: 'fixed',
+        zIndex: 9990,
+        ...pos,
+        transition: [
+          'top    0.24s cubic-bezier(0.23,1,0.32,1)',
+          'bottom 0.24s cubic-bezier(0.23,1,0.32,1)',
+          'left   0.24s cubic-bezier(0.23,1,0.32,1)',
+          'right  0.24s cubic-bezier(0.23,1,0.32,1)',
+        ].join(', '),
+      }}
+    >
 
       {/* Keyframes */}
       <style>{`

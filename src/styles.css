@@ -575,6 +575,27 @@ input:focus, select:focus, textarea:focus {
   .topbar-row { padding: 10px 12px; }
   .topbar-title { font-size: 18px !important; }
   .topbar-subtitle { font-size: 9px !important; }
+  /* Force subtitle to single line with ellipsis on narrow screens so
+     "Today · Monday 25 May" never stacks awkwardly under the title.
+     (UX review issue #55.) */
+  .topbar-subtitle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+}
+
+/* FloatingAdvisor — lift above mobile tab bar.
+   Mobile tab bar is ~72px tall (8px top padding + ~56px content + env(safe-
+   area-inset-bottom, 8px)). FAB needs to clear it OR users can't tap
+   bottom-edge content underneath. Inline `bottom: 24` becomes ~96 on mobile.
+   (UX review issue #54.) */
+@media (max-width: 768px) {
+  .fa-wrap-bottom-right,
+  .fa-wrap-bottom-left {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+  }
 }
 
 /* Hero card — minimum styles for the absolute-positioned glow blob inside.
