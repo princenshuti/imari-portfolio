@@ -128,11 +128,17 @@ function AccountEditor({ account, onSave, onCancel }) {
   );
 }
 
-function maskAccountNumber(n) {
+/**
+ * Consistent masking for account numbers across Accounts and Assets views.
+ * Always shows the last 4 chars; collapses the rest to a bullet group.
+ * Exported so AssetRow can reuse it — avoids the "·· 8657 vs nothing"
+ * inconsistency the UX review flagged.
+ */
+export function maskAccountNumber(n) {
   if (!n) return '';
-  const s = String(n);
+  const s = String(n).trim();
   if (s.length <= 4) return s;
-  return `••• ${s.slice(-4)}`;
+  return `•••• ${s.slice(-4)}`;
 }
 
 function AccountCard({ acc, displayCurrency, cfCount, onEdit, onDelete }) {
@@ -179,6 +185,11 @@ function AccountCard({ acc, displayCurrency, cfCount, onEdit, onDelete }) {
 export default function AccountsView({ state, dispatch }) {
   const { assets, profile } = state;
   const [editing, setEditing] = useState(null);
+
+  // Deep-link helper: navigate to the Assets view (filtered to cash & savings).
+  // Both views render off the same `state.assets` records — this just shifts
+  // the lens for users who want the richer per-asset detail / sort / export.
+  const openInAssets = () => dispatch({ type: 'nav', to: 'assets' });
 
   const accounts = useMemo(() => assets.filter(a => ACCOUNT_KINDS.has(a.kind)), [assets]);
   const banks = accounts.filter(a => a.kind === 'savings');
@@ -279,8 +290,25 @@ export default function AccountsView({ state, dispatch }) {
         </div>
       )}
 
-      <div className="muted" style={{ fontSize: 11, marginTop: 28, padding: 14, background:'var(--bg-2)', borderRadius: 10, lineHeight: 1.55 }}>
-        Account balances flow into your overall net worth on the Dashboard. To track richer details (yield, statement history, etc.), edit the account on the <strong>Assets</strong> page.
+      <div
+        style={{
+          fontSize: 11.5, marginTop: 28, padding: '14px 16px',
+          background: 'var(--bg-2)', borderRadius: 10, lineHeight: 1.55,
+          display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+        }}
+      >
+        <span className="muted">
+          This is the <strong>Cash & MoMo</strong> lens on your portfolio — same records that appear under
+          <strong> Cash &amp; savings</strong> on the Assets page. Balances flow into your net worth on the Dashboard automatically.
+        </span>
+        <button
+          type="button"
+          onClick={openInAssets}
+          className="btn btn-ghost"
+          style={{ padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
+        >
+          Open in Assets →
+        </button>
       </div>
 
       {editing && <AccountEditor account={editing} onSave={handleSave} onCancel={() => setEditing(null)} />}
