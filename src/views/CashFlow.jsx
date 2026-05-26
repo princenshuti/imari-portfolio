@@ -4,6 +4,7 @@ import { Field, inputStyle } from '../components/Field.jsx';
 import Modal, { ImageLightbox } from '../components/Modal.jsx';
 import { parseCSV, detectColumns, rowsToDrafts } from '../services/bankImport.js';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
+import { Donut } from '../components/charts.jsx';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
@@ -289,10 +290,32 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
         {/* ── Step 1: Upload ── */}
         {step === 'upload' && (
           <>
-            <div className="muted" style={{ fontSize: 13, marginTop: 8, marginBottom: 20, lineHeight: 1.6 }}>
-              Export a CSV from your bank's internet banking (BK, Equity, I&M, Cogebanque, MTN MoMo, etc.) and upload it here.
-              We'll detect columns automatically.
+            <div className="muted" style={{ fontSize: 13, marginTop: 8, marginBottom: 16, lineHeight: 1.6 }}>
+              Export a CSV from your bank's internet banking and upload it here. Imari auto-detects columns,
+              guesses categories from transaction descriptions, and lets you review every row before saving.
             </div>
+
+            {/* Supported formats panel — UX review #39 */}
+            <details style={{ marginBottom: 18, padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 8 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>
+                Which banks and formats are supported?
+              </summary>
+              <div className="muted" style={{ fontSize: 11.5, lineHeight: 1.65, marginTop: 8 }}>
+                <strong style={{ color: 'var(--ink-2)' }}>File types:</strong> CSV, TSV (tab-separated), or .txt with a CSV header.
+                <br />
+                <strong style={{ color: 'var(--ink-2)' }}>Tested banks & wallets:</strong> Bank of Kigali (BK), Equity Bank,
+                I&amp;M Bank, Cogebanque, KCB, BPR/Atlas Mara, MTN MoMo (mini-statement export), Airtel Money.
+                <br />
+                <strong style={{ color: 'var(--ink-2)' }}>Column auto-detect:</strong> headers containing "date", "description / narration / details",
+                "amount / debit / credit / dr / cr", and optional "balance" are recognised automatically — you can re-map any in Step 2.
+                <br />
+                <strong style={{ color: 'var(--ink-2)' }}>Date formats:</strong> ISO (2026-05-26), DD/MM/YYYY, DD-MM-YYYY, MM/DD/YYYY all parse.
+                <br />
+                <strong style={{ color: 'var(--ink-2)' }}>Not yet supported:</strong> PDF statements, MT940 SWIFT files, OFX. Save your PDF as
+                CSV from your bank's portal or copy the table into a spreadsheet and export as CSV.
+              </div>
+            </details>
+
             <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" style={{ display: 'none' }}
               onChange={ev => handleFile(ev.target.files?.[0])} />
             <button onClick={() => fileRef.current.click()} style={{
@@ -505,8 +528,19 @@ export default function CashFlowView({ state, dispatch }) {
   const netFlow = totInc - totExp;
   const savingsRate = totInc > 0 ? (netFlow / totInc) * 100 : 0;
 
-  const barData = useMemo(() => Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
+  // Selectable chart window: 6M (compact) or 12M (year view). State persists
+  // across mounts via session so user choice isn't reset on navigation.
+  const [chartMonths, setChartMonths] = useState(() => {
+    try { return Number(sessionStorage.getItem('imari:cf:chartMonths')) || 6; }
+    catch { return 6; }
+  });
+  const setChartWindow = (n) => {
+    setChartMonths(n);
+    try { sessionStorage.setItem('imari:cf:chartMonths', String(n)); } catch {}
+  };
+
+  const barData = useMemo(() => Array.from({ length: chartMonths }, (_, i) => {
+    const d = new Date(); d.setMonth(d.getMonth() - (chartMonths - 1 - i));
     const y = d.getFullYear(), m = d.getMonth();
     let inc = 0, exp = 0;
     cashflows.forEach(cf => {
@@ -518,10 +552,27 @@ export default function CashFlowView({ state, dispatch }) {
       const ma = monthlyAmount(cf);
       if (cf.type === 'income') inc += ma; else exp += ma;
     });
-    return { label: d.toLocaleDateString('en-GB', { month: 'short' }), inc, exp };
-  }), [cashflows]);
+    return { label: d.toLocaleDateString('en-GB', { month: 'short' }), inc, exp, y, m };
+  }), [cashflows, chartMonths]);
 
   const barMax = Math.max(...barData.map(b => Math.max(b.inc, b.exp)), 1);
+  // Data-quality signal — months with any activity. < 3 → caveat shown above
+  // the chart so users don't take aggregates (savings rate, averages) as gospel.
+  const monthsWithData = barData.filter(b => b.inc > 0 || b.exp > 0).length;
+
+  // Current-month expense breakdown by category — small pie next to the bar
+  // chart. Pulls from the bottom-card month (filtered cashflows) so it reflects
+  // whatever month the user is viewing.
+  const expenseByCategory = useMemo(() => {
+    const map = {};
+    expenses.forEach(cf => {
+      const c = ALL_CATS.find(x => x.id === cf.category) || ALL_CATS[ALL_CATS.length - 1];
+      const inDisplay = toBase(monthlyAmount(cf), cf.currency || 'RWF');
+      map[c.id] = map[c.id] || { id: c.id, label: c.label, color: c.color, value: 0 };
+      map[c.id].value += inDisplay;
+    });
+    return Object.values(map).sort((a, b) => b.value - a.value);
+  }, [expenses]);
 
   const cfGroup = (items) => {
     const out = {};
@@ -568,28 +619,127 @@ export default function CashFlowView({ state, dispatch }) {
         ))}
       </div>
 
-      {/* 6-month bar chart */}
+      {/* Trend chart + category breakdown ─────────────────────────────────── */}
       {cashflows.length > 0 && (
-        <div className="card" style={{ padding: '18px 22px', marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>6-Month Cash Flow</div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 80 }}>
-            {barData.map((b, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <div style={{ width: '100%', display: 'flex', gap: 3, alignItems: 'flex-end', height: 60 }}>
-                  <div style={{ flex: 1, background: 'var(--up)', borderRadius: '3px 3px 0 0', height: `${(b.inc / barMax) * 100}%`, minHeight: 2, opacity: 0.7 }} />
-                  <div style={{ flex: 1, background: 'var(--down)', borderRadius: '3px 3px 0 0', height: `${(b.exp / barMax) * 100}%`, minHeight: 2, opacity: 0.7 }} />
+        <div className="card" style={{ padding: '18px 22px', marginBottom: 20, display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 22 }}>
+          {/* Bar chart with axis labels + per-bar tooltips */}
+          <div style={{ minWidth: 0 }}>
+            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>
+                {chartMonths === 12 ? '12-Month' : '6-Month'} Cash Flow
+              </div>
+              <div className="row" style={{ gap: 4 }}>
+                {[6, 12].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setChartWindow(n)}
+                    style={{
+                      padding: '3px 9px', borderRadius: 6, border: 0,
+                      background: chartMonths === n ? 'var(--brand)' : 'var(--bg-2)',
+                      color:      chartMonths === n ? 'var(--brand-ink)' : 'var(--ink-2)',
+                      fontSize: 10.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
+                    }}
+                  >{n}M</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Thin-data caveat — UX review #38 */}
+            {monthsWithData > 0 && monthsWithData < 3 && (
+              <div style={{
+                padding: '8px 10px', marginBottom: 12, borderRadius: 6, fontSize: 11,
+                background: 'var(--gold-soft)', color: 'var(--ink-2)',
+              }}>
+                Only <strong>{monthsWithData} month{monthsWithData === 1 ? '' : 's'}</strong> of data — averages
+                and savings rate may not be reliable yet.
+              </div>
+            )}
+
+            {/* Chart proper — Y-axis + bars side by side */}
+            <div style={{ display: 'flex', gap: 8, height: 120 }}>
+              {/* Y-axis ticks: max / 50% / 0 */}
+              <div className="num" style={{
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                fontSize: 9, color: 'var(--ink-4)', textAlign: 'right', minWidth: 38,
+                paddingBottom: 18,
+              }}>
+                <span>{fmtBase(barMax, profile.displayCurrency, { compact: true })}</span>
+                <span>{fmtBase(barMax / 2, profile.displayCurrency, { compact: true })}</span>
+                <span>0</span>
+              </div>
+              {/* Bars */}
+              <div style={{ flex: 1, position: 'relative', display: 'flex', gap: 6, alignItems: 'flex-end', paddingBottom: 18 }}>
+                {/* Horizontal gridlines */}
+                {[0, 0.5, 1].map(p => (
+                  <div key={p} style={{
+                    position: 'absolute', left: 0, right: 0, bottom: 18 + p * 84,
+                    height: 0.5, background: 'var(--line)', pointerEvents: 'none',
+                  }} />
+                ))}
+                {barData.map((b, i) => {
+                  const net = b.inc - b.exp;
+                  const tip = `${b.label} ${b.y} · Income ${fmtBase(b.inc, profile.displayCurrency, { compact: true })} · Expense ${fmtBase(b.exp, profile.displayCurrency, { compact: true })} · Net ${net >= 0 ? '+' : ''}${fmtBase(net, profile.displayCurrency, { compact: true })}`;
+                  return (
+                    <div
+                      key={i}
+                      title={tip}
+                      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, position: 'relative', minWidth: 0 }}
+                    >
+                      <div style={{ width: '100%', display: 'flex', gap: 3, alignItems: 'flex-end', height: 84 }}>
+                        <div style={{ flex: 1, background: 'var(--up)',   borderRadius: '3px 3px 0 0', height: `${(b.inc / barMax) * 100}%`, minHeight: b.inc > 0 ? 2 : 0, opacity: 0.78, transition: 'height 240ms cubic-bezier(0.23,1,0.32,1)' }} />
+                        <div style={{ flex: 1, background: 'var(--down)', borderRadius: '3px 3px 0 0', height: `${(b.exp / barMax) * 100}%`, minHeight: b.exp > 0 ? 2 : 0, opacity: 0.78, transition: 'height 240ms cubic-bezier(0.23,1,0.32,1)' }} />
+                      </div>
+                      <div style={{ position: 'absolute', bottom: 0, fontSize: 9, color: 'var(--ink-4)' }}>{b.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="row" style={{ gap: 16, marginTop: 10 }}>
+              {[{ color: 'var(--up)', label: 'Income' }, { color: 'var(--down)', label: 'Expense' }].map(l => (
+                <div key={l.label} className="row" style={{ gap: 5 }}>
+                  <div style={{ width: 10, height: 10, background: l.color, borderRadius: 2, opacity: 0.78 }} />
+                  <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{l.label}</span>
                 </div>
-                <div style={{ fontSize: 9, color: 'var(--ink-4)' }}>{b.label}</div>
-              </div>
-            ))}
+              ))}
+              <span className="muted" style={{ fontSize: 9, marginLeft: 'auto' }}>Hover a bar for exact values</span>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
-            {[{ color: 'var(--up)', label: 'Income' }, { color: 'var(--down)', label: 'Expense' }].map(l => (
-              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 10, height: 10, background: l.color, borderRadius: 2, opacity: 0.7 }} />
-                <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{l.label}</span>
+
+          {/* Category breakdown pie for currently-viewed month — UX review #37 */}
+          <div className="col" style={{ gap: 8, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Expenses by category</div>
+            <div className="muted" style={{ fontSize: 10.5, marginTop: -4 }}>{monthLabel}</div>
+            {expenseByCategory.length === 0 ? (
+              <div className="muted" style={{ fontSize: 11, padding: 16, textAlign: 'center', background: 'var(--bg-2)', borderRadius: 8 }}>
+                No expense data this month
               </div>
-            ))}
+            ) : (
+              <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+                <Donut size={84} thickness={11}
+                  slices={expenseByCategory.map(c => ({ value: c.value, color: c.color }))} />
+                <div className="col" style={{ gap: 4, fontSize: 11, flex: 1, minWidth: 0 }}>
+                  {expenseByCategory.slice(0, 5).map(c => {
+                    const total = expenseByCategory.reduce((s, x) => s + x.value, 0);
+                    const pct = total > 0 ? (c.value / total) * 100 : 0;
+                    return (
+                      <div key={c.id} className="row" style={{ justifyContent: 'space-between', gap: 6, minWidth: 0 }}>
+                        <span className="row" style={{ gap: 6, minWidth: 0 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: 1.5, background: c.color, flexShrink: 0 }} />
+                          <span style={{ color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</span>
+                        </span>
+                        <span className="num" style={{ color: 'var(--ink-3)', fontSize: 10, flexShrink: 0 }}>{pct.toFixed(0)}%</span>
+                      </div>
+                    );
+                  })}
+                  {expenseByCategory.length > 5 && (
+                    <span className="muted" style={{ fontSize: 9 }}>+{expenseByCategory.length - 5} more</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

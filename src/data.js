@@ -373,11 +373,16 @@ export const INCOME_CATEGORIES = [
   { id:'other-inc',   label:'Other income',         color:'var(--ink-3)' },
 ];
 export const EXPENSE_CATEGORIES = [
+  { id:'food',        label:'Food & groceries',     color:'var(--brand)' },
+  { id:'rent',        label:'Rent / Mortgage',      color:'var(--plum)' },
+  { id:'transport',   label:'Transport / Fuel',     color:'var(--clay)' },
+  { id:'utilities',   label:'Utilities / Bills',    color:'var(--sky)' },
+  { id:'school-fees', label:'School fees',          color:'var(--plum)' },
+  { id:'healthcare',  label:'Healthcare / Medical', color:'var(--down)' },
+  { id:'insurance',   label:'Insurance premium',    color:'var(--clay)' },
   { id:'loan-repay',  label:'Loan repayment',       color:'var(--down)' },
   { id:'sacco-cont',  label:'SACCO contribution',   color:'var(--gold)' },
-  { id:'insurance',   label:'Insurance premium',    color:'var(--clay)' },
-  { id:'school-fees', label:'School fees',          color:'var(--plum)' },
-  { id:'utilities',   label:'Utilities / Bills',    color:'var(--ink-3)' },
+  { id:'entertainment', label:'Entertainment',      color:'var(--gold)' },
   { id:'other-exp',   label:'Other expense',        color:'var(--ink-3)' },
 ];
 

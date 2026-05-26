@@ -83,12 +83,19 @@ const INCOME_MAP = [
   { cat: 'business',   kws: ['sales', 'revenue', 'business', 'collection', 'merchant', 'pos cr'] },
   { cat: 'freelance',  kws: ['freelance', 'consulting', 'contract fee', 'service fee', 'honorarium'] },
 ];
+// Order matters — first match wins. Put more-specific patterns first
+// (food before generic utilities, healthcare before insurance, etc.).
 const EXPENSE_MAP = [
-  { cat: 'loan-repay', kws: ['loan', 'repayment', 'mortgage', 'installment', 'instalment', 'emi ', 'debt service', 'borrow'] },
-  { cat: 'sacco-cont', kws: ['sacco', 'cooperative', 'umurenge', 'coopec', 'contribution', 'savings deduction'] },
-  { cat: 'insurance',  kws: ['insurance', 'insur', 'premium', 'rssb', 'mutuelle', 'csr '] },
-  { cat: 'school-fees',kws: ['school', 'tuition', 'education', 'university', 'college', 'fees', 'nursery', 'academic'] },
-  { cat: 'utilities',  kws: ['electricity', 'reco', 'wasac', 'water', 'airtime', 'mtn ', 'airtel', 'internet', 'wifi', 'fuel', 'petrol', 'gas ', 'utility', 'tv sub', 'netflix', 'dstv', 'startimes'] },
+  { cat: 'food',         kws: ['supermarket', 'grocery', 'simba', 'nakumatt', 'carrefour', 'sawa', 'restaurant', 'cafe', 'café', 'food', 'meat', 'fruit'] },
+  { cat: 'transport',    kws: ['petrol', 'fuel', 'gas station', 'shell', 'engen', 'total ', 'parking', 'taxi', 'uber', 'yego', 'bolt', 'moto'] },
+  { cat: 'rent',         kws: ['rent ', 'rental', 'mortgage', 'housing', 'landlord'] },
+  { cat: 'healthcare',   kws: ['pharmacy', 'clinic', 'hospital', 'medical', 'doctor', 'medicine', 'kims', 'kfh'] },
+  { cat: 'entertainment',kws: ['cinema', 'movie', 'spotify', 'apple music', 'gaming', 'bar ', 'nightclub'] },
+  { cat: 'loan-repay',   kws: ['loan', 'repayment', 'installment', 'instalment', 'emi ', 'debt service', 'borrow'] },
+  { cat: 'sacco-cont',   kws: ['sacco', 'cooperative', 'umurenge', 'coopec', 'contribution', 'savings deduction'] },
+  { cat: 'insurance',    kws: ['insurance', 'insur', 'premium', 'rssb', 'mutuelle', 'csr '] },
+  { cat: 'school-fees',  kws: ['school', 'tuition', 'education', 'university', 'college', 'fees', 'nursery', 'academic'] },
+  { cat: 'utilities',    kws: ['electricity', 'reco', 'wasac', 'water', 'airtime', 'mtn ', 'airtel', 'internet', 'wifi', 'utility', 'tv sub', 'netflix', 'dstv', 'startimes'] },
 ];
 
 function suggestCategory(desc, isExpense) {
