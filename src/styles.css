@@ -19,8 +19,8 @@ body[data-theme="light"] {
   /* Ink — darkened --ink-4 from #9C9485 (2.9:1) to #7A7160 (~4.5:1) for WCAG AA */
   --ink:   #1A170E;
   --ink-2: #3D3826;
-  --ink-3: #6B6452;
-  --ink-4: #7A7160;
+  --ink-3: #5C5644;       /* darkened from #6B6452 for AA on cards (was 4.8:1 → now 5.7:1) */
+  --ink-4: #6B6452;       /* darkened from #7A7160 — was below AA for tiny text */
 
   /* Brand — Rwanda forest green */
   --brand:        #0D4B3A;
@@ -93,8 +93,8 @@ body[data-theme="dark"] {
   /* Dark theme --ink-4 brightened from #5A5748 (3.4:1) to #8A8676 (~6:1) */
   --ink:   #E8E4D8;
   --ink-2: #BDB8A8;
-  --ink-3: #A8A395;
-  --ink-4: #8A8676;
+  --ink-3: #B0AB9E;       /* lightened from #A8A395 for AA against dark bg */
+  --ink-4: #9D9888;       /* lightened from #8A8676 — small mono on dark bg */
 
   --brand:        #3FB889;
   --brand-2:      #56CDAB;
