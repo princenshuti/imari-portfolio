@@ -1173,6 +1173,32 @@ input:focus, select:focus, textarea:focus {
   color: var(--ink-3);
   margin: 0;
 }
+/* Loan amortisation expander — native <details> with restrained chevron.
+   Used inline inside a liability row; styled to feel like extra info on the
+   same card, not a separate widget. */
+.loan-analysis { margin-top: 10px; }
+.loan-analysis > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition: background 160ms ease;
+}
+.loan-analysis > summary::-webkit-details-marker { display: none; }
+.loan-analysis > summary:hover { background: var(--line-soft); }
+.loan-analysis-toggle {
+  display: inline-block;
+  font-size: 14px;
+  color: var(--ink-3);
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.loan-analysis[open] > summary .loan-analysis-toggle { transform: rotate(90deg); }
+
 /* Featured trust card — spans full grid width, gold accent for emphasis.
    Used for the valuation-honesty card: legally important, deserves weight. */
 .landing-trust-card--featured {

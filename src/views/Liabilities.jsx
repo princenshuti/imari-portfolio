@@ -3,6 +3,7 @@ import { LIABILITY_TYPES, CURRENCIES, toBase, fmt, fmtBase, valueRWF, id } from 
 import { Field, inputStyle } from '../components/Field.jsx';
 import Modal from '../components/Modal.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
+import LoanAnalysis from '../components/LoanAnalysis.jsx';
 
 const EMPTY_LIABILITY = {
   kind: 'personal-loan', name: '', currency: 'RWF',
@@ -231,6 +232,9 @@ export default function LiabilitiesView({ state, dispatch }) {
                       </div>
                     </div>
                   )}
+                  {/* Amortisation expander — reveals the math. Closed by default
+                      so the row stays compact for users skimming the list. */}
+                  <LoanAnalysis liability={l} displayCurrency={profile.displayCurrency} />
                 </div>
               </div>
             );

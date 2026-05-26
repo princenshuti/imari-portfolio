@@ -9,6 +9,7 @@ import { TrendCard } from '../components/Field.jsx';
 import AssetIcon from '../components/AssetIcon.jsx';
 import { filterByRange, calcReturn } from '../services/snapshots.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
+import { monthlyPayment } from '../services/finance.js';
 
 // ─── Asset classification ──────────────────────────────────────────────────
 // Liquid = cash or near-cash (withdrawable same-day)
@@ -992,6 +993,35 @@ export default function DashboardView({ state, dispatch }) {
                   hint={`${fmtBase(totalDebt, profile.displayCurrency, { compact: true })} total liabilities`}
                 />
               )}
+              {/* Debt-to-income — gold standard household-leverage metric.
+                  Sum of amortising monthly payments / gross monthly income.
+                  Only meaningful when both inputs exist. (UX review #35.) */}
+              {liabilities.length > 0 && fs.totalMonthlyIncome > 0 && (() => {
+                const today2 = new Date();
+                const monthsBetween = (a, b) => {
+                  if (!a || !b) return 0;
+                  return Math.max(0, Math.round((new Date(b) - new Date(a)) / (30.4375 * 24 * 3600 * 1000)));
+                };
+                const monthlyDebt = liabilities.reduce((s, l) => {
+                  const remaining = monthsBetween(today2.toISOString().slice(0, 10), l.endDate)
+                    || monthsBetween(l.startDate, l.endDate);
+                  const p = toBase(l.remainingAmount || 0, l.currency || 'RWF');
+                  return s + monthlyPayment(p, l.interestRate || 0, remaining);
+                }, 0);
+                const dti = (monthlyDebt / fs.totalMonthlyIncome) * 100;
+                return (
+                  <RatioBar
+                    label="Debt-to-income"
+                    value={dti}
+                    color={dti < 36 ? 'var(--up)' : dti < 50 ? 'var(--gold)' : 'var(--down)'}
+                    hint={`${fmtBase(monthlyDebt, profile.displayCurrency, { compact: true })} / month in debt payments`}
+                    thresholds={[
+                      { at: 36, label: 'Comfortable' },
+                      { at: 50, label: 'Stretched' },
+                    ]}
+                  />
+                );
+              })()}
             </div>
           </div>
 
