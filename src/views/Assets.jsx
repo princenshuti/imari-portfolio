@@ -526,6 +526,9 @@ export default function AssetsView({ state, dispatch, showToast }) {
                   onToggle={() => toggleOne(a.id)}
                   onEdit={asset => setEditing(asset)}
                   onDelete={asset => setPendingDelete({ kind: 'single', asset })}
+                  onSaveValue={(asset, newValue) =>
+                    dispatch({ type: 'upsertAsset', asset: { ...asset, currentValue: newValue } })
+                  }
                 />
               </React.Fragment>
             ))}

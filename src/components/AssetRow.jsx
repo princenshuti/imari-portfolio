@@ -1,7 +1,8 @@
+import { useState, useRef, useEffect } from 'react';
 import { CLASSES, fmt, fmtBase, suggestValue, toBase, yearsBetween } from '../data.js';
 import AssetIcon from './AssetIcon.jsx';
 
-export default function AssetRow({ asset, displayCurrency, isSelected, onToggle, onEdit, onDelete }) {
+export default function AssetRow({ asset, displayCurrency, isSelected, onToggle, onEdit, onDelete, onSaveValue }) {
   const cls = CLASSES.find(c => c.kind === asset.kind) || CLASSES[CLASSES.length - 1];
   const suggested = suggestValue(asset);
   const current = asset.currentValue !== '' && asset.currentValue != null ? asset.currentValue : suggested;
@@ -9,6 +10,29 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
   const gain = current - cost;
   const gainPct = cost ? (gain / cost * 100) : 0;
   const yrs = yearsBetween(asset.purchaseDate, new Date());
+
+  // Inline-edit state for the current value (UX review #23). Double-click the
+  // value cell to switch to an input. Enter / blur saves; Escape cancels.
+  // Only enabled when onSaveValue is provided — falls back to read-only display.
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef(null);
+  useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
+
+  const beginEdit = () => {
+    if (!onSaveValue) return;
+    setDraft(String(asset.currentValue ?? current ?? ''));
+    setEditing(true);
+  };
+  const commit = () => {
+    const trimmed = draft.trim();
+    const n = trimmed === '' ? '' : Number(trimmed.replace(/,/g, ''));
+    // Ignore non-numeric input — silently cancel rather than corrupt state
+    if (trimmed !== '' && !Number.isFinite(n)) { setEditing(false); return; }
+    onSaveValue?.(asset, trimmed === '' ? '' : n);
+    setEditing(false);
+  };
+  const cancel = () => setEditing(false);
 
   return (
     <div style={{
@@ -81,16 +105,47 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
       </div>
 
       <div className="col" style={{ gap: 2 }}>
-        <div className="num" style={{ fontSize: 13, fontWeight: 500 }}>
-          {fmt(current, asset.currency, { compact: true })}
-        </div>
+        {editing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="decimal"
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); commit(); }
+              else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+            }}
+            aria-label={`Edit value of ${asset.name}`}
+            style={{
+              width: '100%', padding: '4px 6px', borderRadius: 5,
+              border: '1px solid var(--brand)',
+              background: 'var(--paper-2)', color: 'var(--ink)',
+              fontSize: 13, fontFamily: 'var(--mono, monospace)', fontWeight: 500,
+              outline: 'none',
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            onDoubleClick={beginEdit}
+            aria-label={onSaveValue ? `Value of ${asset.name} (double-click to edit)` : undefined}
+            style={{
+              all: 'unset', cursor: onSaveValue ? 'text' : 'default',
+              fontSize: 13, fontWeight: 500, fontFamily: 'var(--mono, monospace)',
+            }}
+          >
+            {fmt(current, asset.currency, { compact: true })}
+          </button>
+        )}
         <div
           className="muted"
           style={{ fontSize: 10, cursor: 'help' }}
           title={
             asset.currentValue
-              ? 'Your value — the figure you entered for this asset.'
-              : `Estimated — Imari's starting suggestion using ${cls.note || 'the default rule'}. Edit the asset to set your own value.`
+              ? `Your value — the figure you entered for this asset.${onSaveValue ? ' Double-click the number to edit inline.' : ''}`
+              : `Estimated — Imari's starting suggestion using ${cls.note || 'the default rule'}.${onSaveValue ? ' Double-click the number to set your own value.' : ' Edit the asset to set your own value.'}`
           }
         >
           {asset.currency} · {asset.currentValue ? 'your value' : 'estimated'}
