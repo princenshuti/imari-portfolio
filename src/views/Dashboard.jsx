@@ -996,7 +996,7 @@ export default function DashboardView({ state, dispatch }) {
               {/* Debt-to-income — gold standard household-leverage metric.
                   Sum of amortising monthly payments / gross monthly income.
                   Only meaningful when both inputs exist. (UX review #35.) */}
-              {liabilities.length > 0 && fs.totalMonthlyIncome > 0 && (() => {
+              {liabilities.length > 0 && financialStats.totalMonthlyIncome > 0 && (() => {
                 const today2 = new Date();
                 const monthsBetween = (a, b) => {
                   if (!a || !b) return 0;
@@ -1008,7 +1008,7 @@ export default function DashboardView({ state, dispatch }) {
                   const p = toBase(l.remainingAmount || 0, l.currency || 'RWF');
                   return s + monthlyPayment(p, l.interestRate || 0, remaining);
                 }, 0);
-                const dti = (monthlyDebt / fs.totalMonthlyIncome) * 100;
+                const dti = (monthlyDebt / financialStats.totalMonthlyIncome) * 100;
                 return (
                   <RatioBar
                     label="Debt-to-income"
