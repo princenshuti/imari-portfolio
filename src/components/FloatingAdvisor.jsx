@@ -9,17 +9,14 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { CLASSES, suggestValue } from '../data.js';
 import { getApiKey, completeChat } from '../ai.js';
 
-// ─── Helpers (kept local so no cross-file dep) ─────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
+// Markdown + asset-name highlighter is shared with the full Advisor view so
+// the same response renders identically in both places.
+import { renderMD } from '../views/Advisor.jsx';
 function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
-}
-function renderMD(s) {
-  return escapeHTML(s)
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>');
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -343,7 +340,7 @@ You are an AI financial advisor. Only answer questions about the portfolio data 
                       fontSize: 12.5, lineHeight: 1.5, whiteSpace: 'pre-wrap',
                     }}
                     dangerouslySetInnerHTML={{
-                      __html: m.role === 'user' ? escapeHTML(m.content) : renderMD(m.content),
+                      __html: m.role === 'user' ? escapeHTML(m.content) : renderMD(m.content, assets.map(a => a.name)),
                     }} />
                   </div>
                 ))}
@@ -398,6 +395,14 @@ You are an AI financial advisor. Only answer questions about the portfolio data 
                 transition: 'background 0.14s ease-out',
               }}>↑</button>
             </form>
+            {/* Persistent disclaimer — same wording + styling as the full Advisor view */}
+            <div style={{
+              marginTop: 8, fontSize: 10, lineHeight: 1.4, color: 'var(--ink-3)',
+              padding: '6px 10px', borderRadius: 6,
+              background: 'var(--gold-softer)', border: '1px solid var(--gold-soft)',
+            }}>
+              <strong style={{ color: 'var(--gold)' }}>!</strong> Not professional financial advice — for big decisions, consult a licensed advisor.
+            </div>
           </div>
         </div>
       )}

@@ -437,6 +437,19 @@ body {
   border-radius: 3px;
 }
 
+/* Asset-name reference inside an Advisor reply — visually grounds the
+   model's answer in the user's actual portfolio. Subtle brand tint;
+   tooltip already says "One of your assets". */
+.md-asset-ref {
+  background: var(--brand-softer);
+  color: var(--brand);
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: help;
+  border-bottom: 1px dotted var(--brand-soft);
+}
+
 /* ── Form focus — visible ring meets 3:1 contrast (WCAG 2.4.7) ──── */
 input:focus, select:focus, textarea:focus {
   outline: 2px solid var(--brand) !important;

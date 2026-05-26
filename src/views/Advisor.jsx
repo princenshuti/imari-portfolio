@@ -6,11 +6,46 @@ import { completeChat } from '../ai.js';
 function escapeHTML(s) {
   return s.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 }
-function renderMD(s) {
-  return escapeHTML(s)
+
+/**
+ * Escape a string for safe use in a RegExp body.
+ */
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Render a markdown-lite assistant reply into HTML, with the user's own
+ * asset names highlighted so it's visually obvious when the model is
+ * grounding its answer in *their* portfolio (e.g. "your Bugesera plot").
+ *
+ * Highlighting only — not linking — because hash-based deep-links into
+ * filtered Assets rows is M3-scope (see issue #47).
+ *
+ * @param {string} s         The raw assistant reply
+ * @param {string[]} names   Asset names to highlight (longest-first matching)
+ */
+export function renderMD(s, names = []) {
+  let out = escapeHTML(s)
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>');
+
+  // Highlight asset-name mentions. Sort longest-first so "Bank of Kigali shares"
+  // wins over "Bank of Kigali" if both exist; case-insensitive, whole-word-ish.
+  const sorted = [...names]
+    .filter(n => n && n.length >= 3)        // skip noise like "A"
+    .sort((a, b) => b.length - a.length);
+  for (const name of sorted) {
+    const esc = escapeRegExp(escapeHTML(name));
+    // negative lookbehind on word char + lookahead on word char to avoid
+    // matching inside other words; flags i for case-insensitive.
+    out = out.replace(
+      new RegExp(`(?<![A-Za-z0-9])${esc}(?![A-Za-z0-9])`, 'gi'),
+      (m) => `<span class="md-asset-ref" title="One of your assets">${m}</span>`
+    );
+  }
+  return out;
 }
 
 function buildTemplates(assets, profile) {
@@ -297,7 +332,7 @@ You are a financial advisor. Only answer financial questions grounded in the dat
                     color: m.role === 'user' ? 'var(--brand-ink)' : 'var(--ink)',
                     border: m.role === 'user' ? '0' : '1px solid var(--line)',
                     fontSize: 13.5, lineHeight: 1.55, whiteSpace:'pre-wrap',
-                  }} dangerouslySetInnerHTML={{ __html: m.role === 'user' ? escapeHTML(m.content) : renderMD(m.content) }}/>
+                  }} dangerouslySetInnerHTML={{ __html: m.role === 'user' ? escapeHTML(m.content) : renderMD(m.content, assets.map(a => a.name)) }}/>
                 </div>
               ))}
               {pending && (
@@ -330,8 +365,27 @@ You are a financial advisor. Only answer financial questions grounded in the dat
                   color:'var(--brand-ink)', cursor: input.trim() && !pending ? 'pointer' : 'default', fontSize: 16,
                 }}>↑</button>
               </form>
-              <div className="muted" style={{ fontSize: 10, textAlign:'center', marginTop: 8 }}>
-                AI advice based on your portfolio data. Not professional financial advice.
+              {/* Persistent disclaimer — required by trust/compliance.
+                  Lives directly above the send button so it's impossible to ignore. */}
+              <div style={{
+                marginTop: 10,
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: 'var(--gold-softer)',
+                border: '1px solid var(--gold-soft)',
+                color: 'var(--ink-2)',
+                fontSize: 11,
+                lineHeight: 1.45,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+              }}>
+                <span aria-hidden="true" style={{ color: 'var(--gold)', fontWeight: 700, flexShrink: 0 }}>!</span>
+                <span>
+                  <strong>Not professional financial advice.</strong> Responses are AI-generated from
+                  your portfolio data and Rwanda-specific rules built into Imari. For decisions involving
+                  significant amounts, taxes, or legal exposure, consult a licensed advisor.
+                </span>
               </div>
             </div>
           </div>
