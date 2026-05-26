@@ -344,7 +344,7 @@ export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
             </Field>
           )}
           {cls.fields.includes('propertyCategory') && (
-            <Field label="Property category" hint="Used to apply the right RRA rate (residential, commercial, etc.)">
+            <Field label="Property category">
               <select
                 value={a.propertyCategory}
                 onChange={e => update('propertyCategory', e.target.value)}
@@ -352,13 +352,13 @@ export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
               >
                 <option value="">— Pick a category —</option>
                 {PROPERTY_CATEGORIES.map(c => (
-                  <option key={c.id} value={c.id}>{c.label} · {c.note}</option>
+                  <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
               </select>
             </Field>
           )}
           {cls.fields.includes('sizeM2') && (
-            <Field label="Size (m²)" hint="Total area. Agricultural land ≤ 20,000 m² (2 ha) is automatically exempt.">
+            <Field label="Size (m²)">
               <Input
                 value={a.sizeM2} onChange={v => update('sizeM2', v)}
                 type="number" placeholder="e.g. 500"

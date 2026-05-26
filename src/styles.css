@@ -387,6 +387,26 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Cash Flow import — spinner + draft-row stagger ───────────── */
+@keyframes cf-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes cf-row-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cf-draft-row {
+  opacity: 0;
+  animation: cf-row-in 220ms var(--ease-out) forwards;
+}
+.cf-import-drop:hover:not(:disabled) {
+  background: var(--brand-softer);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.cf-import-drop:active:not(:disabled) { transform: scale(0.985); }
+.cf-row-x:hover { color: var(--down); background: var(--down-soft); }
+
 /* ── Page transition ──────────────────────────────────────────── */
 .page-view { animation: page-fade 0.18s ease; }
 

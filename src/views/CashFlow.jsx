@@ -1,8 +1,9 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CURRENCIES, toBase, fmtBase, fmt, id } from '../data.js';
 import { Field, inputStyle } from '../components/Field.jsx';
 import Modal, { ImageLightbox } from '../components/Modal.jsx';
-import { parseCSV, detectColumns, rowsToDrafts } from '../services/bankImport.js';
+import { parseFile, detectColumns, rowsToDrafts, aiCategorize } from '../services/bankImport.js';
+import { hasEnvKey } from '../ai.js';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { Donut } from '../components/charts.jsx';
 
@@ -196,66 +197,99 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
 }
 
 // ─── Bank Statement Import Modal ─────────────────────────────────────────────
+const STEP_LABELS = { upload: 'Upload statement', map: 'Map columns', ai: 'AI categorising', review: 'Review & import' };
+const STEP_ORDER  = ['upload', 'map', 'ai', 'review'];
+
 function ImportModal({ accounts, currency, onImport, onCancel }) {
-  const [step, setStep] = useState('upload');   // upload | map | preview
-  const [parsed, setParsed] = useState(null);   // { headers, rows }
+  const [step, setStep] = useState('upload');
+  const [parsed, setParsed] = useState(null);            // { headers, rows }
   const [colMap, setColMap] = useState({});
   const [drafts, setDrafts] = useState([]);
-  const [acctId, setAcctId] = useState('');
+  const [acctId, setAcctId] = useState(accounts[0]?.id || '');
   const [curr, setCurr] = useState(currency || 'RWF');
   const [err, setErr] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [aiProgress, setAiProgress] = useState({ done: 0, total: 0 });
+  const [reviewedFlag, setReviewedFlag] = useState(false); // explicit confirmation for low-conf rows
+  const [fileName, setFileName] = useState('');
   const fileRef = useRef(null);
 
-  const handleFile = (file) => {
+  const stepIdx = STEP_ORDER.indexOf(step);
+  const lowCount = drafts.filter(d => d._confidence === 'low').length;
+  const aiAvailable = hasEnvKey;
+
+  // ── File upload ────────────────────────────────────────────────────────────
+  const handleFile = async (file) => {
     if (!file) return;
-    setErr(null);
-    const MAX_CSV_BYTES = 5 * 1024 * 1024; // 5 MB
-    if (file.size > MAX_CSV_BYTES) {
-      setErr('File too large (max 5 MB). Export a shorter date range from your bank app.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const result = parseCSV(ev.target.result);
-        if (!result.headers.length) throw new Error('Could not read headers from this file. Make sure it\'s a CSV.');
-        const detected = detectColumns(result.headers);
-        setParsed(result);
-        setColMap(detected);
-        setStep('map');
-      } catch (e) { setErr(e.message); }
-    };
-    reader.readAsText(file);
+    if (!acctId) { setErr('Pick the account this statement belongs to first.'); return; }
+    setErr(null); setLoading(true); setFileName(file.name);
+    try {
+      const result = await parseFile(file);
+      if (!result.headers.length) throw new Error('No headers found. Open the file in Excel and make sure row 1 has column titles.');
+      const detected = detectColumns(result.headers);
+      setParsed(result);
+      setColMap(detected);
+      setStep('map');
+    } catch (e) {
+      setErr(e.message || 'Could not read this file.');
+      setFileName('');
+    } finally { setLoading(false); }
   };
 
-  const generateDrafts = () => {
+  // ── Generate drafts + (optionally) run AI ──────────────────────────────────
+  const goToReview = async () => {
+    setErr(null);
     try {
       const d = rowsToDrafts(parsed.rows, colMap, curr);
-      if (!d.length) throw new Error('No transactions found with current column mapping. Try adjusting the columns.');
-      setDrafts(d.map((x, i) => ({ ...x, _key: i })));
-      setStep('preview');
-    } catch (e) { setErr(e.message); }
+      if (!d.length) throw new Error('No transactions matched. Check your column mapping — debit+credit OR amount+type must be filled.');
+      setDrafts(d);
+
+      const lowDrafts = d.filter(x => x._confidence === 'low');
+      if (aiAvailable && lowDrafts.length > 0) {
+        setStep('ai');
+        setAiProgress({ done: 0, total: d.length });
+        const refined = await aiCategorize(d, {
+          onProgress: (done, total) => setAiProgress({ done, total }),
+        });
+        // Sort low-confidence to top so user sees what needs attention first
+        const sorted = [...refined].sort((a, b) => {
+          if (a._confidence === b._confidence) return 0;
+          return a._confidence === 'low' ? -1 : 1;
+        });
+        setDrafts(sorted);
+      }
+      setStep('review');
+    } catch (e) { setErr(e.message); setStep('map'); }
   };
 
   const updateDraft = (key, field, val) =>
-    setDrafts(ds => ds.map(d => d._key === key ? { ...d, [field]: val } : d));
+    setDrafts(ds => ds.map(d => d._key === key
+      ? { ...d, [field]: val, ...(field === 'category' ? { _confidence: 'high', _userTouched: true } : {}) }
+      : d));
 
   const removeDraft = (key) => setDrafts(ds => ds.filter(d => d._key !== key));
+
+  const stillFlagged = drafts.filter(d => d._confidence === 'low' && !d._userTouched).length;
+  const canImport = drafts.length > 0 && (stillFlagged === 0 || reviewedFlag);
 
   const doImport = () => {
     const entries = drafts.map(d => ({
       id: id(), type: d.type, category: d.category,
       amount: d.amount, currency: d.currency || curr,
       date: d.date, recurring: 'once', notes: d.notes,
-      accountId: acctId || null, attachment: null,
+      accountId: acctId, attachment: null,
     }));
     onImport(entries);
   };
 
+  // ── Column mapping helpers ─────────────────────────────────────────────────
   const colOpts = ['', ...(parsed?.headers || [])];
-  const colField = (label, key) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <label style={{ fontSize: 12, color: 'var(--ink-2)', width: 90, flexShrink: 0 }}>{label}</label>
+  const colField = (label, key, hint) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <label style={{ fontSize: 12, color: 'var(--ink-2)', width: 120, flexShrink: 0 }}>
+        {label}
+        {hint && <span className="muted" style={{ display: 'block', fontSize: 10, marginTop: 1 }}>{hint}</span>}
+      </label>
       <select value={colMap[key] || ''} onChange={e => setColMap(m => ({ ...m, [key]: e.target.value || null }))} style={{ ...inputStyle, flex: 1, fontSize: 12 }}>
         {colOpts.map(o => <option key={o} value={o}>{o || '— skip —'}</option>)}
       </select>
@@ -264,152 +298,306 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
 
   const incCats = INCOME_CATEGORIES;
   const expCats = EXPENSE_CATEGORIES;
+  const maxW = step === 'review' ? 980 : step === 'ai' ? 460 : 580;
+  const acctLabel = (a) => a ? `${a.bank || a.wallet || a.name} (${a.currency})` : '';
+  const pickedAcct = accounts.find(a => a.id === acctId);
 
   return (
-    <Modal open onClose={onCancel} maxWidth={step === 'preview' ? 900 : 560} title="Import bank statement">
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-          <div>
-            <div className="muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Step {step === 'upload' ? 1 : step === 'map' ? 2 : 3} of 3
-            </div>
-            <h2 className="font-serif" style={{ fontSize: 22, marginTop: 2, margin: 0, fontWeight: 400 }}>
-              {step === 'upload' ? 'Upload bank statement' : step === 'map' ? 'Map columns' : `Review ${drafts.length} transactions`}
-            </h2>
+    <Modal open onClose={onCancel} maxWidth={maxW} title="Import bank statement">
+      {/* Header — step indicator */}
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18, alignItems: 'flex-start' }}>
+        <div>
+          <div className="muted" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
+            Step {stepIdx + 1} of {STEP_ORDER.length}
           </div>
-          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
-            <span aria-hidden="true">×</span>
-          </button>
+          <h2 className="font-serif" style={{ fontSize: 22, marginTop: 2, margin: 0, fontWeight: 400 }}>
+            {STEP_LABELS[step]}
+          </h2>
         </div>
+        <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
 
-        {err && (
-          <div style={{ padding: '10px 14px', background: 'var(--down-soft)', color: 'var(--down)', borderRadius: 8, fontSize: 12.5, marginBottom: 14 }}>
-            {err}
+      {/* Progress dots — quiet, just orient the user */}
+      <div className="row" style={{ gap: 6, marginBottom: 22 }}>
+        {STEP_ORDER.map((s, i) => (
+          <div key={s} style={{
+            height: 3, flex: 1, borderRadius: 999,
+            background: i <= stepIdx ? 'var(--brand)' : 'var(--line)',
+            transition: 'background 200ms var(--ease-out)',
+          }} />
+        ))}
+      </div>
+
+      {err && (
+        <div role="alert" style={{
+          padding: '10px 14px', background: 'var(--down-soft)', color: 'var(--down-ink)',
+          borderRadius: 8, fontSize: 12.5, marginBottom: 14, lineHeight: 1.5,
+        }}>
+          {err}
+        </div>
+      )}
+
+      {/* ── Step 1: Upload ────────────────────────────────────────────────── */}
+      {step === 'upload' && (
+        <>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 18, lineHeight: 1.6 }}>
+            Export a statement from your bank, MTN MoMo or Airtel Money app, pick the matching
+            account here, and Imari will categorise every transaction for you.
           </div>
-        )}
 
-        {/* ── Step 1: Upload ── */}
-        {step === 'upload' && (
-          <>
-            <div className="muted" style={{ fontSize: 13, marginTop: 8, marginBottom: 16, lineHeight: 1.6 }}>
-              Export a CSV from your bank's internet banking and upload it here. Imari auto-detects columns,
-              guesses categories from transaction descriptions, and lets you review every row before saving.
-            </div>
-
-            {/* Supported formats panel — UX review #39 */}
-            <details style={{ marginBottom: 18, padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 8 }}>
-              <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>
-                Which banks and formats are supported?
-              </summary>
-              <div className="muted" style={{ fontSize: 11.5, lineHeight: 1.65, marginTop: 8 }}>
-                <strong style={{ color: 'var(--ink-2)' }}>File types:</strong> CSV, TSV (tab-separated), or .txt with a CSV header.
-                <br />
-                <strong style={{ color: 'var(--ink-2)' }}>Tested banks & wallets:</strong> Bank of Kigali (BK), Equity Bank,
-                I&amp;M Bank, Cogebanque, KCB, BPR/Atlas Mara, MTN MoMo (mini-statement export), Airtel Money.
-                <br />
-                <strong style={{ color: 'var(--ink-2)' }}>Column auto-detect:</strong> headers containing "date", "description / narration / details",
-                "amount / debit / credit / dr / cr", and optional "balance" are recognised automatically — you can re-map any in Step 2.
-                <br />
-                <strong style={{ color: 'var(--ink-2)' }}>Date formats:</strong> ISO (2026-05-26), DD/MM/YYYY, DD-MM-YYYY, MM/DD/YYYY all parse.
-                <br />
-                <strong style={{ color: 'var(--ink-2)' }}>Not yet supported:</strong> PDF statements, MT940 SWIFT files, OFX. Save your PDF as
-                CSV from your bank's portal or copy the table into a spreadsheet and export as CSV.
+          {/* Account selector — required, first thing */}
+          <Field label="Account this statement belongs to *">
+            {accounts.length > 0 ? (
+              <select value={acctId} onChange={e => setAcctId(e.target.value)} style={inputStyle} required>
+                <option value="">— Choose account —</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{acctLabel(a)}</option>)}
+              </select>
+            ) : (
+              <div className="muted" style={{ fontSize: 12, padding: '12px 14px', background: 'var(--bg-2)', borderRadius: 8, lineHeight: 1.5 }}>
+                You don't have any accounts yet. Add a bank or Mobile Money account in <strong>Accounts</strong> first,
+                then come back here to import statements.
               </div>
-            </details>
+            )}
+          </Field>
 
-            <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" style={{ display: 'none' }}
-              onChange={ev => handleFile(ev.target.files?.[0])} />
-            <button onClick={() => fileRef.current.click()} style={{
-              ...inputStyle, cursor: 'pointer', textAlign: 'center', color: 'var(--ink-3)',
-              background: 'var(--bg-2)', border: '2px dashed var(--line)', padding: 40, fontSize: 14,
-            }}>
-              📁 Click to choose CSV file
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 14 }}>
+            <Field label="Statement currency">
+              <select value={curr} onChange={e => setCurr(e.target.value)} style={inputStyle}>
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+              </select>
+            </Field>
+          </div>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.tsv,.txt,.xlsx,.xls"
+            style={{ display: 'none' }}
+            onChange={ev => handleFile(ev.target.files?.[0])}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={!acctId || loading || accounts.length === 0}
+            className="cf-import-drop"
+            style={{
+              marginTop: 18, width: '100%', cursor: !acctId ? 'not-allowed' : 'pointer',
+              textAlign: 'center', color: 'var(--ink-2)', background: 'var(--bg-2)',
+              border: '1.5px dashed var(--line-strong)', borderRadius: 'var(--r-md)',
+              padding: '32px 20px', fontSize: 13, lineHeight: 1.5, fontFamily: 'inherit',
+              transition: 'background 180ms var(--ease-out), border-color 180ms var(--ease-out), transform 120ms var(--ease-out)',
+              opacity: (!acctId || accounts.length === 0) ? 0.55 : 1,
+            }}
+          >
+            {loading ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Spinner /> Reading {fileName || 'file'}…
+              </span>
+            ) : (
+              <>
+                <div style={{ fontSize: 22, marginBottom: 6 }}>↓</div>
+                <div style={{ fontWeight: 600, color: 'var(--ink)' }}>Choose a CSV or Excel file</div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                  .csv · .tsv · .xlsx · .xls — up to 10 MB
+                </div>
+              </>
+            )}
+          </button>
+
+          <details style={{ marginTop: 16, padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 8 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>
+              Which banks and formats are supported?
+            </summary>
+            <div className="muted" style={{ fontSize: 11.5, lineHeight: 1.65, marginTop: 8 }}>
+              <strong style={{ color: 'var(--ink-2)' }}>Tested:</strong> Bank of Kigali, Equity, I&amp;M, Cogebanque, KCB, BPR,
+              MTN MoMo (mini-statement Excel export), Airtel Money.
+              <br />
+              <strong style={{ color: 'var(--ink-2)' }}>Auto-detected columns:</strong> Date, Description / Narration / Details,
+              Debit / Credit / Money In / Money Out, Amount, Type, Charge / Fee.
+              <br />
+              <strong style={{ color: 'var(--ink-2)' }}>Not supported:</strong> PDF, OFX, MT940 — save as Excel or CSV first.
+            </div>
+          </details>
+        </>
+      )}
+
+      {/* ── Step 2: Map columns ──────────────────────────────────────────── */}
+      {step === 'map' && parsed && (
+        <>
+          <div className="muted" style={{ fontSize: 12.5, marginBottom: 18, lineHeight: 1.6 }}>
+            Found <strong>{parsed.headers.length}</strong> columns, <strong>{parsed.rows.length}</strong> rows in{' '}
+            <strong style={{ color: 'var(--ink-2)' }}>{fileName}</strong>.
+            Fill <em>Debit + Credit</em> <strong>or</strong> <em>Amount + Type</em>.
+          </div>
+          <div className="col" style={{ gap: 12 }}>
+            {colField('Date', 'date')}
+            {colField('Description', 'desc')}
+            {colField('Money out', 'debit', 'Debit / Withdrawal / Sent')}
+            {colField('Money in', 'credit', 'Credit / Deposit / Received')}
+            {colField('Amount', 'amount', 'Single-amount column')}
+            {colField('Type', 'type', 'Dr/Cr column')}
+            {colField('Fee / Charge', 'fee', 'Booked as separate utilities expense')}
+          </div>
+
+          {/* Preview the first 3 rows */}
+          <div style={{ marginTop: 18, overflowX: 'auto', borderRadius: 8, border: '1px solid var(--line)' }}>
+            <table style={{ fontSize: 11, borderCollapse: 'collapse', width: '100%' }}>
+              <thead>
+                <tr>{parsed.headers.map(h => (
+                  <th key={h} style={{ padding: '7px 10px', background: 'var(--bg-2)', borderBottom: '1px solid var(--line)', textAlign: 'left', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--ink-2)' }}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {parsed.rows.slice(0, 3).map((r, i) => (
+                  <tr key={i}>{parsed.headers.map(h => (
+                    <td key={h} style={{ padding: '6px 10px', borderTop: '1px solid var(--line-soft)', whiteSpace: 'nowrap', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink-3)' }}>{r[h]}</td>
+                  ))}</tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+            <button onClick={() => { setStep('upload'); setErr(null); }} className="btn btn-ghost">← Back</button>
+            <button onClick={goToReview} className="btn btn-primary">
+              {aiAvailable ? 'Categorise & review →' : 'Generate preview →'}
             </button>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 18 }}>
-              <Field label="Account (optional)">
-                <select value={acctId} onChange={e => setAcctId(e.target.value)} style={inputStyle}>
-                  <option value="">— None —</option>
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.bank || a.wallet || a.name}</option>)}
-                </select>
-              </Field>
-              <Field label="Statement currency">
-                <select value={curr} onChange={e => setCurr(e.target.value)} style={inputStyle}>
-                  {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-                </select>
-              </Field>
-            </div>
-          </>
-        )}
+          </div>
+        </>
+      )}
 
-        {/* ── Step 2: Map columns ── */}
-        {step === 'map' && parsed && (
-          <>
-            <div className="muted" style={{ fontSize: 12, marginTop: 8, marginBottom: 18, lineHeight: 1.6 }}>
-              We detected <strong>{parsed.headers.length}</strong> columns and{' '}
-              <strong>{parsed.rows.length}</strong> rows. Map them to the fields below.
-              Either <em>Debit + Credit</em> or <em>Amount + Type</em> must be filled.
+      {/* ── Step 3: AI categorising interstitial ─────────────────────────── */}
+      {step === 'ai' && (
+        <div style={{ padding: '36px 20px 28px', textAlign: 'center' }}>
+          <Spinner size={36} />
+          <div className="font-serif" style={{ fontSize: 18, marginTop: 18, marginBottom: 6, fontWeight: 400 }}>
+            Categorising your transactions
+          </div>
+          <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
+            Imari is reading each description and picking the best category.
+            Anything unclear will be flagged for you to confirm.
+          </div>
+          {aiProgress.total > 0 && (
+            <div style={{ marginTop: 22, maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>
+              <div style={{ height: 4, borderRadius: 999, background: 'var(--line)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${(aiProgress.done / aiProgress.total) * 100}%`,
+                  background: 'var(--brand)',
+                  transition: 'width 240ms var(--ease-out)',
+                }} />
+              </div>
+              <div className="muted" style={{ fontSize: 10.5, marginTop: 6 }}>
+                {aiProgress.done} of {aiProgress.total} transactions
+              </div>
             </div>
-            <div className="col" style={{ gap: 10 }}>
-              {colField('Date', 'date')}
-              {colField('Description', 'desc')}
-              {colField('Debit (out)', 'debit')}
-              {colField('Credit (in)', 'credit')}
-              {colField('Amount', 'amount')}
-              {colField('Type (Dr/Cr)', 'type')}
+          )}
+        </div>
+      )}
+
+      {/* ── Step 4: Review & import ──────────────────────────────────────── */}
+      {step === 'review' && (
+        <>
+          {/* Summary strip */}
+          <div className="row" style={{ gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+            <Stat label="To import" value={drafts.length} accent="var(--brand)" />
+            <Stat label="Income"   value={drafts.filter(d => d.type === 'income').length} accent="var(--up)" />
+            <Stat label="Expenses" value={drafts.filter(d => d.type === 'expense').length} accent="var(--down)" />
+            <Stat label="Needs review" value={lowCount} accent={lowCount ? 'var(--gold-ink)' : 'var(--ink-3)'} />
+            <div style={{ flex: 1, minWidth: 140, padding: '8px 12px', background: 'var(--brand-softer)', borderRadius: 8, fontSize: 11.5, color: 'var(--ink-2)', lineHeight: 1.4 }}>
+              Will post to{' '}
+              <strong style={{ color: 'var(--brand)' }}>{acctLabel(pickedAcct) || 'selected account'}</strong>
             </div>
-            {/* Preview of first 3 rows */}
-            <div style={{ marginTop: 16, overflowX: 'auto' }}>
-              <div className="muted" style={{ fontSize: 11, marginBottom: 6 }}>First 3 rows preview:</div>
-              <table style={{ fontSize: 11, borderCollapse: 'collapse', width: '100%' }}>
-                <thead>
-                  <tr>{parsed.headers.map(h => <th key={h} style={{ padding: '4px 8px', background: 'var(--bg-2)', borderBottom: '1px solid var(--line)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {parsed.rows.slice(0, 3).map((r, i) => (
-                    <tr key={i}>{parsed.headers.map(h => <td key={h} style={{ padding: '3px 8px', borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r[h]}</td>)}</tr>
+          </div>
+
+          {lowCount > 0 && (
+            <div role="status" style={{
+              padding: '10px 14px', borderRadius: 8, background: 'var(--gold-softer)',
+              fontSize: 12, color: 'var(--ink-2)', marginBottom: 14, lineHeight: 1.55,
+              border: '1px solid var(--gold-soft)',
+            }}>
+              <strong style={{ color: 'var(--gold-ink)' }}>{lowCount}</strong>{' '}
+              {lowCount === 1 ? 'transaction needs' : 'transactions need'} your eye.
+              They're at the top of the list — pick the right category from the dropdown,
+              or tick the box below the table to import them as-is.
+            </div>
+          )}
+
+          <div className="cf-import-table-wrap" style={{ overflowX: 'auto', marginBottom: 16, borderRadius: 8, border: '1px solid var(--line)' }}>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-2)' }}>
+                  {['', 'Date', 'Description', 'Type', 'Amount', 'Category', ''].map((h, i) => (
+                    <th key={i} style={{
+                      padding: '9px 10px', textAlign: i === 4 ? 'right' : 'left',
+                      fontWeight: 600, fontSize: 10.5, color: 'var(--ink-2)',
+                      borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap',
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                    }}>{h}</th>
                   ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="row" style={{ gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-              <button onClick={() => setStep('upload')} className="btn btn-ghost">← Back</button>
-              <button onClick={generateDrafts} className="btn btn-primary">Generate preview →</button>
-            </div>
-          </>
-        )}
-
-        {/* ── Step 3: Preview & edit ── */}
-        {step === 'preview' && (
-          <>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 14, lineHeight: 1.5 }}>
-              Review categories below. Click any row's category to change it. Remove rows you don't want to import.
-            </div>
-            <div style={{ overflowX: 'auto', marginBottom: 16 }}>
-              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-2)' }}>
-                    {['Date', 'Description', 'Type', 'Amount', 'Category', ''].map(h => (
-                      <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 600, fontSize: 11, borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {drafts.map(d => (
-                    <tr key={d._key} style={{ borderBottom: '1px solid var(--line)' }}>
-                      <td style={{ padding: '7px 10px', whiteSpace: 'nowrap', color: 'var(--ink-3)', fontSize: 11 }}>{d.date}</td>
-                      <td style={{ padding: '7px 10px', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d._desc}>{d._desc || '—'}</td>
-                      <td style={{ padding: '7px 10px' }}>
-                        <select value={d.type} onChange={ev => updateDraft(d._key, 'type', ev.target.value)}
-                          style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--line)', background: d.type === 'income' ? 'var(--up-soft)' : 'var(--down-soft)', color: d.type === 'income' ? 'var(--up)' : 'var(--down)', cursor: 'pointer' }}>
+                </tr>
+              </thead>
+              <tbody>
+                {drafts.map((d, idx) => {
+                  const flagged = d._confidence === 'low' && !d._userTouched;
+                  return (
+                    <tr
+                      key={d._key}
+                      className="cf-draft-row"
+                      style={{
+                        borderBottom: '1px solid var(--line-soft)',
+                        background: flagged ? 'var(--gold-softer)' : 'transparent',
+                        animationDelay: `${Math.min(idx * 18, 360)}ms`,
+                      }}
+                    >
+                      <td style={{ padding: '8px 10px', width: 32 }}>
+                        {flagged ? (
+                          <span title="Needs your review" style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 18, height: 18, borderRadius: 999, background: 'var(--gold)',
+                            color: '#1A170E', fontSize: 11, fontWeight: 700,
+                          }}>!</span>
+                        ) : d._aiCategorized ? (
+                          <span title="Suggested by AI" style={{ fontSize: 11, color: 'var(--brand)' }}>✦</span>
+                        ) : null}
+                      </td>
+                      <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: 'var(--ink-3)', fontSize: 11 }}>{d.date}</td>
+                      <td style={{ padding: '8px 10px', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ink-2)' }} title={d._desc}>
+                        {d._desc || '—'}
+                        {d._isFee && <span style={{ marginLeft: 6, fontSize: 9, padding: '1px 6px', borderRadius: 999, background: 'var(--bg-2)', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>fee</span>}
+                      </td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <select
+                          value={d.type}
+                          onChange={ev => updateDraft(d._key, 'type', ev.target.value)}
+                          aria-label="Transaction type"
+                          style={{
+                            fontSize: 11, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--line)',
+                            background: d.type === 'income' ? 'var(--up-soft)' : 'var(--down-soft)',
+                            color: d.type === 'income' ? 'var(--up-ink)' : 'var(--down-ink)',
+                            fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
                           <option value="income">▲ Income</option>
                           <option value="expense">▼ Expense</option>
                         </select>
                       </td>
-                      <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: d.type === 'income' ? 'var(--up)' : 'var(--down)' }}>
+                      <td className="num" style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap', color: d.type === 'income' ? 'var(--up)' : 'var(--down)' }}>
                         {d.type === 'income' ? '+' : '−'}{d.amount.toLocaleString()}
                       </td>
-                      <td style={{ padding: '7px 10px' }}>
-                        <select value={d.category} onChange={ev => updateDraft(d._key, 'category', ev.target.value)}
-                          style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--paper)', cursor: 'pointer' }}>
+                      <td style={{ padding: '8px 10px' }}>
+                        <select
+                          value={d.category}
+                          onChange={ev => updateDraft(d._key, 'category', ev.target.value)}
+                          aria-label="Category"
+                          style={{
+                            fontSize: 11, padding: '4px 7px', borderRadius: 6,
+                            border: flagged ? '1px solid var(--gold)' : '1px solid var(--line)',
+                            background: 'var(--paper)', cursor: 'pointer', fontWeight: flagged ? 600 : 500,
+                            minWidth: 150,
+                          }}
+                        >
                           <optgroup label="Income">
                             {incCats.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                           </optgroup>
@@ -418,28 +606,88 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
                           </optgroup>
                         </select>
                       </td>
-                      <td style={{ padding: '7px 10px' }}>
-                        <button type="button" onClick={() => removeDraft(d._key)} aria-label={`Remove draft entry ${d.description || d.category || ''}`.trim()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--down)', fontSize: 16, lineHeight: 1 }}><span aria-hidden="true">×</span></button>
+                      <td style={{ padding: '8px 10px', width: 32 }}>
+                        <button
+                          type="button"
+                          onClick={() => removeDraft(d._key)}
+                          aria-label="Remove this row"
+                          className="cf-row-x"
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: 'var(--ink-4)', fontSize: 16, lineHeight: 1, padding: 4,
+                            borderRadius: 6, transition: 'color 140ms var(--ease-out), background 140ms var(--ease-out)',
+                          }}
+                        >×</button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="row" style={{ gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="muted" style={{ fontSize: 12 }}>
-                {drafts.filter(d => d.type === 'income').length} income · {drafts.filter(d => d.type === 'expense').length} expenses
-              </div>
-              <div className="row" style={{ gap: 10 }}>
-                <button type="button" onClick={() => setStep('map')} className="btn btn-ghost">← Back</button>
-                <button type="button" onClick={doImport} className="btn btn-primary" disabled={!drafts.length}>
-                  Import {drafts.length} entries →
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Confirm-low-confidence checkbox */}
+          {stillFlagged > 0 && (
+            <label style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
+              background: 'var(--bg-2)', borderRadius: 8, fontSize: 12, color: 'var(--ink-2)',
+              cursor: 'pointer', lineHeight: 1.5, marginBottom: 14,
+            }}>
+              <input
+                type="checkbox"
+                checked={reviewedFlag}
+                onChange={e => setReviewedFlag(e.target.checked)}
+                style={{ marginTop: 2, accentColor: 'var(--brand)' }}
+              />
+              <span>
+                I've reviewed the <strong>{stillFlagged}</strong> flagged{' '}
+                {stillFlagged === 1 ? 'transaction' : 'transactions'} and want to import them as-is.
+                You can still re-categorise them later from the Cash Flow list.
+              </span>
+            </label>
+          )}
+
+          <div className="row" style={{ gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+            <button type="button" onClick={() => { setStep('map'); setReviewedFlag(false); }} className="btn btn-ghost">← Back</button>
+            <button
+              type="button"
+              onClick={doImport}
+              className="btn btn-primary"
+              disabled={!canImport}
+              title={!canImport ? `Resolve ${stillFlagged} flagged row${stillFlagged === 1 ? '' : 's'} first` : undefined}
+            >
+              Import {drafts.length} {drafts.length === 1 ? 'entry' : 'entries'} →
+            </button>
+          </div>
+        </>
+      )}
     </Modal>
+  );
+}
+
+// ─── Small UI atoms used by ImportModal ─────────────────────────────────────
+function Stat({ label, value, accent }) {
+  return (
+    <div style={{
+      padding: '8px 14px', borderRadius: 8, background: 'var(--paper)',
+      border: '1px solid var(--line)', minWidth: 92,
+    }}>
+      <div className="muted" style={{ fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>{label}</div>
+      <div className="num" style={{ fontSize: 17, fontWeight: 700, color: accent, letterSpacing: '-0.01em' }}>{value}</div>
+    </div>
+  );
+}
+
+function Spinner({ size = 16 }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block', width: size, height: size,
+        border: `2px solid var(--line)`, borderTopColor: 'var(--brand)',
+        borderRadius: '50%', animation: 'cf-spin 720ms linear infinite',
+      }}
+    />
   );
 }
 
