@@ -26,8 +26,41 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
       <div className="row" style={{ gap: 12, minWidth: 0 }}>
         <AssetIcon kind={asset.kind} color={cls.color} size={38} />
         <div className="col" style={{ minWidth: 0, gap: 2 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{asset.name}</div>
-          <div className="muted" style={{ fontSize: 11 }}>
+          <div
+            style={{ fontSize: 13.5, fontWeight: 500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}
+            title={asset.name}
+          >
+            {asset.name}
+            {/* Fractional-ownership / unvalued asset warning (UX review #21).
+                If both cost and value are 0 — typically a fractional-stake
+                placeholder — surface a badge prompting the user to enter a
+                value so the asset isn't silently absent from net worth. */}
+            {cost === 0 && current === 0 && (
+              <span
+                className="pill"
+                title="No value entered — this asset isn't counted in your net worth. Edit to set a value."
+                style={{
+                  marginLeft: 8, fontSize: 9.5, padding: '1px 7px',
+                  background: 'var(--gold-soft)', color: 'var(--gold-ink, var(--gold))',
+                  cursor: 'help', verticalAlign: 'middle',
+                }}
+              >Set value</span>
+            )}
+          </div>
+          <div
+            className="muted"
+            style={{ fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+            title={[
+              cls.label,
+              asset.ticker && asset.ticker,
+              asset.shares != null && `${asset.shares.toLocaleString()} sh`,
+              asset.units != null && `${asset.units} units`,
+              asset.count != null && `${asset.count} head`,
+              asset.neighbourhood && asset.neighbourhood,
+              asset.upi && `UPI ${asset.upi}`,
+              asset.chassis && asset.chassis,
+            ].filter(Boolean).join(' · ')}
+          >
             {cls.label}
             {asset.ticker && ` · ${asset.ticker}`}
             {asset.shares != null && ` · ${asset.shares.toLocaleString()} sh`}

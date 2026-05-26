@@ -141,7 +141,7 @@ export function maskAccountNumber(n) {
   return `•••• ${s.slice(-4)}`;
 }
 
-function AccountCard({ acc, displayCurrency, cfCount, onEdit, onDelete }) {
+function AccountCard({ acc, displayCurrency, cfCount, lastActivity, onEdit, onDelete }) {
   const isBank = acc.kind === 'savings';
   const institution = acc.bank || acc.wallet || 'Account';
   const balance = acc.currentValue !== '' && acc.currentValue != null ? acc.currentValue : acc.purchasePrice;
@@ -154,12 +154,23 @@ function AccountCard({ acc, displayCurrency, cfCount, onEdit, onDelete }) {
         display:'flex', alignItems:'center', justifyContent:'center', fontSize: 22, fontWeight: 600,
       }}>{isBank ? '⌬' : '○'}</div>
       <div className="col" style={{ minWidth: 0, gap: 3 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{institution}</div>
+        <div className="row" style={{ gap: 8, alignItems: 'baseline', minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{institution}</div>
+          {/* Explicit currency badge — was previously only implicit in the
+              formatted balance below. Helps readers spot multi-currency
+              accounts at a glance. (UX review #25.) */}
+          <span
+            className="pill pill-soft"
+            style={{ fontSize: 9, padding: '1px 6px', flexShrink: 0 }}
+            title={`Stored in ${acc.currency}`}
+          >{acc.currency}</span>
+        </div>
         <div className="muted" style={{ fontSize: 11.5 }}>
           {isBank ? 'Bank account' : 'Mobile money'}
           {acc.accountNumber && ` · ${maskAccountNumber(acc.accountNumber)}`}
           {isBank && acc.yieldPct ? ` · ${acc.yieldPct}% / yr` : ''}
           {cfCount > 0 && ` · ${cfCount} cashflow${cfCount === 1 ? '' : 's'} linked`}
+          {lastActivity && ` · last activity ${lastActivity}`}
         </div>
       </div>
       <div className="col" style={{ alignItems:'flex-end', gap: 2 }}>
@@ -203,6 +214,30 @@ export default function AccountsView({ state, dispatch }) {
       .forEach(c => { map[c.accountId] = (map[c.accountId] || 0) + 1; });
     return map;
   }, [state.cashflows]);
+
+  // Most recent cashflow date per account → "last activity" hint on AccountCard.
+  // Falls back to the account's purchaseDate if no cashflows exist.
+  const lastActivityByAccount = useMemo(() => {
+    const map = {};
+    (state.cashflows || [])
+      .filter(c => c.accountId && c.date)
+      .forEach(c => { if (!map[c.accountId] || c.date > map[c.accountId]) map[c.accountId] = c.date; });
+    accounts.forEach(a => { if (!map[a.id] && a.purchaseDate) map[a.id] = a.purchaseDate; });
+    // Format: "2 days ago" / "3 weeks ago" / "Mar 2025"
+    const fmt = (iso) => {
+      if (!iso) return null;
+      const d = new Date(iso);
+      const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+      if (days < 1)  return 'today';
+      if (days < 7)  return `${days}d ago`;
+      if (days < 30) return `${Math.floor(days / 7)}w ago`;
+      if (days < 365) return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+      return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    };
+    const out = {};
+    for (const [id, iso] of Object.entries(map)) out[id] = fmt(iso);
+    return out;
+  }, [state.cashflows, accounts]);
 
   const totalsRWF = useMemo(() => {
     let bank = 0, momo = 0;
@@ -265,7 +300,7 @@ export default function AccountsView({ state, dispatch }) {
       </div>
       {banks.length > 0 ? (
         <div className="col" style={{ gap: 10, marginBottom: 22 }}>
-          {banks.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} onEdit={setEditing} onDelete={handleDelete} />)}
+          {banks.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} lastActivity={lastActivityByAccount[a.id]} onEdit={setEditing} onDelete={handleDelete} />)}
         </div>
       ) : (
         <div className="card" style={{ padding: 28, textAlign:'center', marginBottom: 22 }}>
@@ -281,7 +316,7 @@ export default function AccountsView({ state, dispatch }) {
       </div>
       {momos.length > 0 ? (
         <div className="col" style={{ gap: 10 }}>
-          {momos.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} onEdit={setEditing} onDelete={handleDelete} />)}
+          {momos.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} lastActivity={lastActivityByAccount[a.id]} onEdit={setEditing} onDelete={handleDelete} />)}
         </div>
       ) : (
         <div className="card" style={{ padding: 28, textAlign:'center' }}>

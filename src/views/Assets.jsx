@@ -377,23 +377,42 @@ export default function AssetsView({ state, dispatch, showToast }) {
         </div>
       </div>
 
-      {/* ─ Bulk-select banner ──────────────────────────────────── */}
-      {someSelected && (
-        <div className="row" style={{
-          padding: '10px 16px', borderRadius: 10, marginBottom: 12,
-          background: 'var(--down-soft)', gap: 12, alignItems: 'center',
-        }}>
-          <span style={{ fontSize: 13, color: 'var(--down)', fontWeight: 500, flex: 1 }}>
-            {selected.size} asset{selected.size === 1 ? '' : 's'} selected
-          </span>
-          <button onClick={() => setSelected(new Set())} className="btn btn-ghost" style={{ fontSize: 12 }}>
-            Deselect all
-          </button>
-          <button type="button" onClick={handleBulkDelete} className="btn btn-danger btn-sm">
-            Delete {selected.size} asset{selected.size === 1 ? '' : 's'}
-          </button>
-        </div>
-      )}
+      {/* ─ Bulk-select banner — sticky so it follows the user while scrolling
+            through the table. Shows count + summed value so users see exactly
+            what they're about to delete. (UX review #22.) */}
+      {someSelected && (() => {
+        const today = new Date();
+        const selectedTotal = assets
+          .filter(a => selected.has(a.id))
+          .reduce((s, a) => s + valueRWF(a, today), 0);
+        return (
+          <div
+            role="region"
+            aria-label="Bulk actions"
+            style={{
+              position: 'sticky', top: 8, zIndex: 30,
+              padding: '12px 16px', borderRadius: 10, marginBottom: 12,
+              background: 'var(--down-soft)',
+              border: '1px solid color-mix(in oklab, var(--down) 30%, transparent)',
+              boxShadow: 'var(--shadow-2)',
+              display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontSize: 13, color: 'var(--down)', fontWeight: 600, flex: 1, minWidth: 200 }}>
+              {selected.size} asset{selected.size === 1 ? '' : 's'} selected
+              <span className="num" style={{ fontWeight: 500, opacity: 0.85, marginLeft: 8 }}>
+                · {fmtBase(selectedTotal, profile.displayCurrency, { compact: true })} total value
+              </span>
+            </span>
+            <button onClick={() => setSelected(new Set())} className="btn btn-ghost" style={{ fontSize: 12 }}>
+              Deselect all
+            </button>
+            <button type="button" onClick={handleBulkDelete} className="btn btn-danger btn-sm">
+              Delete {selected.size} asset{selected.size === 1 ? '' : 's'}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* ─ Import result banner ────────────────────────────────── */}
       {importResult && (
