@@ -114,7 +114,7 @@ function TaxTable({ columns, rows, footerRow }) {
 
 // ─── Main view ────────────────────────────────────────────────
 
-export default function TaxReportView({ state }) {
+export default function TaxReportView({ state, dispatch }) {
   const { assets, profile } = state;
   const today = new Date();
   const year  = today.getFullYear();
@@ -215,6 +215,90 @@ export default function TaxReportView({ state }) {
           🖨 Print / Save PDF
         </button>
       </div>
+
+      {/* Deadline countdown + missing-data audit ────────────────────────
+          Two compact alert cards above the summary so the user sees
+          actionable items first. (UX review #45 + #46.) */}
+      {(() => {
+        // Next deadlines: FAT 31 March, Vehicle Road Levy 31 December.
+        const yr = today.getFullYear();
+        const candidates = [
+          { label: 'Fixed Asset Tax',     date: new Date(yr, 2, 31), amount: totalPropertyTax },
+          { label: 'Vehicle Road Levy',   date: new Date(yr, 11, 31), amount: totalVehicleLevy },
+        ].map(d => ({ ...d, date: d.date < today ? new Date(d.date.getFullYear() + 1, d.date.getMonth(), d.date.getDate()) : d.date }))
+          .sort((a, b) => a.date - b.date);
+        const next = candidates.find(d => d.amount > 0);
+
+        // Missing-data audit — assets that would change the tax outcome if
+        // their fields were filled. Each entry deep-links to the Assets view.
+        const missing = [];
+        state.assets.forEach(a => {
+          const cur = a.currentValue !== '' && a.currentValue != null ? a.currentValue : null;
+          if ((a.kind === 'realestate-land' || a.kind === 'realestate-house') && !cur) {
+            missing.push({ id: a.id, name: a.name, why: 'No market value — Fixed Asset Tax will use the purchase price (or 0).' });
+          }
+          if (!a.purchasePrice && a.kind !== 'momo-cash') {
+            missing.push({ id: a.id, name: a.name, why: 'No purchase price — CGT estimate will be inaccurate on sale.' });
+          }
+          if (!a.purchaseDate) {
+            missing.push({ id: a.id, name: a.name, why: 'No purchase date — depreciation / appreciation cannot be calculated.' });
+          }
+        });
+
+        if (!next && missing.length === 0) return null;
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: missing.length > 0 ? '1fr 1.4fr' : '1fr', gap: 12, marginBottom: 22 }}>
+            {next && (
+              <div className="card" style={{ padding: '14px 18px', borderLeft: '3px solid var(--gold)' }}>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+                  Next deadline
+                </div>
+                <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                  <div>
+                    <div className="font-serif" style={{ fontSize: 19, lineHeight: 1.2 }}>{next.label}</div>
+                    <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
+                      {next.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {' · '}
+                      <strong style={{ color: 'var(--down)' }}>
+                        {Math.max(0, Math.ceil((next.date - today) / 86400000))} days
+                      </strong> from today
+                    </div>
+                  </div>
+                  <div className="num" style={{ fontSize: 17, fontWeight: 700, color: 'var(--down)' }}>
+                    {fmtBase(next.amount, c, { compact: true })}
+                  </div>
+                </div>
+              </div>
+            )}
+            {missing.length > 0 && (
+              <div className="card" style={{ padding: '14px 18px', borderLeft: '3px solid var(--clay)' }}>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  What's missing — affects this report
+                </div>
+                <div className="col" style={{ gap: 4 }}>
+                  {missing.slice(0, 4).map(m => (
+                    <button
+                      key={m.id + m.why}
+                      type="button"
+                      onClick={() => dispatch?.({ type: 'nav', to: 'assets' })}
+                      style={{
+                        all: 'unset', cursor: 'pointer', padding: '4px 0', display: 'block',
+                        borderBottom: '0.5px solid var(--line-soft)',
+                      }}
+                    >
+                      <span style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 500 }}>{m.name}</span>
+                      <span className="muted" style={{ fontSize: 11, marginLeft: 8 }}>{m.why}</span>
+                    </button>
+                  ))}
+                  {missing.length > 4 && (
+                    <span className="muted" style={{ fontSize: 11, marginTop: 4 }}>+{missing.length - 4} more issues — fix on the Assets page</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Summary KPIs ──────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 28 }}>

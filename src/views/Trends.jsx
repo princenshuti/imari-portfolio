@@ -8,11 +8,22 @@ function countLive(overrides) {
   return Object.values(overrides).filter(o => o?.live).length;
 }
 
-export default function TrendsView() {
+export default function TrendsView({ state, dispatch }) {
   // Single source of truth — same `overrides` map Dashboard's watchlist reads from.
   // No more divergent USD/RWF rates between views.
   const { overrides, status, error: errorMsg, fetchedAt, refresh } = useMarket();
   const load = refresh;
+
+  // Personal watchlist — domain IDs stored on profile. Star toggles in/out.
+  // Watched cards float to the top of each group. (UX review #44.)
+  const watchlist = state?.profile?.watchlist || [];
+  const toggleWatch = (domainId) => {
+    if (!dispatch) return;
+    const next = watchlist.includes(domainId)
+      ? watchlist.filter(x => x !== domainId)
+      : [...watchlist, domainId];
+    dispatch({ type: 'setProfile', patch: { watchlist: next } });
+  };
 
   const groups = useMemo(() => {
     const out = {};
@@ -130,14 +141,18 @@ export default function TrendsView() {
             <span className="muted" style={{ fontSize: 11 }}>{domains.length} indicator{domains.length !== 1 ? 's' : ''}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-            {domains.map(d => (
-              <TrendCard
-                key={d.id}
-                d={d}
-                big
-                override={overrides[d.id] ?? null}
-              />
-            ))}
+            {[...domains]
+              .sort((a, b) => Number(watchlist.includes(b.id)) - Number(watchlist.includes(a.id)))
+              .map(d => (
+                <TrendCard
+                  key={d.id}
+                  d={d}
+                  big
+                  override={overrides[d.id] ?? null}
+                  isWatched={watchlist.includes(d.id)}
+                  onToggleWatch={toggleWatch}
+                />
+              ))}
           </div>
         </div>
       ))}

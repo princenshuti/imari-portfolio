@@ -185,7 +185,23 @@ export default function AdvisorView({ state, dispatch }) {
   const { profile, assets, chat } = state;
   const [input, setInput] = useState('');
   const [pending, setPending] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
   const scrollRef = useRef(null);
+
+  // Bookmarked insights live on profile.savedInsights so they persist across
+  // chat clears and sync with the rest of the portfolio. (UX review #47.)
+  const savedInsights = profile.savedInsights || [];
+  const isSaved = (content) => savedInsights.some(s => s.content === content);
+  const toggleSave = (msgIdx) => {
+    const m = chat[msgIdx];
+    if (!m || m.role !== 'assistant') return;
+    const userQ = msgIdx > 0 ? chat[msgIdx - 1]?.content : null;
+    const exists = isSaved(m.content);
+    const next = exists
+      ? savedInsights.filter(s => s.content !== m.content)
+      : [...savedInsights, { savedAt: new Date().toISOString(), question: userQ, content: m.content }];
+    dispatch({ type: 'setProfile', patch: { savedInsights: next } });
+  };
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -286,7 +302,18 @@ You are a financial advisor. Only answer financial questions grounded in the dat
               <span>Sees your {assets.length} assets · grounded in RW rules · not professional advice</span>
             </div>
           </div>
-          <button onClick={() => dispatch({ type:'clearChat' })} className="btn btn-ghost" style={{ marginLeft:'auto', padding:'7px 12px', fontSize: 12 }}>
+          <button
+            type="button"
+            onClick={() => setShowSaved(s => !s)}
+            className="btn btn-ghost"
+            aria-pressed={showSaved}
+            title="View saved insights"
+            style={{ marginLeft:'auto', padding:'7px 12px', fontSize: 12 }}
+          >
+            <span aria-hidden="true" style={{ marginRight: 4 }}>★</span>
+            Saved {savedInsights.length > 0 ? `(${savedInsights.length})` : ''}
+          </button>
+          <button onClick={() => dispatch({ type:'clearChat' })} className="btn btn-ghost" style={{ padding:'7px 12px', fontSize: 12 }}>
             ↻ New chat
           </button>
         </div>
@@ -333,6 +360,25 @@ You are a financial advisor. Only answer financial questions grounded in the dat
                     border: m.role === 'user' ? '0' : '1px solid var(--line)',
                     fontSize: 13.5, lineHeight: 1.55, whiteSpace:'pre-wrap',
                   }} dangerouslySetInnerHTML={{ __html: m.role === 'user' ? escapeHTML(m.content) : renderMD(m.content, assets.map(a => a.name)) }}/>
+                  {/* Bookmark toggle on AI bubbles — minimal footprint, hover-revealed */}
+                  {m.role === 'assistant' && (
+                    <button
+                      type="button"
+                      onClick={() => toggleSave(i)}
+                      aria-label={isSaved(m.content) ? 'Remove bookmark' : 'Bookmark this insight'}
+                      title={isSaved(m.content) ? 'Saved — click to remove' : 'Save this insight'}
+                      style={{
+                        marginTop: 4, padding: '3px 8px', borderRadius: 6, border: 0, cursor: 'pointer',
+                        background: 'transparent', color: isSaved(m.content) ? 'var(--gold)' : 'var(--ink-4)',
+                        fontFamily: 'inherit', fontSize: 11, fontWeight: 500,
+                        transition: 'color 160ms ease, background 160ms ease',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-2)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <span aria-hidden="true">{isSaved(m.content) ? '★ Saved' : '☆ Save'}</span>
+                    </button>
+                  )}
                 </div>
               ))}
               {pending && (
@@ -393,6 +439,72 @@ You are a financial advisor. Only answer financial questions grounded in the dat
 
         <TemplateSidebar templates={templates} onPick={ask} disabled={pending} />
       </div>
+
+      {/* Saved-insights drawer — overlay, dismiss on backdrop click / Esc. */}
+      {showSaved && (
+        <div
+          role="dialog" aria-label="Saved insights" aria-modal="true"
+          onClick={() => setShowSaved(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: 'rgba(20,20,16,0.45)', backdropFilter: 'blur(4px)',
+            display: 'flex', justifyContent: 'flex-end',
+            animation: 'imari-fade-in 0.18s ease-out',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 460, height: '100%',
+              background: 'var(--paper)', overflowY: 'auto',
+              padding: '22px 24px',
+              boxShadow: 'var(--shadow-pop)',
+              animation: 'imari-drawer-in 240ms cubic-bezier(0.32, 0.72, 0, 1)',
+            }}
+          >
+            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
+              <h2 className="font-serif" style={{ fontSize: 22, margin: 0, fontWeight: 400 }}>Saved insights</h2>
+              <button type="button" onClick={() => setShowSaved(false)} aria-label="Close drawer" className="btn-icon-sm">
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            {savedInsights.length === 0 ? (
+              <div className="muted" style={{ fontSize: 13, padding: 24, textAlign: 'center' }}>
+                No saved insights yet. Click the ★ Save button on any advisor reply to bookmark it here.
+              </div>
+            ) : (
+              <div className="col" style={{ gap: 12 }}>
+                {[...savedInsights].reverse().map((s, idx) => (
+                  <div key={s.savedAt + idx} className="card" style={{ padding: 14 }}>
+                    {s.question && (
+                      <div className="muted" style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+                        Q · {s.question}
+                      </div>
+                    )}
+                    <div
+                      style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink)', whiteSpace: 'pre-wrap' }}
+                      dangerouslySetInnerHTML={{ __html: renderMD(s.content, assets.map(a => a.name)) }}
+                    />
+                    <div className="row" style={{ marginTop: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="muted" style={{ fontSize: 10.5 }}>
+                        Saved {new Date(s.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => dispatch({ type: 'setProfile', patch: { savedInsights: savedInsights.filter(x => x.content !== s.content) } })}
+                        className="btn btn-ghost btn-xs"
+                        style={{ fontSize: 11 }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

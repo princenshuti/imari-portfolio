@@ -288,6 +288,13 @@ body {
   to   { opacity: 1; }
 }
 
+/* Right-drawer slide-in. Used by Advisor saved-insights panel.
+   Starts at translateX(100%) (off-screen right) → 0. iOS-style curve. */
+@keyframes imari-drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
 .btn-danger {
   background: var(--down);
   color: #fff;

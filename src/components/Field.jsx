@@ -88,7 +88,7 @@ export function KPI({ label, value, sub, accent = 'var(--brand)' }) {
  *   override — live data from market.js: { value, change, live, source, fetchedAt }
  *              If null/undefined the domain's static values are used.
  */
-export function TrendCard({ d, big = false, override = null }) {
+export function TrendCard({ d, big = false, override = null, isWatched = false, onToggleWatch = null }) {
   // Merge live override on top of static domain data
   const value    = override?.value  ?? d.value;
   const change   = override?.change ?? d.change;
@@ -112,8 +112,25 @@ export function TrendCard({ d, big = false, override = null }) {
 
   return (
     <div className="card hover-lift" style={{ padding: big ? 20 : 16, position: 'relative', cursor: 'default' }}>
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)' }}>{d.label}</div>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6, alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', flex: 1, minWidth: 0 }}>{d.label}</div>
+        {onToggleWatch && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggleWatch(d.id); }}
+            aria-label={isWatched ? `Remove ${d.label} from watchlist` : `Add ${d.label} to watchlist`}
+            title={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}
+            style={{
+              background: 'transparent', border: 0, cursor: 'pointer', padding: 2,
+              fontSize: 13, lineHeight: 1, color: isWatched ? 'var(--gold)' : 'var(--ink-4)',
+              transition: 'color 160ms ease, transform 160ms cubic-bezier(0.23,1,0.32,1)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            <span aria-hidden="true">{isWatched ? '★' : '☆'}</span>
+          </button>
+        )}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
           padding: '2px 7px', borderRadius: 20,
