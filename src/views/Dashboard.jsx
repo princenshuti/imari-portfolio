@@ -251,7 +251,13 @@ function KpiTile({ label, value, sub, accent, delay, onClick }) {
 }
 
 /** Horizontal ratio progress bar with label */
-function RatioBar({ label, value, color, hint }) {
+/**
+ * Ratio bar with optional threshold markers.
+ * `thresholds` is an array like [{at: 25, label: 'Low'}, {at: 55, label: 'Ample'}] —
+ * tick marks render at those percentages with a tooltip label on hover so the
+ * green/amber/red banding has explicit numerical anchors (UX review #14).
+ */
+function RatioBar({ label, value, color, hint, thresholds }) {
   const capped = Math.min(Math.max(value, 0), 100);
   const c = color || (capped > 55 ? 'var(--up)' : capped > 25 ? 'var(--gold)' : 'var(--down)');
   return (
@@ -260,12 +266,31 @@ function RatioBar({ label, value, color, hint }) {
         <span className="muted" style={{ fontSize: 11.5 }}>{label}</span>
         <span className="num" style={{ fontSize: 13, fontWeight: 700, color: c }}>{value.toFixed(1)}%</span>
       </div>
-      <div style={{ height: 4, borderRadius: 2, background: 'var(--bg-2)', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: 4, borderRadius: 2, background: 'var(--bg-2)', overflow: 'visible' }}>
         <div style={{
           height: '100%', width: capped + '%', background: c, borderRadius: 2,
           transition: 'width 0.9s cubic-bezier(0.23,1,0.32,1)',
         }} />
+        {thresholds && thresholds.map(t => (
+          <span
+            key={t.at}
+            title={`${t.label} threshold: ${t.at}%`}
+            aria-label={`${t.label} threshold at ${t.at}%`}
+            style={{
+              position: 'absolute', top: -2, left: `${t.at}%`,
+              width: 2, height: 8, background: 'var(--ink-3)', opacity: 0.5,
+              borderRadius: 1, transform: 'translateX(-1px)', cursor: 'help',
+            }}
+          />
+        ))}
       </div>
+      {thresholds && (
+        <div className="muted" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginTop: 3 }}>
+          {thresholds.map(t => (
+            <span key={t.at} style={{ flex: `0 0 ${t.at}%`, textAlign: 'right', paddingRight: 2 }}>{t.label} {t.at}%</span>
+          ))}
+        </div>
+      )}
       {hint && <div className="muted" style={{ fontSize: 10, marginTop: 3, lineHeight: 1.4 }}>{hint}</div>}
     </div>
   );
@@ -348,20 +373,30 @@ function CategoryBars({ groups, totalValue }) {
 }
 
 /** Asset card used in Top Gainers and Highest Depreciation */
-function MoverCard({ asset, delay }) {
+function MoverCard({ asset, delay, onClick }) {
   const cls = CLASSES.find(c => c.kind === asset.kind) || CLASSES[CLASSES.length - 1];
   const isUp = asset._pct >= 0;
+  const isInteractive = !!onClick;
   return (
-    <div style={{
-      padding: '14px 16px', borderRadius: 'var(--r-md)',
-      background: isUp ? 'color-mix(in oklab, var(--up) 6%, var(--bg-2))' : 'color-mix(in oklab, var(--down) 6%, var(--bg-2))',
-      border: `0.5px solid ${isUp ? 'color-mix(in oklab, var(--up) 18%, transparent)' : 'color-mix(in oklab, var(--down) 18%, transparent)'}`,
-      transition: 'box-shadow 0.15s ease-out, transform 0.15s ease-out',
-      animation: 'imari-slideUp 260ms cubic-bezier(0.23,1,0.32,1) both',
-      animationDelay: `${delay}ms`,
-    }}
-    onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-2)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!isInteractive}
+      aria-label={isInteractive ? `Open ${asset.name} in Assets` : undefined}
+      style={{
+        all: 'unset',
+        boxSizing: 'border-box',
+        display: 'block', width: '100%',
+        padding: '14px 16px', borderRadius: 'var(--r-md)',
+        background: isUp ? 'color-mix(in oklab, var(--up) 6%, var(--bg-2))' : 'color-mix(in oklab, var(--down) 6%, var(--bg-2))',
+        border: `0.5px solid ${isUp ? 'color-mix(in oklab, var(--up) 18%, transparent)' : 'color-mix(in oklab, var(--down) 18%, transparent)'}`,
+        transition: 'box-shadow 0.15s ease-out, transform 0.15s ease-out',
+        animation: 'imari-slideUp 260ms cubic-bezier(0.23,1,0.32,1) both',
+        animationDelay: `${delay}ms`,
+        cursor: isInteractive ? 'pointer' : 'default',
+      }}
+      onMouseEnter={e => { if (isInteractive) { e.currentTarget.style.boxShadow = 'var(--shadow-2)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
     >
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
         <AssetIcon kind={asset.kind} color={cls.color} size={26} />
@@ -373,7 +408,7 @@ function MoverCard({ asset, delay }) {
       <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>
         {isUp ? '+' : ''}{fmt(asset._gain, asset.currency, { compact: true })} · {cls.label}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -829,8 +864,10 @@ export default function DashboardView({ state, dispatch }) {
 
   // Section content map — values are null when data conditions not met
   const sectionContent = {
+    // 4-up KPI strip (was 5 → wrapped to 3+2 awkwardly at mid widths).
+    // Debt-to-asset moved into Financial Ratios card where it already appears.
     kpi: (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+      <div className="dash-kpi-grid">
         <KpiTile
           delay={0}
           label="Net worth"
@@ -854,13 +891,6 @@ export default function DashboardView({ state, dispatch }) {
         />
         <KpiTile
           delay={120}
-          label="Debt-to-asset"
-          value={`${debtToAsset.toFixed(1)}%`}
-          sub={debtToAsset < 30 ? 'Healthy leverage' : debtToAsset < 60 ? 'Moderate leverage' : 'High leverage — review'}
-          accent={debtToAsset < 30 ? 'var(--up)' : debtToAsset < 60 ? 'var(--gold)' : 'var(--down)'}
-        />
-        <KpiTile
-          delay={160}
           label="Savings rate"
           value={savingsRate !== null ? `${savingsRate.toFixed(1)}%` : '—'}
           sub={savingsRate !== null ? '6-month average of income saved' : 'Add cashflows to track'}
@@ -943,6 +973,10 @@ export default function DashboardView({ state, dispatch }) {
                 value={stats.liquidityRatio}
                 color={stats.liquidityRatio > 15 ? 'var(--up)' : stats.liquidityRatio > 5 ? 'var(--gold)' : 'var(--down)'}
                 hint={stats.liquidityRatio < 10 ? 'Low — keep 3-6 months expenses liquid' : 'Cash & savings as % of total assets'}
+                thresholds={[
+                  { at: 5,  label: 'Low' },
+                  { at: 15, label: 'Healthy' },
+                ]}
               />
               <RatioBar
                 label="Income-generating"
@@ -1235,7 +1269,7 @@ export default function DashboardView({ state, dispatch }) {
             <div className="muted" style={{ fontSize: 12 }}>No assets in profit yet</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
-              {gainers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} />)}
+              {gainers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} onClick={() => dispatch({ type: 'nav', to: 'assets' })} />)}
             </div>
           )}
         </div>
@@ -1251,7 +1285,7 @@ export default function DashboardView({ state, dispatch }) {
             <div className="muted" style={{ fontSize: 12 }}>No assets in the red — great!</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
-              {losers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} />)}
+              {losers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} onClick={() => dispatch({ type: 'nav', to: 'assets' })} />)}
             </div>
           )}
         </div>
@@ -1272,17 +1306,27 @@ export default function DashboardView({ state, dispatch }) {
     benchmarks: (
       <div className={activeGoals.length > 0 ? 'dash-grid-2' : ''} style={activeGoals.length > 0 ? undefined : { display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
         <div className="card" style={{ padding: '20px 22px' }}>
-          <div className="font-serif" style={{ fontSize: 17, marginBottom: 4 }}>vs. Benchmarks</div>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+            <div className="font-serif" style={{ fontSize: 17 }}>vs. Benchmarks</div>
+            <span
+              className="pill pill-soft"
+              title={`Portfolio bar = your net-worth change over the last ${chartRange}. Benchmarks scaled to the same window where possible.`}
+              style={{ fontSize: 10, cursor: 'help' }}
+            >
+              {chartRange} window
+            </span>
+          </div>
           <div className="muted" style={{ fontSize: 11, marginBottom: 16 }}>
             Your <strong style={{ color: portfolioReturn >= 0 ? 'var(--up)' : 'var(--down)' }}>
               {portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(1)}%
-            </strong> this period compared to:
+            </strong> over the last {chartRange} compared to:
           </div>
           {benchmarks.map(b => (
             <BenchmarkBar key={b.label} label={b.label} portfolioReturn={portfolioReturn} benchmarkReturn={b.ret} />
           ))}
           <div className="muted" style={{ fontSize: 9.5, marginTop: 12, lineHeight: 1.5 }}>
-            Benchmark figures are illustrative. Portfolio bar shows the {chartRange} return.
+            All bars compare the same <strong>{chartRange}</strong> window. Benchmark figures
+            (USD/RWF, CPI, RSE ASI, T-bond) are illustrative and scaled to the selected range.
           </div>
         </div>
         {activeGoals.length > 0 && (
