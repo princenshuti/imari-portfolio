@@ -13,6 +13,7 @@ import { ViewSkeleton } from './components/Skeleton.jsx';
 import Login from './views/Login.jsx';
 import Landing from './views/Landing.jsx';
 import NamePrompt from './views/NamePrompt.jsx';
+import Onboarding from './views/Onboarding.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
 // All views — lazy loaded on first navigation
 const DashboardView   = lazy(() => import('./views/Dashboard.jsx'));
@@ -553,25 +554,8 @@ export default function App() {
   }
   if (!stateReady) return <FullScreenLoader message="Loading your portfolio…" />;
 
-  if (!state.profile.name) {
-    return <NamePrompt onSubmit={name => dispatch({ type:'setProfile', patch: { name } })} />;
-  }
-
-  const accountCount = state.assets.filter(a => a.kind === 'savings' || a.kind === 'momo-cash').length;
-  const titles = {
-    dashboard:   { title: `${greetingFor()}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
-    accounts:    { title: 'Accounts', subtitle: `${accountCount} bank / mobile money` },
-    assets:      { title: 'Your assets', subtitle: `${state.assets.length} positions tracked` },
-    trends:      { title: 'Markets & trends', subtitle: 'Domains you watch' },
-    advisor:     { title: 'AI Advisor', subtitle: 'Grounded in your portfolio' },
-    settings:    { title: 'Settings', subtitle: 'Profile · FX · members · backup' },
-    liabilities: { title: 'Liabilities', subtitle: `${(state.liabilities||[]).length} debts tracked` },
-    goals:       { title: 'Goals', subtitle: `${(state.goals||[]).filter(g=>!g.achieved).length} active goals` },
-    cashflow:    { title: 'Cash Flow', subtitle: 'Income · Expenses · Savings rate' },
-    tax:         { title: 'Tax Report', subtitle: `${new Date().getFullYear()} · Rwanda RRA estimate` },
-  };
-
-  // Wrap dispatch in a read-only guard for viewers
+  // Wrap dispatch in a read-only guard for viewers — declared early so the
+  // Onboarding gate below can use it.
   const guardedDispatch = (action) => {
     const writeActions = new Set([
       'upsertAsset','deleteAsset','bulkDeleteAssets','clearAssets','reset',
@@ -587,6 +571,38 @@ export default function App() {
       return;
     }
     dispatch(action);
+  };
+
+  if (!state.profile.name) {
+    return <NamePrompt onSubmit={name => dispatch({ type:'setProfile', patch: { name } })} />;
+  }
+
+  // First-run onboarding wizard — shows when the user has a name but zero
+  // assets and hasn't explicitly dismissed it. Sets profile.onboardedAt when
+  // "I'll add more later" or "Load sample" runs, so it never re-fires.
+  if (state.assets.length === 0 && !state.profile.onboardedAt && role !== 'viewer') {
+    return (
+      <Onboarding
+        profile={state.profile}
+        dispatch={guardedDispatch}
+        showToast={showToast}
+        onComplete={() => guardedDispatch({ type: 'setProfile', patch: { onboardedAt: new Date().toISOString() } })}
+      />
+    );
+  }
+
+  const accountCount = state.assets.filter(a => a.kind === 'savings' || a.kind === 'momo-cash').length;
+  const titles = {
+    dashboard:   { title: `${greetingFor()}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
+    accounts:    { title: 'Accounts', subtitle: `${accountCount} bank / mobile money` },
+    assets:      { title: 'Your assets', subtitle: `${state.assets.length} positions tracked` },
+    trends:      { title: 'Markets & trends', subtitle: 'Domains you watch' },
+    advisor:     { title: 'AI Advisor', subtitle: 'Grounded in your portfolio' },
+    settings:    { title: 'Settings', subtitle: 'Profile · FX · members · backup' },
+    liabilities: { title: 'Liabilities', subtitle: `${(state.liabilities||[]).length} debts tracked` },
+    goals:       { title: 'Goals', subtitle: `${(state.goals||[]).filter(g=>!g.achieved).length} active goals` },
+    cashflow:    { title: 'Cash Flow', subtitle: 'Income · Expenses · Savings rate' },
+    tax:         { title: 'Tax Report', subtitle: `${new Date().getFullYear()} · Rwanda RRA estimate` },
   };
 
   const view = (() => {
