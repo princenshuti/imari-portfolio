@@ -374,19 +374,27 @@ export default function GoalsView({ state, dispatch }) {
           {[
             { label: 'Active goals', value: active.length, sub: 'in progress' },
             { label: 'Net worth', value: fmtBase(netWorth, profile.displayCurrency, { compact: true }), sub: 'assets − liabilities', isNum: true },
-            {
-              label: 'Nearest goal',
-              value: (() => {
-                const sorted = active.filter(g => g.deadline).sort((a, b) => a.deadline.localeCompare(b.deadline));
-                return sorted[0]?.title || '—';
-              })(),
-              sub: (() => {
-                const sorted = active.filter(g => g.deadline).sort((a, b) => a.deadline.localeCompare(b.deadline));
-                const d = sorted[0]?.deadline;
-                if (!d) return 'no deadline';
-                return `${Math.ceil((new Date(d) - today) / 86400000)}d away`;
-              })(),
-            },
+            // "Closest to done" — goal with the highest % progress (per its
+            // own funding type, so the math matches the card below). Picking
+            // by deadline alone is misleading: a 1B target with a deadline is
+            // not actually "nearer" than a 10M target without one. (User
+            // feedback after M3 ship.)
+            (() => {
+              const withProgress = active.map(g => {
+                const target = toBase(g.targetAmount || 0, g.currency || 'RWF');
+                const curr   = currentValueFor(g);
+                const pct    = target > 0 ? Math.min((curr / target) * 100, 100) : 0;
+                return { g, pct };
+              }).sort((a, b) => b.pct - a.pct);
+              const top = withProgress[0];
+              if (!top || !top.g) return { label: 'Closest to done', value: '—', sub: 'add a goal to start' };
+              const daysLeft = top.g.deadline ? Math.ceil((new Date(top.g.deadline) - today) / 86400000) : null;
+              return {
+                label: 'Closest to done',
+                value: top.g.title || '—',
+                sub: `${top.pct.toFixed(1)}% complete${daysLeft != null ? ` · ${daysLeft}d to deadline` : ''}`,
+              };
+            })(),
           ].map((c, i) => (
             <div key={i} style={{ padding: '14px 18px', borderRadius: 'var(--r-md)', background: 'var(--paper)', border: '0.5px solid var(--line)' }}>
               <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{c.label}</div>
