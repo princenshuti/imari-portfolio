@@ -3,12 +3,21 @@ import { useState, useCallback } from 'react';
 export function useToast() {
   const [toasts, setToasts] = useState([]);
 
-  const showToast = useCallback((message, type = 'info') => {
+  /**
+   * showToast(message, type?, options?)
+   *   options.action     { label, onClick }  — renders a button (e.g. Undo).
+   *   options.duration   override the default visible window in ms.
+   * Returns the toast id so the caller can dismiss programmatically.
+   */
+  const showToast = useCallback((message, type = 'info', options = {}) => {
     const id = Date.now() + Math.random();
-    setToasts(prev => [...prev, { id, message, type }]);
-    // Errors/warnings stay longer so screen-reader users can hear them
-    const duration = (type === 'error' || type === 'warning') ? 7000 : 4500;
+    setToasts(prev => [...prev, { id, message, type, action: options.action }]);
+    // Errors/warnings stay longer so screen-reader users can hear them.
+    // Action toasts (undo) get the longer window too so the user has time to react.
+    const defaultDuration = options.action ? 6000 : (type === 'error' || type === 'warning') ? 7000 : 4500;
+    const duration = options.duration ?? defaultDuration;
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
+    return id;
   }, []);
 
   const dismiss = useCallback((id) => {
@@ -54,6 +63,19 @@ export function ToastContainer({ toasts, dismiss }) {
             }}
           >
             <span style={{ flex: 1 }}>{t.message}</span>
+            {t.action && (
+              <button
+                onClick={() => { t.action.onClick?.(); dismiss(t.id); }}
+                style={{
+                  background: 'rgba(255,255,255,0.18)', border: 0, color: 'inherit',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                  padding: '5px 10px', borderRadius: 6, lineHeight: 1,
+                  marginRight: 2,
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             <button
               onClick={() => dismiss(t.id)}
               aria-label="Dismiss notification"

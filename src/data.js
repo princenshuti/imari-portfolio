@@ -199,26 +199,29 @@ export const TREND_DOMAINS = [
   },
   {
     id:'bnr-repo', label:'BNR Repo rate', unit:'%', dataKind:'reference',
-    value: 6.00,  // BNR MPC decision, effective Q4 2024 · Source: bnr.rw
+    value: 6.00,
     change: -0.50,
     series: syn(60, 7.5, -0.18, 0.01, 17),
     source: 'BNR.rw · Monetary Policy Committee · reference',
+    asOf:  'Q4 2024 MPC decision',
     color:'var(--brand-2)', group:'Rwanda macro',
   },
   {
     id:'cpi', label:'Inflation (CPI YoY)', unit:'%', dataKind:'reference',
-    value: 5.1,   // NISR Consumer Price Index, Q1 2025 · Source: statistics.gov.rw
+    value: 5.1,
     change: -0.3,
     series: syn(60, 8.0, -0.28, 0.025, 19),
     source: 'NISR · statistics.gov.rw · reference',
+    asOf:  'Q1 2025',
     color:'var(--clay)', group:'Rwanda macro',
   },
   {
     id:'rse-asi', label:'RSE All-Share Index', unit:'', dataKind:'reference',
-    value: 149.2, // Rwanda Stock Exchange ASI · Source: rse.rw (low liquidity — use with caution)
+    value: 149.2,
     change: +0.4,
     series: syn(60, 130, 0.14, 0.012, 5),
     source: 'RSE.rw · reference · low-liquidity market',
+    asOf:  'Last sourced Q1 2025',
     color:'var(--brand)', group:'Stocks',
   },
   {
@@ -255,10 +258,11 @@ export const TREND_DOMAINS = [
   },
   {
     id:'tbond10', label:'10-yr RW Treasury', unit:'%', dataKind:'reference',
-    value: 13.50, // BNR primary market yield · Source: bnr.rw
+    value: 13.50,
     change: +0.10,
     series: syn(60, 13.0, 0.04, 0.008, 31),
     source: 'BNR.rw · primary market yield · reference',
+    asOf:  'Q1 2025 primary auction',
     color:'var(--gold)', group:'Yields',
   },
   {
@@ -267,6 +271,14 @@ export const TREND_DOMAINS = [
     change: +0.9,
     series: syn(60, 118, 0.20, 0.012, 37),
     source: 'Imari composite model — no official index exists',
+    asOf:  'Modeled monthly',
+    methodology: [
+      'No official Rwandan real-estate index exists publicly, so Imari composes one from:',
+      '• Volume-weighted per-m² medians of the 7 Kigali neighbourhoods in KIGALI_NEIGHBOURHOODS',
+      '• Sample-size weighting by district transaction counts (sourced annually from RHA)',
+      '• Smoothed with a 3-month rolling average to dampen single-property outliers',
+      'Use as a directional indicator — not an investment-grade benchmark.',
+    ].join('\n'),
     color:'var(--brand)', group:'Real estate',
   },
 ];

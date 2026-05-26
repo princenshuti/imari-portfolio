@@ -190,8 +190,27 @@ export function TrendCard({ d, big = false, override = null }) {
       </div>
       <div className="muted" style={{ fontSize: 9.5, marginTop: 4, lineHeight: 1.4 }}>
         {source}
+        {/* Per-indicator timestamp.
+            - Live data → relative "Xm ago" from the fetch
+            - Reference / modeled → static asOf string (last published period) */}
         {override?.fetchedAt && (
           <span style={{ marginLeft: 4, opacity: 0.6 }}>· {timeSince(override.fetchedAt)}</span>
+        )}
+        {!override?.fetchedAt && d.asOf && (
+          <span style={{ marginLeft: 4, opacity: 0.6 }}>· {d.asOf}</span>
+        )}
+        {/* Modeled-indicator methodology disclosure — appears inline so users
+            know exactly how the number was composed. Native <details> works
+            without extra JS and keyboard-navigable for free. */}
+        {d.methodology && (
+          <details style={{ marginTop: 4 }}>
+            <summary style={{ cursor: 'pointer', color: 'var(--brand)', fontSize: 9.5, fontWeight: 600 }}>
+              How is this computed?
+            </summary>
+            <div style={{ marginTop: 4, padding: '6px 8px', background: 'var(--bg-2)', borderRadius: 4, whiteSpace: 'pre-line', fontSize: 9.5, lineHeight: 1.5, color: 'var(--ink-3)' }}>
+              {d.methodology}
+            </div>
+          </details>
         )}
       </div>
     </div>

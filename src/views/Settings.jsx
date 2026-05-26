@@ -235,13 +235,22 @@ function MembersSection({ portfolioId, role, session }) {
   );
 }
 
-function MilestoneSection({ profile, dispatch }) {
+function MilestoneSection({ profile, dispatch, showToast }) {
   const current = profile.milestones?.length ? profile.milestones : MILESTONES;
   const [inputVal, setInputVal] = useState('');
 
   const save = (list) => dispatch({ type: 'setProfile', patch: { milestones: list } });
 
-  const remove = (m) => save(current.filter(x => x !== m));
+  // Remove + Undo: small × on a milestone pill is easy to mis-tap. Show a
+  // Snackbar-style toast with an Undo button that restores the milestone.
+  // (UX review #32.)
+  const remove = (m) => {
+    const next = current.filter(x => x !== m);
+    save(next);
+    showToast?.(`Removed ${fmt(m)} milestone.`, 'info', {
+      action: { label: 'Undo', onClick: () => save([...next, m].sort((a, b) => a - b)) },
+    });
+  };
 
   const add = () => {
     const raw = inputVal.replace(/[, ]/g, '');
@@ -619,7 +628,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         </div>
       </Section>
 
-      <MilestoneSection profile={state.profile} dispatch={dispatch} />
+      <MilestoneSection profile={state.profile} dispatch={dispatch} showToast={showToast} />
 
       <Section title="Tax & Reporting" subtitle="View your estimated Rwanda tax liability and capital gains breakdown.">
         <div className="row" style={{ gap: 10 }}>
