@@ -217,7 +217,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
             style={{ flex: 1, border: 0, outline: 'none', background: 'transparent', fontSize: 13, fontFamily: 'inherit', color: 'var(--ink)' }}
           />
           {search && (
-            <button onClick={() => setSearch('')} style={{ border: 0, background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 14, padding: 0 }}>×</button>
+            <button type="button" onClick={() => setSearch('')} aria-label="Clear search" style={{ border: 0, background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 14, padding: 0 }}><span aria-hidden="true">×</span></button>
           )}
         </div>
 
@@ -413,9 +413,9 @@ export default function AssetsView({ state, dispatch, showToast }) {
                 </ul>
               )}
             </div>
-            <button onClick={() => setImportResult(null)} style={{
+            <button type="button" onClick={() => setImportResult(null)} aria-label="Dismiss import result" style={{
               width: 24, height: 24, borderRadius: 6, border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: 14,
-            }}>×</button>
+            }}><span aria-hidden="true">×</span></button>
           </div>
         </div>
       )}

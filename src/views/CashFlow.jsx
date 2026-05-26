@@ -396,7 +396,7 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
                         </select>
                       </td>
                       <td style={{ padding: '7px 10px' }}>
-                        <button onClick={() => removeDraft(d._key)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--down)', fontSize: 16, lineHeight: 1 }}>×</button>
+                        <button type="button" onClick={() => removeDraft(d._key)} aria-label={`Remove draft entry ${d.description || d.category || ''}`.trim()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--down)', fontSize: 16, lineHeight: 1 }}><span aria-hidden="true">×</span></button>
                       </td>
                     </tr>
                   ))}
@@ -452,8 +452,8 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
           <div className="num" style={{ fontSize: 14, fontWeight: 700, color: isIncome ? 'var(--up)' : 'var(--down)' }}>
             {isIncome ? '+' : '−'}{fmt(cf.amount, cf.currency, { compact: true })}
           </div>
-          <button onClick={() => onEdit(cf)} style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid var(--line)', background: 'transparent', cursor: 'pointer' }}>Edit</button>
-          <button onClick={() => onDelete(cf.id)} style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down)', cursor: 'pointer' }}>×</button>
+          <button type="button" onClick={() => onEdit(cf)} aria-label={`Edit cashflow ${cf.description || cf.category || ''}`.trim()} style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid var(--line)', background: 'transparent', cursor: 'pointer' }}>Edit</button>
+          <button type="button" onClick={() => onDelete(cf.id)} aria-label={`Delete cashflow ${cf.description || cf.category || ''}`.trim()} style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down)', cursor: 'pointer' }}><span aria-hidden="true">×</span></button>
         </div>
       </div>
       <ImageLightbox open={showImg && !!cf.attachment} onClose={() => setShowImg(false)} src={cf.attachment?.data} alt="Cashflow receipt" />

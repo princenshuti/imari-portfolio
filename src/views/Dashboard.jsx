@@ -1127,6 +1127,7 @@ export default function DashboardView({ state, dispatch }) {
                 <div style={{ paddingTop: 10, borderTop: '0.5px solid var(--line-soft)' }}>
                   <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Net cash flow / month</div>
                   <div className="num" style={{ fontSize: 20, fontWeight: 600, color: fs.netCashMonthly >= 0 ? 'var(--up)' : 'var(--down)' }}>
+                    <span aria-hidden="true">{fs.netCashMonthly >= 0 ? '▲' : '▼'}</span>{' '}
                     {fs.netCashMonthly >= 0 ? '+' : ''}{fmtBase(fs.netCashMonthly, profile.displayCurrency, { compact: true })}
                   </div>
                   <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Income minus avg monthly spend</div>

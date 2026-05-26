@@ -60,6 +60,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
 
       <div className="col" style={{ alignItems:'flex-end', gap: 2 }}>
         <div className="num" style={{ fontSize: 12, fontWeight: 600, color: gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)' }}>
+          <span aria-hidden="true">{gain >= 0 ? '▲' : '▼'}</span>{' '}
           {gain >= 0 ? '+' : ''}{gainPct.toFixed(1)}%
         </div>
         <div className="num" style={{ fontSize: 10, color: gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)' }}>

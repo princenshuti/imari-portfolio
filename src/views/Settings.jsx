@@ -277,10 +277,10 @@ function MilestoneSection({ profile, dispatch }) {
             background: 'var(--up-soft)', color: 'var(--up)', border: '1px solid var(--up-soft)',
           }}>
             {fmt(m)}
-            <button onClick={() => remove(m)} style={{
+            <button type="button" onClick={() => remove(m)} aria-label={`Remove milestone ${fmt(m)}`} style={{
               background: 'none', border: 'none', cursor: 'pointer', color: 'var(--up)',
               fontSize: 14, lineHeight: 1, padding: 0, marginTop: -1,
-            }}>×</button>
+            }}><span aria-hidden="true">×</span></button>
           </div>
         ))}
       </div>
