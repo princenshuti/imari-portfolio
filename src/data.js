@@ -60,13 +60,13 @@ export function fmtBase(amountRWF, displayCurrency, opts) {
 export const CLASSES = [
   {
     kind:'realestate-land', label:'Land / plot', group:'Real estate', glyph:'▢', color:'var(--brand)',
-    fields:['neighbourhood','upi'],
+    fields:['neighbourhood','upi','propertyCategory','sizeM2'],
     rule: (a, today) => simpleGrowth(a, 0.05, today),
     note: '+5%/yr appreciation rule of thumb',
   },
   {
     kind:'realestate-house', label:'House / apartment', group:'Real estate', glyph:'◐', color:'var(--brand)',
-    fields:['neighbourhood','upi'],
+    fields:['neighbourhood','upi','propertyCategory','sizeM2'],
     rule: (a, today) => simpleGrowth(a, 0.04, today),
     note: '+4%/yr appreciation rule of thumb',
   },
@@ -406,19 +406,49 @@ export const MILESTONES = [
   250_000_000, 500_000_000, 1_000_000_000,
 ];
 
+// ───── Property categories for tax classification ─────────────
+// Source: Law No. 75/2018 + revisions (Rwanda Immovable Property Tax).
+// Rates as commonly cited by RRA — verify before filing; rates change.
+export const PROPERTY_CATEGORIES = [
+  { id: 'residential',     label: 'Residential',                        rate: 0.001, exempt3M: true,  note: 'First RWF 3M exempt' },
+  { id: 'commercial',      label: 'Commercial',                         rate: 0.003, exempt3M: false, note: '0.3% of market value' },
+  { id: 'industrial',      label: 'Industrial',                         rate: 0.003, exempt3M: false, note: '0.3% of market value' },
+  { id: 'agricultural',    label: 'Agricultural / Forestry',            rate: 0.001, exempt3M: false, note: 'Exempt if ≤ 2 hectares (20,000 m²)' },
+  { id: 'micro-business',  label: 'Micro-Enterprise / Small Business',  rate: 0.001, exempt3M: false, note: 'Reduced rate per RRA SME framework' },
+];
+
 // ───── Fixed Asset Tax (RRA · immovable property) ─────────────
 // Source: rra.gov.rw/fileadmin/img/fixed-asset-tax.html
 export const FIXED_ASSET_TAX = {
-  rate:                 0.001,          // 1/1000 = 0.1% per year of market value
-  residentialExemption: 3_000_000,     // RWF · only excess above this threshold is taxed
-  // Applies to: realestate-land (full rate), realestate-house (with exemption)
-  // Exempt: agricultural/forestry land ≤ 2 ha; government; religious; diplomatic; residential ≤ 3M
-  declarationDeadline:  'March 31',    // self-assessed · annual
-  paymentDeadline:      'March 31',    // annual obligation
+  rate:                 0.001,          // Legacy default — used when category not set
+  residentialExemption: 3_000_000,      // RWF · only excess above this threshold is taxed
+  agriculturalSqmExempt: 20_000,        // 2 hectares = 20,000 m² (auto-exempt below this)
+  declarationDeadline:  'March 31',
+  paymentDeadline:      'March 31',
   latePenalties:        [0.10, 0.20, 0.30, 0.40], // < 1 month, 1-2m, 2-3m, > 3 months
-  lateInterestMonthly:  0.015,         // 1.5% / month from due date
-  lateSurcharge:        { rate: 0.10, max: 100_000 }, // 10% of tax, capped at 100k RWF
+  lateInterestMonthly:  0.015,
+  lateSurcharge:        { rate: 0.10, max: 100_000 },
 };
+
+/**
+ * Compute the Fixed Asset Tax annual obligation for a property.
+ * Honours category-specific rate, residential RWF 3M exemption, and
+ * agricultural ≤ 2 ha auto-exemption when sizeM2 is known.
+ */
+export function fixedAssetTax(asset, marketValueRWF) {
+  const cat = PROPERTY_CATEGORIES.find(c => c.id === asset.propertyCategory);
+  const rate = cat?.rate ?? FIXED_ASSET_TAX.rate;
+  // Agricultural ≤ 2 ha is fully exempt
+  if (cat?.id === 'agricultural' && asset.sizeM2 != null && +asset.sizeM2 > 0 && +asset.sizeM2 <= FIXED_ASSET_TAX.agriculturalSqmExempt) {
+    return { tax: 0, taxableBase: 0, rate, exempt: true, reason: '≤ 2 hectares — agricultural exemption' };
+  }
+  // Residential RWF 3M exemption
+  let taxable = marketValueRWF;
+  if (cat?.exempt3M || (!cat && asset.kind === 'realestate-house')) {
+    taxable = Math.max(0, marketValueRWF - FIXED_ASSET_TAX.residentialExemption);
+  }
+  return { tax: Math.round(taxable * rate), taxableBase: taxable, rate, exempt: false, reason: cat?.note };
+}
 
 // ───── Vehicle Road Maintenance Levy (Law 013/2025 of 27/05/2025) ─────
 // Source: Official Gazette, special issue 29/05/2025 · applies annually, due 31 December

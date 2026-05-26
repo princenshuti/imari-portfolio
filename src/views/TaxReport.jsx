@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
-  CLASSES, TAX_RULES, FIXED_ASSET_TAX, VEHICLE_CATEGORIES,
-  toBase, valueRWF, costRWF, fmtBase, fmt,
+  CLASSES, TAX_RULES, FIXED_ASSET_TAX, VEHICLE_CATEGORIES, PROPERTY_CATEGORIES,
+  fixedAssetTax, toBase, valueRWF, costRWF, fmtBase, fmt,
 } from '../data.js';
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -121,28 +121,33 @@ export default function TaxReportView({ state, dispatch }) {
   const [dueDate, setDueDate] = useState('');
 
   // ═══ 1. FIXED ASSET TAX (annual, real estate) ════════════════
+  // Delegates to fixedAssetTax(asset, marketValue) which honours the
+  // property category (residential / commercial / industrial / agricultural /
+  // micro-business), the RWF 3M residential exemption, and the agricultural
+  // ≤ 2 ha auto-exemption when sizeM2 is known.
   const propertyTaxRows = useMemo(() => {
     return assets
       .filter(a => a.kind === 'realestate-land' || a.kind === 'realestate-house')
       .map(a => {
-        const isResidential = a.kind === 'realestate-house';
         const marketValueRWF = valueRWF(a, today);
-        let taxableBase, annualTax, note;
-
-        if (isResidential) {
-          // Only excess above 3,000,000 RWF is taxed
-          taxableBase = Math.max(0, marketValueRWF - FIXED_ASSET_TAX.residentialExemption);
-          annualTax   = Math.round(taxableBase * FIXED_ASSET_TAX.rate);
-          note = marketValueRWF <= FIXED_ASSET_TAX.residentialExemption
-            ? 'Below 3M threshold — fully exempt'
-            : `Taxable = ${fmt(marketValueRWF,'RWF',{compact:true})} − 3M exemption`;
-        } else {
-          // Land: full rate; may be exempt if agricultural ≤ 2 ha
-          taxableBase = marketValueRWF;
-          annualTax   = Math.round(taxableBase * FIXED_ASSET_TAX.rate);
-          note        = 'Exempt if agricultural/forestry land ≤ 2 ha — verify with RRA';
-        }
-        return { a, isResidential, marketValueRWF, taxableBase, annualTax, note };
+        const calc = fixedAssetTax(a, marketValueRWF);
+        const cat  = PROPERTY_CATEGORIES.find(c => c.id === a.propertyCategory);
+        const isResidential = a.kind === 'realestate-house' || cat?.id === 'residential';
+        const note = !a.propertyCategory
+          ? 'No category set — defaulted to 0.1%. Edit the asset to pick one.'
+          : calc.exempt
+            ? calc.reason
+            : cat?.note;
+        return {
+          a,
+          cat,
+          isResidential,
+          marketValueRWF,
+          taxableBase: calc.taxableBase,
+          annualTax:   calc.tax,
+          rate:        calc.rate,
+          note,
+        };
       });
   }, [assets]);
 
@@ -234,8 +239,15 @@ export default function TaxReportView({ state, dispatch }) {
         const missing = [];
         state.assets.forEach(a => {
           const cur = a.currentValue !== '' && a.currentValue != null ? a.currentValue : null;
-          if ((a.kind === 'realestate-land' || a.kind === 'realestate-house') && !cur) {
+          const isRealEstate = a.kind === 'realestate-land' || a.kind === 'realestate-house';
+          if (isRealEstate && !cur) {
             missing.push({ id: a.id, name: a.name, why: 'No market value — Fixed Asset Tax will use the purchase price (or 0).' });
+          }
+          if (isRealEstate && !a.propertyCategory) {
+            missing.push({ id: a.id, name: a.name, why: 'No property category — defaults to 0.1% residential rate; pick commercial / industrial / agricultural if applicable.' });
+          }
+          if (isRealEstate && !a.sizeM2) {
+            missing.push({ id: a.id, name: a.name, why: 'No size (m²) — agricultural ≤ 2 ha auto-exemption cannot be applied.' });
           }
           if (!a.purchasePrice && a.kind !== 'momo-cash') {
             missing.push({ id: a.id, name: a.name, why: 'No purchase price — CGT estimate will be inaccurate on sale.' });
@@ -345,10 +357,14 @@ export default function TaxReportView({ state, dispatch }) {
         </div>
 
         <FormulaBox>
-          {'Annual tax  =  taxable base  ×  1/1000  (0.1%)\n\n'}
-          {'Land (realestate):          taxable base  =  full market value\n'}
-          {'House (residential):        taxable base  =  max(0,  market value − RWF 3,000,000)\n'}
-          {'Agricultural land ≤ 2 ha:  EXEMPT  (verify area with RRA)'}
+          {'Annual tax  =  taxable base  ×  category rate\n\n'}
+          {'Residential:                  0.1% · first RWF 3,000,000 exempt\n'}
+          {'Commercial:                   0.3% · no exemption\n'}
+          {'Industrial:                   0.3% · no exemption\n'}
+          {'Agricultural ≤ 2 ha (20,000 m²):  EXEMPT  (auto, when size is set)\n'}
+          {'Agricultural > 2 ha:          0.1% · verify with RRA\n'}
+          {'Micro-Enterprise / SME:       0.1% · reduced rate per RRA SME framework\n\n'}
+          {'Rates as commonly cited by RRA — verify with rra.gov.rw before filing; rates change.'}
         </FormulaBox>
 
         {propertyTaxRows.length === 0 ? (
@@ -357,22 +373,19 @@ export default function TaxReportView({ state, dispatch }) {
           </div>
         ) : (
           <TaxTable
-            columns={['Asset', 'Type', 'Market value', 'Exemption', 'Taxable base', 'Rate', 'Annual tax', 'Note']}
+            columns={['Asset', 'Category', 'Size', 'Market value', 'Taxable base', 'Rate', 'Annual tax', 'Note']}
             rows={propertyTaxRows.map(r => [
               r.a.name,
-              r.isResidential ? 'Residential house' : 'Land / plot',
+              r.cat?.label || (r.a.kind === 'realestate-house' ? 'Residential (default)' : 'Land — uncategorised'),
+              { value: r.a.sizeM2 ? `${(+r.a.sizeM2).toLocaleString()} m²` : '—', color: 'var(--ink-3)' },
               { value: fmtBase(r.marketValueRWF, c, { compact: true }), mono: true },
-              { value: r.isResidential ? 'RWF 3,000,000' : '—', color: 'var(--up)' },
               { value: fmtBase(r.taxableBase, c, { compact: true }), mono: true },
-              { value: '0.1% / yr', color: 'var(--ink-3)' },
+              { value: `${(r.rate * 100).toFixed(2)}% / yr`, color: 'var(--ink-3)' },
               {
                 value: r.annualTax > 0 ? fmtBase(r.annualTax, c) : 'Exempt',
                 mono: true, bold: r.annualTax > 0,
                 color: r.annualTax > 0 ? 'var(--down)' : 'var(--up)',
               },
-              // Collapse repeated "Exempt if agricultural/forestry land ≤ 2 ha"
-              // note into a compact info marker — full text lives in the
-              // FormulaBox above and on tooltip hover.
               r.note
                 ? { value: <span title={r.note} style={{ cursor: 'help' }} aria-label={r.note}>ⓘ</span>, color: 'var(--ink-3)' }
                 : { value: '', color: 'var(--ink-3)' },

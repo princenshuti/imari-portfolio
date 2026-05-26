@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import {
   CLASSES, CURRENCIES, COUNTRIES,
   RWANDA_PROVINCES, RWANDA_DISTRICTS,
-  VEHICLE_CATEGORIES,
+  VEHICLE_CATEGORIES, PROPERTY_CATEGORIES,
   suggestValue, fmt, id,
 } from '../data.js';
 import { Field, Input, inputStyle } from './Field.jsx';
@@ -133,6 +133,8 @@ export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
     notes:         asset.notes         || '',
     neighbourhood: asset.neighbourhood || '',
     upi:           asset.upi           || '',
+    propertyCategory: asset.propertyCategory || '',
+    sizeM2:        asset.sizeM2        ?? '',
     model:         asset.model         || '',
     chassis:       asset.chassis       || '',
     count:         asset.count         ?? '',
@@ -339,6 +341,28 @@ export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
           {cls.fields.includes('upi') && (
             <Field label="UPI" hint="Unique Parcel Identifier — from your title deed">
               <Input value={a.upi} onChange={v => update('upi', v)} placeholder="e.g. 1/01/01/01/0001" />
+            </Field>
+          )}
+          {cls.fields.includes('propertyCategory') && (
+            <Field label="Property category" hint="Used to apply the right RRA rate (residential, commercial, etc.)">
+              <select
+                value={a.propertyCategory}
+                onChange={e => update('propertyCategory', e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">— Pick a category —</option>
+                {PROPERTY_CATEGORIES.map(c => (
+                  <option key={c.id} value={c.id}>{c.label} · {c.note}</option>
+                ))}
+              </select>
+            </Field>
+          )}
+          {cls.fields.includes('sizeM2') && (
+            <Field label="Size (m²)" hint="Total area. Agricultural land ≤ 20,000 m² (2 ha) is automatically exempt.">
+              <Input
+                value={a.sizeM2} onChange={v => update('sizeM2', v)}
+                type="number" placeholder="e.g. 500"
+              />
             </Field>
           )}
           {cls.fields.includes('model') && (
