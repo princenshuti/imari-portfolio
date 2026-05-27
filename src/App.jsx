@@ -619,7 +619,7 @@ export default function App() {
       case 'goals':       return <GoalsView       state={state} dispatch={guardedDispatch} />;
       case 'cashflow':    return <CashFlowView    state={state} dispatch={guardedDispatch} />;
       case 'tax':         return <TaxReportView   state={state} dispatch={guardedDispatch} />;
-      default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} />;
+      default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} netWorth={netWorth} totalCost={totalCost} />;
     }
   })();
 

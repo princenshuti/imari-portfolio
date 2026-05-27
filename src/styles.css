@@ -442,9 +442,107 @@ body {
 .skeleton {
   background: linear-gradient(90deg, var(--bg-2) 0%, var(--line) 50%, var(--bg-2) 100%);
   background-size: 200% 100%;
-  animation: imari-shimmer 1.6s infinite;
+  animation: imari-shimmer 1.1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   border-radius: 6px;
 }
+
+/* ── Dashboard interaction classes ─────────────────────────────
+   Centralized hover/active/focus states so KPI tiles, mover cards,
+   and section CTAs all feel consistent. Kowalski rule: every
+   pressable element gets a scale(0.985) :active state. */
+.dash-kpi-tile {
+  transition:
+    box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 160ms ease-out;
+}
+.dash-kpi-tile.is-interactive { cursor: pointer; }
+.dash-kpi-tile.is-interactive:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-1px);
+  border-color: var(--brand-soft);
+}
+.dash-kpi-tile.is-interactive:active {
+  transform: translateY(0) scale(0.985);
+  transition-duration: 90ms;
+}
+.dash-kpi-tile:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.dash-mover-card {
+  transition:
+    box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.dash-mover-card:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-1px);
+}
+.dash-mover-card:active {
+  transform: translateY(0) scale(0.985);
+  transition-duration: 90ms;
+}
+.dash-mover-card:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Inline anchor-style nav buttons used inside cards (View all →, See all →).
+   Previously rendered as transparent <button> with inline styles — no focus
+   ring. This class adds keyboard parity. */
+.dash-link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--brand);
+  font-family: inherit;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 6px;
+  transition: background 120ms ease-out;
+}
+.dash-link:hover { background: var(--brand-softer); }
+.dash-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+/* Refresh icon — spins while loading.
+   Use rotation on the glyph, not the whole button, so the click target
+   stays still and the label "Refresh" stays readable. */
+@keyframes imari-rotate-360 {
+  to { transform: rotate(360deg); }
+}
+.dash-refresh-icon {
+  display: inline-block;
+  transition: transform 600ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.dash-refresh-icon.is-spinning {
+  animation: imari-rotate-360 0.9s linear infinite;
+}
+
+/* Dashboard page bottom padding — clears the mobile FAB (54px) +
+   tab bar (~72px). Prevents the last KPI from sitting under the FAB. */
+.dash-page { padding-bottom: 24px; }
+@media (max-width: 768px) {
+  .dash-page { padding-bottom: 140px; }
+}
+
+/* Chart axis labels — give last/first labels a translate so they
+   don't collide with the chart edge.  */
+.dash-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--ink-4);
+  letter-spacing: 0.02em;
+  padding: 4px 12px 0;
+}
+.dash-chart-axis > span:first-child { transform: translateX(-4px); }
+.dash-chart-axis > span:last-child  { transform: translateX(4px); }
 
 /* ── Hover lift ───────────────────────────────────────────────── */
 .hover-lift {

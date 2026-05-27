@@ -163,12 +163,17 @@ ${JSON.stringify(snapshot, null, 2)}`;
           </div>
         </div>
         <div className="row" style={{ gap: 6, flexShrink: 0 }}>
-          <button onClick={generate} disabled={pending} title="Regenerate" style={{
+          <button onClick={generate} disabled={pending} title="Regenerate" aria-label="Regenerate insight" style={{
             padding: '7px 12px', borderRadius: 'var(--r-pill)',
             border: '0.5px solid var(--line-strong)', background: 'var(--paper)',
             cursor: pending ? 'default' : 'pointer', fontSize: 11, color: 'var(--ink-3)',
-            fontFamily: 'inherit', opacity: pending ? 0.5 : 1, transition: 'all 0.14s',
-          }}>↻ Refresh</button>
+            fontFamily: 'inherit', opacity: pending ? 0.7 : 1,
+            transition: 'background 140ms ease-out, opacity 140ms ease-out',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}>
+            <span className={`dash-refresh-icon${pending ? ' is-spinning' : ''}`} aria-hidden="true">↻</span>
+            {pending ? 'Refreshing' : 'Refresh'}
+          </button>
           <button onClick={() => dispatch({ type: 'nav', to: 'advisor' })} style={{
             padding: '7px 14px', borderRadius: 'var(--r-pill)',
             border: 0, background: 'var(--brand)', color: 'var(--brand-ink)',
@@ -231,18 +236,15 @@ function KpiTile({ label, value, sub, accent, delay, onClick }) {
       type={onClick ? 'button' : undefined}
       onClick={onClick}
       aria-label={onClick ? `${label}: ${value}. ${sub || ''}` : undefined}
+      className={`dash-kpi-tile${onClick ? ' is-interactive' : ''}`}
       style={{
         padding: '16px 20px', borderRadius: 'var(--r-md)',
         background: 'var(--paper)', border: '0.5px solid var(--line)',
         boxShadow: 'var(--shadow-1)',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'box-shadow 0.15s ease-out, transform 0.15s ease-out',
         animation: 'imari-slideUp 240ms cubic-bezier(0.23,1,0.32,1) both',
         animationDelay: `${delay}ms`,
         textAlign: 'left', fontFamily: 'inherit', width: '100%', display: 'block',
       }}
-      onMouseEnter={e => { if (onClick) { e.currentTarget.style.boxShadow = 'var(--shadow-2)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-1)'; e.currentTarget.style.transform = 'none'; }}
     >
       <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
       <div className="num" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: accent || 'var(--ink)', lineHeight: 1.1 }}>{value}</div>
@@ -270,7 +272,7 @@ function RatioBar({ label, value, color, hint, thresholds }) {
       <div style={{ position: 'relative', height: 4, borderRadius: 2, background: 'var(--bg-2)', overflow: 'visible' }}>
         <div style={{
           height: '100%', width: capped + '%', background: c, borderRadius: 2,
-          transition: 'width 0.9s cubic-bezier(0.23,1,0.32,1)',
+          transition: 'width 0.6s cubic-bezier(0.23,1,0.32,1)',
         }} />
         {thresholds && thresholds.map(t => (
           <span
@@ -354,8 +356,8 @@ function CategoryBars({ groups, totalValue }) {
                 <span className="muted" style={{ fontSize: 10 }}>{g.count} asset{g.count !== 1 ? 's' : ''} · {alloc}%</span>
               </div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
-                <span className="num" style={{ fontSize: 13, fontWeight: 700, color: isUp ? 'var(--up)' : 'var(--down)', minWidth: 60, textAlign: 'right' }}>
-                  {isUp ? '+' : ''}{g.gainPct.toFixed(1)}%
+                <span className="num" style={{ fontSize: 13, fontWeight: 700, color: isUp ? 'var(--up)' : 'var(--down)', minWidth: 72, textAlign: 'right' }}>
+                  <span aria-hidden="true" style={{ marginRight: 3 }}>{isUp ? '▲' : '▼'}</span>{isUp ? '+' : ''}{g.gainPct.toFixed(1)}%
                 </span>
               </div>
             </div>
@@ -363,7 +365,7 @@ function CategoryBars({ groups, totalValue }) {
               <div style={{
                 height: '100%', width: barW + '%',
                 background: isUp ? g.color : 'var(--down)', borderRadius: 3,
-                transition: 'width 0.85s cubic-bezier(0.23,1,0.32,1)',
+                transition: 'width 0.6s cubic-bezier(0.23,1,0.32,1)',
               }} />
             </div>
           </div>
@@ -384,6 +386,7 @@ function MoverCard({ asset, delay, onClick }) {
       onClick={onClick}
       disabled={!isInteractive}
       aria-label={isInteractive ? `Open ${asset.name} in Assets` : undefined}
+      className={isInteractive ? 'dash-mover-card' : undefined}
       style={{
         all: 'unset',
         boxSizing: 'border-box',
@@ -391,19 +394,17 @@ function MoverCard({ asset, delay, onClick }) {
         padding: '14px 16px', borderRadius: 'var(--r-md)',
         background: isUp ? 'color-mix(in oklab, var(--up) 6%, var(--bg-2))' : 'color-mix(in oklab, var(--down) 6%, var(--bg-2))',
         border: `0.5px solid ${isUp ? 'color-mix(in oklab, var(--up) 18%, transparent)' : 'color-mix(in oklab, var(--down) 18%, transparent)'}`,
-        transition: 'box-shadow 0.15s ease-out, transform 0.15s ease-out',
         animation: 'imari-slideUp 260ms cubic-bezier(0.23,1,0.32,1) both',
         animationDelay: `${delay}ms`,
         cursor: isInteractive ? 'pointer' : 'default',
       }}
-      onMouseEnter={e => { if (isInteractive) { e.currentTarget.style.boxShadow = 'var(--shadow-2)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
     >
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
         <AssetIcon kind={asset.kind} color={cls.color} size={26} />
         <span style={{ fontSize: 12, fontWeight: 500, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink)' }}>{asset.name}</span>
       </div>
       <div className="num" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: isUp ? 'var(--up)' : 'var(--down)', lineHeight: 1 }}>
+        <span aria-hidden="true" style={{ fontSize: 14, marginRight: 4 }}>{isUp ? '▲' : '▼'}</span>
         {isUp ? '+' : ''}{asset._pct.toFixed(1)}%
       </div>
       <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>
@@ -472,7 +473,9 @@ const SECTION_META = {
   benchmarks: { label: 'Benchmarks & Goals',      canHide: true  },
   markets:    { label: 'Markets Watchlist',       canHide: true  },
 };
-const DEFAULT_SECTION_ORDER = ['kpi','hero','insight','financials','chart','category','movers','alerts','benchmarks','markets'];
+// "Am I OK?" (kpi+hero) → "What needs attention?" (alerts+insight) → "What changed?"
+// (movers+chart) → "How am I positioned?" (financials+category+benchmarks) → "Markets".
+const DEFAULT_SECTION_ORDER = ['kpi','hero','alerts','insight','movers','chart','financials','category','benchmarks','markets'];
 
 function useDashboardLayout() {
   const [order, setOrder] = useState(() => {
@@ -603,7 +606,7 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReord
 }
 
 // ─── Main Dashboard ────────────────────────────────────────────────────────
-export default function DashboardView({ state, dispatch }) {
+export default function DashboardView({ state, dispatch, netWorth: appNetWorth, totalCost: appTotalCost }) {
   const { profile, assets, snapshots = [], goals = [], liabilities = [], cashflows = [] } = state;
   const today = new Date();
 
@@ -613,14 +616,16 @@ export default function DashboardView({ state, dispatch }) {
   const { overrides: marketOverrides } = useMarket();
 
   // ── Core portfolio stats ──────────────────────────────────────
+  // Authoritative totals come from App.jsx via props (appNetWorth / appTotalCost)
+  // so the sidebar and dashboard headline can never drift apart due to async
+  // FX rate updates between renders. Per-group breakdowns still recompute
+  // locally because they're sorted by relative size, not exact totals.
   const stats = useMemo(() => {
-    let totalValue = 0, totalCost = 0, liquidValue = 0, incomeGenValue = 0;
+    let liquidValue = 0, incomeGenValue = 0;
     const byGroup = {};
     assets.forEach(a => {
       const v = valueRWF(a, today);
       const c = costRWF(a);
-      totalValue  += v;
-      totalCost   += c;
       if (LIQUID_KINDS.has(a.kind)) liquidValue += v;
       if (isIncomeGenerating(a))    incomeGenValue += v;
       const cls = CLASSES.find(x => x.kind === a.kind) || CLASSES[CLASSES.length - 1];
@@ -633,15 +638,20 @@ export default function DashboardView({ state, dispatch }) {
     const groups = Object.values(byGroup)
       .map(g => ({ ...g, gainPct: g.cost > 0 ? ((g.value - g.cost) / g.cost * 100) : 0 }))
       .sort((a, b) => b.value - a.value);
+    // Pull canonical totals from App so sidebar + headline always agree.
+    const debt = (state.liabilities || []).reduce((s, l) => s + toBase(l.remainingAmount || 0, l.currency || 'RWF'), 0);
+    const totalValue = (appNetWorth ?? 0) + debt;       // gross value
+    const totalCost  = appTotalCost ?? 0;
     const gain = totalValue - totalCost;
     return {
       totalValue, totalCost, gain,
       gainPct:       totalCost  ? (gain / totalCost * 100)          : 0,
       liquidityRatio: totalValue ? (liquidValue / totalValue * 100)   : 0,
       incomeGenRatio: totalValue ? (incomeGenValue / totalValue * 100): 0,
+      liquidValue, incomeGenValue,
       groups,
     };
-  }, [assets]);
+  }, [assets, appNetWorth, appTotalCost, state.liabilities]);
 
   // ── Liabilities & ratios ──────────────────────────────────────
   const totalDebt = useMemo(() =>
@@ -865,32 +875,60 @@ export default function DashboardView({ state, dispatch }) {
 
   // Section content map — values are null when data conditions not met
   const sectionContent = {
-    // 4-up KPI strip (was 5 → wrapped to 3+2 awkwardly at mid widths).
-    // Debt-to-asset moved into Financial Ratios card where it already appears.
-    kpi: (
-      <div className="dash-kpi-grid">
+    // KPI strip. When debt exists, show Net worth / Gross portfolio / P/L / Savings.
+    // When debt is zero, Net worth == Gross portfolio (same number) — collapse the
+    // duplicate and promote "Liquid balance" so the strip carries 4 unique signals.
+    kpi: (() => {
+      const hasDebt = liabilities.length > 0;
+      const tiles = [];
+      tiles.push(
         <KpiTile
+          key="nw"
           delay={0}
-          label="Net worth"
+          label={hasDebt ? 'Net worth' : 'Portfolio value'}
           value={fmtBase(trueNetWorth, profile.displayCurrency, { compact: trueNetWorth > 1e8 })}
-          sub={liabilities.length > 0 ? `After ${fmtBase(totalDebt, profile.displayCurrency, { compact: true })} debt` : `${assets.length} assets tracked`}
+          sub={hasDebt ? `After ${fmtBase(totalDebt, profile.displayCurrency, { compact: true })} debt` : `${assets.length} asset${assets.length === 1 ? '' : 's'} · cost basis ${fmtBase(stats.totalCost, profile.displayCurrency, { compact: true })}`}
           accent="var(--ink)"
         />
+      );
+      if (hasDebt) {
+        tiles.push(
+          <KpiTile
+            key="gross"
+            delay={40}
+            label="Gross portfolio"
+            value={fmtBase(stats.totalValue, profile.displayCurrency, { compact: stats.totalValue > 1e8 })}
+            sub={`Cost basis: ${fmtBase(stats.totalCost, profile.displayCurrency, { compact: true })}`}
+            accent="var(--brand)"
+          />
+        );
+      } else {
+        // Replacement tile: liquid balance — clickable, takes user to cash + savings
+        tiles.push(
+          <KpiTile
+            key="liquid"
+            delay={40}
+            label="Liquid balance"
+            value={fmtBase(stats.liquidValue || 0, profile.displayCurrency, { compact: (stats.liquidValue || 0) > 1e7 })}
+            sub={`${stats.liquidityRatio.toFixed(1)}% of portfolio — cash + mobile money + savings`}
+            accent="var(--brand)"
+            onClick={() => dispatch({ type: 'nav', to: 'accounts' })}
+          />
+        );
+      }
+      tiles.push(
         <KpiTile
-          delay={40}
-          label="Gross portfolio"
-          value={fmtBase(stats.totalValue, profile.displayCurrency, { compact: stats.totalValue > 1e8 })}
-          sub={`Cost basis: ${fmtBase(stats.totalCost, profile.displayCurrency, { compact: true })}`}
-          accent="var(--brand)"
-        />
-        <KpiTile
+          key="pl"
           delay={80}
           label="Unrealised P/L"
-          value={`${stats.gain >= 0 ? '+' : ''}${fmtBase(stats.gain, profile.displayCurrency, { compact: true })}`}
+          value={`${stats.gain >= 0 ? '▲ ' : '▼ '}${stats.gain >= 0 ? '+' : ''}${fmtBase(stats.gain, profile.displayCurrency, { compact: true })}`}
           sub={`${stats.gainPct >= 0 ? '+' : ''}${stats.gainPct.toFixed(1)}% all-time vs cost`}
           accent={stats.gain >= 0 ? 'var(--up)' : 'var(--down)'}
         />
+      );
+      tiles.push(
         <KpiTile
+          key="sr"
           delay={120}
           label="Savings rate"
           value={savingsRate !== null ? `${savingsRate.toFixed(1)}%` : '—'}
@@ -898,8 +936,9 @@ export default function DashboardView({ state, dispatch }) {
           accent={savingsRate === null ? 'var(--ink-3)' : savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)'}
           onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}
         />
-      </div>
-    ),
+      );
+      return <div className="dash-kpi-grid">{tiles}</div>;
+    })(),
 
     hero: (
       <div className="dash-grid-3">
@@ -925,9 +964,19 @@ export default function DashboardView({ state, dispatch }) {
             </span>
           </div>
           <div style={{ marginTop: 18, color: 'var(--brand)' }}>
-            <AreaChart data={trend} w={680} h={140} stroke="var(--brand)" accent="var(--brand)" responsive />
+            <AreaChart
+              data={trend}
+              labels={Array.from({ length: trend.length }, (_, i) => {
+                const d = new Date(); d.setMonth(d.getMonth() - (trend.length - 1 - i));
+                return d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+              })}
+              w={680} h={140}
+              stroke="var(--brand)" accent="var(--brand)" responsive
+              formatValue={(v) => fmtBase(v, profile.displayCurrency, { compact: true })}
+              ariaLabel={`24-month net worth chart. Latest: ${fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })}.`}
+            />
           </div>
-          <div className="row" style={{ justifyContent: 'space-between', fontSize: 9, color: 'var(--ink-4)', paddingTop: 4, letterSpacing: '0.02em' }}>
+          <div className="dash-chart-axis" aria-hidden="true">
             <span>24m ago</span><span>18m</span><span>12m</span><span>6m</span><span>Today</span>
           </div>
         </div>
@@ -937,7 +986,8 @@ export default function DashboardView({ state, dispatch }) {
           <div className="font-serif" style={{ fontSize: 17, marginBottom: 16, letterSpacing: '-0.01em' }}>Asset allocation</div>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, position: 'relative' }}>
             <Donut size={114} thickness={15}
-              slices={stats.groups.map(g => ({ value: g.value, color: g.color }))} />
+              slices={stats.groups.map(g => ({ value: g.value, color: g.color, label: g.group }))}
+              ariaLabel={`Asset allocation: ${stats.groups.map(g => `${g.group} ${stats.totalValue > 0 ? (g.value / stats.totalValue * 100).toFixed(0) : 0} percent`).join(', ')}`} />
             <div style={{
               position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
               textAlign: 'center', pointerEvents: 'none',
@@ -1068,7 +1118,7 @@ export default function DashboardView({ state, dispatch }) {
       ].sort((a, b) => b.monthly - a.monthly);
       const hasIncome = fs.totalMonthlyIncome > 0;
       return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
 
           {/* Income by source */}
           <div className="card" style={{ padding: '20px 22px' }}>
@@ -1103,7 +1153,7 @@ export default function DashboardView({ state, dispatch }) {
                       <div style={{ height: 4, background: 'var(--bg-2)', borderRadius: 2, overflow: 'hidden' }}>
                         <div style={{
                           height: '100%', width: pct + '%', background: src.color, borderRadius: 2,
-                          transition: 'width 0.85s cubic-bezier(0.23,1,0.32,1)',
+                          transition: 'width 0.6s cubic-bezier(0.23,1,0.32,1)',
                         }} />
                       </div>
                     </div>
@@ -1222,7 +1272,7 @@ export default function DashboardView({ state, dispatch }) {
                             <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{r.group}</span>
                           </div>
                           <span className="num" style={{ fontSize: 12, fontWeight: 700, color: isUp ? 'var(--up)' : 'var(--down)' }}>
-                            {isUp ? '+' : ''}{r.retPct.toFixed(1)}%
+                            <span aria-hidden="true" style={{ marginRight: 3 }}>{isUp ? '▲' : '▼'}</span>{isUp ? '+' : ''}{r.retPct.toFixed(1)}%
                           </span>
                         </div>
                         <div style={{ height: 4, background: 'var(--bg-2)', borderRadius: 2, overflow: 'hidden' }}>
@@ -1230,7 +1280,7 @@ export default function DashboardView({ state, dispatch }) {
                             height: '100%', borderRadius: 2,
                             width: Math.min(Math.abs(r.retPct) / Math.max(...Object.values(fs.returnByClass).map(d => d.cost > 0 ? Math.abs((d.value - d.cost) / d.cost * 100) : 0), 1) * 100, 100) + '%',
                             background: isUp ? r.color : 'var(--down)',
-                            transition: 'width 0.85s cubic-bezier(0.23,1,0.32,1)',
+                            transition: 'width 0.6s cubic-bezier(0.23,1,0.32,1)',
                           }} />
                         </div>
                         <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>
@@ -1322,16 +1372,45 @@ export default function DashboardView({ state, dispatch }) {
       </div>
     ) : null,
 
-    alerts: showAlerts ? (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-        <AlertCard title="Asset concentration" accentColor="var(--gold)" items={concentrationAlerts}
-          onNav={concentrationAlerts.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null} navLabel="Rebalance →" />
-        <AlertCard title="High-risk signals" accentColor="var(--down)" items={riskAlerts}
-          onNav={riskAlerts.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null} navLabel="Review assets →" />
-        <AlertCard title="Maintenance assets" accentColor="var(--clay)" items={maintenanceAssets}
-          onNav={maintenanceAssets.length > 0 ? () => dispatch({ type: 'nav', to: 'assets' }) : null} navLabel="View assets →" />
-      </div>
-    ) : null,
+    // Alerts: render only the columns that have items. If all three are empty,
+    // surface a compact "everything healthy" banner instead of three filler cards.
+    alerts: (() => {
+      const cards = [
+        { title: 'Asset concentration', accent: 'var(--gold)', items: concentrationAlerts, label: 'Rebalance →' },
+        { title: 'High-risk signals',   accent: 'var(--down)', items: riskAlerts,          label: 'Review assets →' },
+        { title: 'Maintenance assets',  accent: 'var(--clay)', items: maintenanceAssets,   label: 'View assets →' },
+      ].filter(c => c.items.length > 0);
+      if (cards.length === 0) {
+        return (
+          <div className="card" style={{
+            padding: '14px 18px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: 'color-mix(in oklab, var(--up) 6%, var(--paper))',
+            border: '0.5px solid color-mix(in oklab, var(--up) 22%, transparent)',
+          }}>
+            <span style={{
+              width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+              background: 'var(--up-soft)', color: 'var(--up)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, fontWeight: 700,
+            }} aria-hidden="true">✓</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Portfolio is healthy</div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 1 }}>No concentration, risk, or maintenance flags right now.</div>
+            </div>
+          </div>
+        );
+      }
+      const cols = Math.min(cards.length, 3);
+      return (
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 14 }}>
+          {cards.map(c => (
+            <AlertCard key={c.title} title={c.title} accentColor={c.accent} items={c.items}
+              onNav={() => dispatch({ type: 'nav', to: 'assets' })} navLabel={c.label} />
+          ))}
+        </div>
+      );
+    })(),
 
     benchmarks: (
       <div className={activeGoals.length > 0 ? 'dash-grid-2' : ''} style={activeGoals.length > 0 ? undefined : { display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
