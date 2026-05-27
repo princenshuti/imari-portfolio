@@ -14,6 +14,7 @@
 import { useState } from 'react';
 import { id, fmt } from '../data.js';
 import AssetEditor from '../components/AssetEditor.jsx';
+import { useT } from '../contexts/I18nContext.jsx';
 
 // Each template seeds the AssetEditor with sensible Rwanda defaults. Values are
 // suggestions — the user adjusts before saving.
@@ -66,6 +67,7 @@ const TEMPLATES = [
 ];
 
 export default function Onboarding({ profile, dispatch, showToast, onComplete }) {
+  const { t } = useT();
   const [editing, setEditing] = useState(null);
 
   const addedCount = 0; // tracked implicitly via parent state; we just rely on user clicking Done
@@ -106,11 +108,10 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
             fontFamily: 'Instrument Serif, serif', fontSize: 32, marginBottom: 16,
           }}>●</div>
           <h1 className="font-serif" style={{ fontSize: 38, lineHeight: 1.1, letterSpacing: '-0.02em', margin: '0 0 10px' }}>
-            Murakaza neza, {firstName}.
+            {t('onboarding.welcome', { name: firstName })}
           </h1>
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.5, maxWidth: 520, margin: '0 auto' }}>
-            Add what you own to start tracking your wealth. Pick one or more from below —
-            each opens a quick form pre-filled with sensible Rwandan defaults.
+            {t('onboarding.sub')}
           </p>
         </div>
 
@@ -165,20 +166,19 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
             onClick={loadSample}
             className="btn btn-ghost"
           >
-            ↻ Load sample portfolio
+            {t('onboarding.cta_sample')}
           </button>
           <button
             type="button"
             onClick={onComplete}
             className="btn btn-primary"
           >
-            I'll add more later →
+            {t('onboarding.cta_skip')}
           </button>
         </div>
 
-        {/* Encourage progression once they've added something */}
         <div className="muted" style={{ textAlign: 'center', fontSize: 11, marginTop: -8 }}>
-          Your data is private. Nothing leaves your account unless you choose to export it.
+          {t('onboarding.privacy')}
         </div>
       </div>
 

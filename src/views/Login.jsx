@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { signIn, signUp, resetPassword, isConfigured } from '../cloud.js';
+import { useT } from '../contexts/I18nContext.jsx';
 
 export default function Login({ pendingInvite, initialMode = 'signin' }) {
+  const { t } = useT();
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState(pendingInvite?.email || '');
   const [password, setPassword] = useState('');
@@ -105,7 +107,7 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
       <button
         type="button"
         onClick={() => { window.location.hash = ''; }}
-        aria-label="Back to home"
+        aria-label={t('login.back_home')}
         style={{
           position:'absolute', top: 20, left: 20, background:'transparent', border: 0,
           color:'var(--ink-3)', fontSize: 13, cursor:'pointer', padding:'8px 12px',
@@ -115,7 +117,7 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
         onMouseEnter={e => { e.currentTarget.style.color = 'var(--ink)'; e.currentTarget.style.background = 'var(--bg-2)'; }}
         onMouseLeave={e => { e.currentTarget.style.color = 'var(--ink-3)'; e.currentTarget.style.background = 'transparent'; }}
       >
-        <span aria-hidden="true">←</span> Back to home
+        {t('login.back_home')}
       </button>
       <div className="card" style={{ padding: 36, width:'100%', maxWidth: 460 }}>
         <div aria-hidden="true" style={{
@@ -124,20 +126,20 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
           fontFamily:'Instrument Serif, serif', fontSize: 28, marginBottom: 18,
         }}>●</div>
         <h1 className="font-serif" style={{ fontSize: 32, lineHeight: 1.1, letterSpacing:'-0.02em', margin: 0, fontWeight: 400 }}>
-          {mode === 'signin' ? 'Welcome to Imari.' : mode === 'signup' ? 'Create your account.' : 'Reset your password.'}
+          {mode === 'signin' ? t('login.welcome_signin') : mode === 'signup' ? t('login.welcome_signup') : t('login.welcome_forgot')}
         </h1>
         <div className="muted" style={{ fontSize: 13, marginTop: 6, marginBottom: 22, lineHeight: 1.5 }}>
           {mode === 'forgot'
-            ? "Enter your email and we'll send you a link to reset your password."
+            ? t('login.sub_forgot')
             : pendingInvite
-              ? `You've been invited as a ${pendingInvite.role}. Sign in or create an account with ${pendingInvite.email} to join the portfolio.`
+              ? t('login.sub_invite', { role: pendingInvite.role, email: pendingInvite.email })
               : mode === 'signin'
-                ? 'Sign in or create an account to access your portfolio.'
-                : 'Imari encrypts your password and stores it securely on Supabase.'}
+                ? t('login.sub_signin')
+                : t('login.sub_signup')}
         </div>
 
         <form onSubmit={submit} className="col" style={{ gap: 12 }}>
-          <label htmlFor="login-email" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Email address</label>
+          <label htmlFor="login-email" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{t('login.email_label')}</label>
           <input
             id="login-email"
             type="email" required value={email} onChange={e => setEmail(e.target.value)}
@@ -148,11 +150,11 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
           />
           {mode !== 'forgot' && (
             <>
-              <label htmlFor="login-password" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Password</label>
+              <label htmlFor="login-password" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{t('login.password_label')}</label>
               <input
                 id="login-password"
                 type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                placeholder={mode === 'signup' ? 'At least 8 characters' : 'Password'}
+                placeholder={mode === 'signup' ? t('login.password_short') : t('login.password_label')}
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} style={inputStyle}
                 aria-invalid={!!error}
                 aria-describedby={error ? errorId : undefined}
@@ -164,7 +166,7 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
           {mode === 'signin' && (
             <div style={{ textAlign:'right', marginTop: -4 }}>
               <button type="button" onClick={() => switchMode('forgot')} className="btn-link" style={{ fontSize: 12 }}>
-                Forgot password?
+                {t('login.forgot_link')}
               </button>
             </div>
           )}
@@ -173,21 +175,21 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
           {message && <div id={messageId} role="status" style={{ padding: 10, borderRadius: 8, background:'var(--up-soft)',   color:'var(--up-ink)',   fontSize: 12.5 }}>{message}</div>}
 
           <button type="submit" disabled={loading} className="btn btn-primary" style={{ width:'100%', marginTop: 6 }}>
-            {loading ? 'Please wait…' : mode === 'signin' ? 'Sign in →' : mode === 'forgot' ? 'Send reset link →' : 'Create account →'}
+            {loading ? t('login.submit_loading') : mode === 'signin' ? t('login.submit_signin') : mode === 'forgot' ? t('login.submit_forgot') : t('login.submit_signup')}
           </button>
         </form>
 
         <div style={{ marginTop: 18, textAlign:'center', fontSize: 12.5 }}>
           {mode === 'forgot' ? (
             <>
-              <span className="muted">Remember your password?</span>{' '}
-              <button type="button" onClick={() => switchMode('signin')} className="btn-link">Sign in</button>
+              <span className="muted">{t('login.remember')}</span>{' '}
+              <button type="button" onClick={() => switchMode('signin')} className="btn-link">{t('login.do_signin')}</button>
             </>
           ) : (
             <>
-              <span className="muted">{mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}</span>{' '}
+              <span className="muted">{mode === 'signin' ? t('login.no_account') : t('login.has_account')}</span>{' '}
               <button type="button" onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')} className="btn-link">
-                {mode === 'signin' ? 'Create one' : 'Sign in'}
+                {mode === 'signin' ? t('login.create_one') : t('login.do_signin')}
               </button>
             </>
           )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useT } from '../contexts/I18nContext.jsx';
 
 // Inline SVG icon set — Heroicons outline at 24x24
 function Icon({ name }) {
@@ -98,6 +99,7 @@ const STEPS = [
 ];
 
 export default function Landing({ onSignIn }) {
+  const { t } = useT();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -130,10 +132,10 @@ export default function Landing({ onSignIn }) {
             <span className="landing-brand-name font-serif">Imari</span>
           </a>
           <div className="landing-nav-actions">
-            <a href="#why" className="landing-link">Why Imari</a>
-            <a href="#features" className="landing-link">Features</a>
-            <a href="#security" className="landing-link">Security</a>
-            <button onClick={() => goLogin('signin')} className="btn btn-primary landing-cta-sm">Sign in</button>
+            <a href="#why" className="landing-link">{t('landing.nav.why')}</a>
+            <a href="#features" className="landing-link">{t('landing.nav.features')}</a>
+            <a href="#security" className="landing-link">{t('landing.nav.security')}</a>
+            <button onClick={() => goLogin('signin')} className="btn btn-primary landing-cta-sm">{t('landing.nav.signin')}</button>
           </div>
         </div>
       </nav>
@@ -142,44 +144,38 @@ export default function Landing({ onSignIn }) {
       <header className="landing-hero">
         <div className="landing-hero-inner">
           <span className="landing-eyebrow">
-            <span className="landing-dot" aria-hidden /> Personal wealth tracker · Built for Rwanda
+            <span className="landing-dot" aria-hidden /> {t('landing.hero.eyebrow')}
           </span>
           <h1 className="landing-headline font-serif">
-            Stop guessing<br />
-            <em className="landing-headline-em">what you’re worth.</em>
+            {t('landing.hero.headline_1')}<br />
+            <em className="landing-headline-em">{t('landing.hero.headline_2')}</em>
           </h1>
-          <p className="landing-sub">
-            If your money is spread across banks, MoMo, USD cash, land and a few investments,
-            you are estimating your net worth in your head — and usually getting it wrong.
-            Imari ends the guesswork: every account and every asset in one live picture, in RWF
-            and USD, based on the values you enter — so you can see where you stand today and
-            whether you are ahead of last quarter.
-          </p>
+          <p className="landing-sub">{t('landing.hero.sub')}</p>
           <div className="landing-hero-ctas">
             <button onClick={goSignup} className="btn btn-primary landing-cta">
-              Get started — it’s free <Icon name="arrow" />
+              {t('landing.hero.cta_primary')} <Icon name="arrow" />
             </button>
             <button onClick={() => goLogin('signin')} className="btn btn-ghost landing-cta-ghost">
-              I already have an account
+              {t('landing.hero.cta_secondary')}
             </button>
           </div>
           <div className="landing-trust">
             <Icon name="shield" />
-            <span>Free to start. No card, no bank passwords — encrypted in transit and at rest.</span>
+            <span>{t('landing.hero.trust')}</span>
           </div>
         </div>
 
         {/* Floating preview card */}
         <div className="landing-preview" aria-hidden>
           <div className="landing-preview-card">
-            <div className="landing-preview-label">Net worth</div>
+            <div className="landing-preview-label">{t('landing.preview.label')}</div>
             <div className="landing-preview-amount num">
               <span className="landing-preview-ccy">RWF</span>
               <span>24,830,000</span>
             </div>
             <div className="landing-preview-delta">
               <span className="pill pill-up">↑ 8.4%</span>
-              <span className="landing-preview-period">this quarter</span>
+              <span className="landing-preview-period">{t('landing.preview.delta_period')}</span>
             </div>
             <svg className="landing-preview-spark" viewBox="0 0 200 50" preserveAspectRatio="none">
               <defs>
@@ -201,11 +197,11 @@ export default function Landing({ onSignIn }) {
           </div>
           <div className="landing-preview-mini">
             <div className="landing-preview-mini-row">
-              <span className="landing-preview-mini-label">Savings rate</span>
+              <span className="landing-preview-mini-label">{t('landing.preview.savings_rate')}</span>
               <span className="num landing-preview-mini-val">32%</span>
             </div>
             <div className="landing-preview-mini-row">
-              <span className="landing-preview-mini-label">Goal · House</span>
+              <span className="landing-preview-mini-label">{t('landing.preview.goal_house')}</span>
               <span className="num landing-preview-mini-val t-brand">68%</span>
             </div>
           </div>
@@ -215,13 +211,9 @@ export default function Landing({ onSignIn }) {
       {/* Problem — name the pain */}
       <section id="why" className="landing-section">
         <div className="landing-section-head">
-          <span className="landing-section-eyebrow">The problem</span>
-          <h2 className="font-serif landing-section-title">Tracking wealth in Rwanda is broken.</h2>
-          <p className="landing-section-sub">
-            Spreadsheets go stale the day you close them. Banking apps each show one slice. Generic
-            finance tools don’t know what MoMo is, don’t speak RWF, and can’t tell you what RRA
-            expects in April. So you are left doing the hardest job yourself — and guessing.
-          </p>
+          <span className="landing-section-eyebrow">{t('landing.problem.eyebrow')}</span>
+          <h2 className="font-serif landing-section-title">{t('landing.problem.title')}</h2>
+          <p className="landing-section-sub">{t('landing.problem.sub')}</p>
         </div>
         <div className="landing-pains">
           {PAINS.map(p => (
@@ -237,12 +229,9 @@ export default function Landing({ onSignIn }) {
       {/* Solution — what's inside */}
       <section id="features" className="landing-section landing-section-alt">
         <div className="landing-section-head">
-          <span className="landing-section-eyebrow">The solution</span>
-          <h2 className="font-serif landing-section-title">One app for your whole financial picture.</h2>
-          <p className="landing-section-sub">
-            Imari brings every account, asset, debt and goal into a single dashboard — multi-currency,
-            multi-asset, and built around the banks, wallets and rules you already use in Rwanda.
-          </p>
+          <span className="landing-section-eyebrow">{t('landing.solution.eyebrow')}</span>
+          <h2 className="font-serif landing-section-title">{t('landing.solution.title')}</h2>
+          <p className="landing-section-sub">{t('landing.solution.sub')}</p>
         </div>
 
         <div className="landing-features">
@@ -261,22 +250,22 @@ export default function Landing({ onSignIn }) {
       {/* Security — earn the trust */}
       <section id="security" className="landing-section">
         <div className="landing-section-head">
-          <span className="landing-section-eyebrow">Built for trust</span>
-          <h2 className="font-serif landing-section-title">Your money is private. Your data stays yours.</h2>
-          <p className="landing-section-sub">
-            Imari holds the kind of information your bank holds — so we protect it the same way:
-            encryption in transit and at rest, strict per-account isolation, and the discipline of
-            never collecting more than the app actually needs.
-          </p>
+          <span className="landing-section-eyebrow">{t('landing.security.eyebrow')}</span>
+          <h2 className="font-serif landing-section-title">{t('landing.security.title')}</h2>
+          <p className="landing-section-sub">{t('landing.security.sub')}</p>
         </div>
 
         <div className="landing-trust-grid">
-          {TRUST.map(t => (
-            <article key={t.title} className="landing-trust-card">
-              <div className="landing-trust-icon"><Icon name={t.icon} /></div>
+          {/* Loop variable renamed to `tr` to avoid shadowing the `t` translator
+              function from useT(). Card titles + descriptions stay in English
+              for now — translating marketing prose into Kinyarwanda needs a
+              native financial-vocabulary reviewer. */}
+          {TRUST.map(tr => (
+            <article key={tr.title} className="landing-trust-card">
+              <div className="landing-trust-icon"><Icon name={tr.icon} /></div>
               <div>
-                <h3 className="landing-trust-title">{t.title}</h3>
-                <p className="landing-trust-desc">{t.desc}</p>
+                <h3 className="landing-trust-title">{tr.title}</h3>
+                <p className="landing-trust-desc">{tr.desc}</p>
               </div>
             </article>
           ))}
@@ -309,8 +298,8 @@ export default function Landing({ onSignIn }) {
       {/* How it works */}
       <section id="how" className="landing-section landing-section-alt">
         <div className="landing-section-head">
-          <span className="landing-section-eyebrow">How it works</span>
-          <h2 className="font-serif landing-section-title">From zero to a full picture, in one afternoon.</h2>
+          <span className="landing-section-eyebrow">{t('landing.how.eyebrow')}</span>
+          <h2 className="font-serif landing-section-title">{t('landing.how.title')}</h2>
         </div>
 
         <ol className="landing-steps">
@@ -328,18 +317,15 @@ export default function Landing({ onSignIn }) {
       <section className="landing-footer-cta">
         <div className="landing-footer-card">
           <h2 className="font-serif landing-footer-title">
-            Know what you’re worth.<br />Starting today.
+            {t('landing.footer.title_1')}<br />{t('landing.footer.title_2')}
           </h2>
-          <p className="landing-footer-sub">
-            Free to start — no card, no bank credentials. Just the first complete, honest picture
-            of your money, built in Rwanda for the way money actually moves here.
-          </p>
+          <p className="landing-footer-sub">{t('landing.footer.sub')}</p>
           <div className="landing-hero-ctas" style={{ justifyContent: 'center' }}>
             <button onClick={goSignup} className="btn btn-primary landing-cta">
-              Create your account <Icon name="arrow" />
+              {t('landing.footer.cta_create')} <Icon name="arrow" />
             </button>
             <button onClick={() => goLogin('signin')} className="btn btn-ghost landing-cta-ghost">
-              Sign in
+              {t('landing.footer.cta_signin')}
             </button>
           </div>
         </div>
@@ -350,7 +336,7 @@ export default function Landing({ onSignIn }) {
             <span className="font-serif">Imari</span>
           </div>
           <div className="landing-footer-meta">
-            <span>Powered by</span>
+            <span>{t('landing.footer.powered_by')}</span>
             <img src={`${import.meta.env.BASE_URL}maxventures-logo.png`} alt="Maxventures" className="landing-footer-logo" />
           </div>
         </footer>

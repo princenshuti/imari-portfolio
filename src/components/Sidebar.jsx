@@ -3,11 +3,34 @@ import { fmtBase, toBase } from '../data.js';
 import { signOut } from '../cloud.js';
 import { MaxventuresIcon } from './MaxventuresLogo.jsx';
 import { navItemsByGroup } from '../nav.js';
+import { useT } from '../contexts/I18nContext.jsx';
 
 const NAV_GROUPS = navItemsByGroup();
 const COLLAPSE_KEY = 'imari:sidebar:collapsed';
 
+// Map nav-item id → i18n key so labels translate while structure stays static.
+const NAV_KEY = {
+  dashboard:   'nav.dashboard',
+  assets:      'nav.assets',
+  liabilities: 'nav.liabilities',
+  cashflow:    'nav.cashflow',
+  goals:       'nav.goals',
+  accounts:    'nav.accounts',
+  trends:      'nav.trends',
+  tax:         'nav.tax',
+  advisor:     'nav.advisor',
+  settings:    'nav.settings',
+};
+// Map English group label → i18n key (matches NAV_GROUPS in nav.js).
+const GROUP_KEY = {
+  'Overview':        'nav.group_overview',
+  'Wealth':          'nav.group_wealth',
+  'Money & Markets': 'nav.group_money',
+  'Tools':           'nav.group_tools',
+};
+
 export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [] }) {
+  const { t } = useT();
   const totalDebt = liabilities.reduce((s, l) => s + toBase(l.remainingAmount || 0, l.currency || 'RWF'), 0);
   const trueNetWorth = netWorth; // already assets-liabilities in App.jsx
   const gain    = netWorth - totalCost;
@@ -40,7 +63,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
         <button
           type="button"
           onClick={() => onNav('dashboard')}
-          aria-label="Go to Dashboard"
+          aria-label={t('nav.home_label')}
           className="sidebar-brand"
           style={{
             all: 'unset',
@@ -65,8 +88,8 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? t('nav.expand') : t('nav.collapse')}
+          title={collapsed ? t('nav.expand') : t('nav.collapse')}
           style={{
             background: 'transparent', border: 0, color: 'var(--ink-3)',
             cursor: 'pointer', padding: 6, borderRadius: 6, lineHeight: 1,
@@ -94,7 +117,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
         onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
       >
         <div className="col" style={{ gap: 1 }}>
-          <div className="muted" style={{ fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700 }}>True net worth</div>
+          <div className="muted" style={{ fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.net_worth')}</div>
           <div className="font-serif" style={{ fontSize: 24, letterSpacing: '-0.025em', lineHeight: 1.1, marginTop: 2, color: 'var(--ink)' }}>
             {fmtBase(trueNetWorth, displayCurrency, { compact: true })}
           </div>
@@ -104,14 +127,14 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div className="col" style={{ gap: 1 }}>
-            <div className="muted" style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>Assets</div>
+            <div className="muted" style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.assets_short')}</div>
             <div className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--up-ink)' }}>
               {fmtBase(netWorth + totalDebt, displayCurrency, { compact: true })}
             </div>
           </div>
           {totalDebt > 0 && (
             <div className="col" style={{ gap: 1 }}>
-              <div className="muted" style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>Debt</div>
+              <div className="muted" style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.debt')}</div>
               <div className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--down-ink)' }}>
                 <span aria-hidden="true">−</span>{fmtBase(totalDebt, displayCurrency, { compact: true })}
               </div>
@@ -144,25 +167,26 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
               <div className="muted" style={{
                 fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700,
                 padding: '0 12px', marginBottom: 3,
-              }}>{grp.label}</div>
+              }}>{GROUP_KEY[grp.label] ? t(GROUP_KEY[grp.label]) : grp.label}</div>
             )}
             <div className="col" style={{ gap: 1 }}>
-              {grp.items.map(it => (
-                <button
-                  key={it.id}
-                  className={`nav-btn${it.id === active ? ' active' : ''}`}
-                  onClick={() => onNav(it.id)}
-                  aria-current={it.id === active ? 'page' : undefined}
-                  // Tooltip label only matters when the visible text is hidden
-                  // (collapsed). Title prop is keyboard-accessible too.
-                  title={collapsed ? it.label : undefined}
-                  aria-label={collapsed ? it.label : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '10px 0' } : undefined}
-                >
-                  <span aria-hidden="true" style={{ width: 18, textAlign: 'center', fontSize: 13, opacity: it.id === active ? 1 : 0.65 }}>{it.glyph}</span>
-                  {!collapsed && <span>{it.label}</span>}
-                </button>
-              ))}
+              {grp.items.map(it => {
+                const label = NAV_KEY[it.id] ? t(NAV_KEY[it.id]) : it.label;
+                return (
+                  <button
+                    key={it.id}
+                    className={`nav-btn${it.id === active ? ' active' : ''}`}
+                    onClick={() => onNav(it.id)}
+                    aria-current={it.id === active ? 'page' : undefined}
+                    title={collapsed ? label : undefined}
+                    aria-label={collapsed ? label : undefined}
+                    style={collapsed ? { justifyContent: 'center', padding: '10px 0' } : undefined}
+                  >
+                    <span aria-hidden="true" style={{ width: 18, textAlign: 'center', fontSize: 13, opacity: it.id === active ? 1 : 0.65 }}>{it.glyph}</span>
+                    {!collapsed && <span>{label}</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -171,7 +195,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
       {/* ── Footer — sync status pill (dot-only when collapsed) ── */}
       <div className="col" style={{ marginTop: 'auto', gap: 8 }}>
         <div
-          title={collapsed ? (session ? 'Synced to cloud' : 'Saved locally') : undefined}
+          title={collapsed ? (session ? t('nav.synced') : t('nav.saved_local')) : undefined}
           style={{
             padding: collapsed ? '8px' : '8px 12px', borderRadius: 'var(--r-md)',
             background: 'var(--bg-2)', fontSize: 10.5,
@@ -184,7 +208,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
               background: session ? 'var(--up)' : 'var(--gold)',
               boxShadow: session ? '0 0 0 2px var(--up-soft)' : '0 0 0 2px var(--gold-soft)',
             }}/>
-            {!collapsed && <span className="muted">{session ? 'Synced to cloud' : 'Saved locally'}</span>}
+            {!collapsed && <span className="muted">{session ? t('nav.synced') : t('nav.saved_local')}</span>}
           </div>
         </div>
 

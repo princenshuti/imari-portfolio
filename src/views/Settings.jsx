@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { CURRENCIES, MILESTONES, LIVE_FX } from '../data.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
+import { useT, SUPPORTED_LOCALES } from '../contexts/I18nContext.jsx';
 import { exportJSON, importJSONFile } from '../store.js';
 import { getApiKey, setApiKey, hasEnvKey } from '../ai.js';
 import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, sendInvitationEmail, isConfigured } from '../cloud.js';
@@ -352,6 +353,9 @@ function MilestoneSection({ profile, dispatch, showToast }) {
 }
 
 export default function SettingsView({ state, dispatch, session, portfolioId, role, showToast, themePref, onThemeChange }) {
+  // Bound i18n controller (t/locale/setLocale). Naming `i18n` not `t` to
+  // avoid shadowing the per-pill loop variable used in this file.
+  const i18n = useT();
   const fileRef   = useRef(null);
   const avatarRef = useRef(null);
   const [fxLocal, setFxLocal]         = useState(state.fx);
@@ -408,20 +412,20 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
 
   return (
     <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)', maxWidth: 820 }}>
-      <Section title="Appearance" subtitle="Choose how Imari looks. Auto follows your system setting.">
+      <Section title={i18n.t('settings.appearance_title')} subtitle="Choose how Imari looks. Auto follows your system setting.">
         <div className="row" style={{ gap: 8 }}>
           {[
-            { value: 'auto',  label: '⟳ Auto'  },
-            { value: 'light', label: '☀ Light' },
-            { value: 'dark',  label: '☽ Dark'  },
-          ].map(t => (
+            { value: 'auto',  label: `⟳ ${i18n.t('settings.theme_auto')}`  },
+            { value: 'light', label: `☀ ${i18n.t('settings.theme_light')}` },
+            { value: 'dark',  label: `☽ ${i18n.t('settings.theme_dark')}`  },
+          ].map(opt => (
             <button
-              key={t.value}
-              onClick={() => onThemeChange?.(t.value)}
-              className={`btn ${themePref === t.value ? 'btn-primary' : 'btn-ghost'}`}
+              key={opt.value}
+              onClick={() => onThemeChange?.(opt.value)}
+              className={`btn ${themePref === opt.value ? 'btn-primary' : 'btn-ghost'}`}
               style={{ minWidth: 90 }}
             >
-              {t.label}
+              {opt.label}
             </button>
           ))}
         </div>
@@ -431,6 +435,27 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
             : themePref === 'dark'
             ? 'Dark mode is active.'
             : 'Light mode is active.'}
+        </div>
+
+        {/* Locale switcher — UX review #53. Persists to profile.locale so it
+            syncs across devices via cloud profile. */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '0.5px solid var(--line)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{i18n.t('settings.locale_label')}</div>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            {SUPPORTED_LOCALES.map(loc => (
+              <button
+                key={loc.code}
+                onClick={() => i18n.setLocale(loc.code)}
+                className={`btn ${i18n.locale === loc.code ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ minWidth: 110 }}
+              >
+                {loc.nativeName}
+              </button>
+            ))}
+          </div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
+            {i18n.t('settings.locale_hint')}
+          </div>
         </div>
       </Section>
 

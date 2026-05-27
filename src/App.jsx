@@ -15,6 +15,7 @@ import Landing from './views/Landing.jsx';
 import NamePrompt from './views/NamePrompt.jsx';
 import Onboarding from './views/Onboarding.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
+import { I18nProvider } from './contexts/I18nContext.jsx';
 // All views — lazy loaded on first navigation
 const DashboardView   = lazy(() => import('./views/Dashboard.jsx'));
 const AssetsView      = lazy(() => import('./views/Assets.jsx'));
@@ -539,23 +540,34 @@ export default function App() {
   // session === null       → not logged in (show login)
   // stateReady === false   → logged in but portfolio still loading from cloud
   // profile.name empty     → need onboarding name
-  if (session === undefined) return <FullScreenLoader message="Checking session…" />;
-  if (isRecoveryMode) return <ResetPassword session={session} onDone={() => { setIsRecoveryMode(false); }} />;
+  // Every render path is wrapped in I18nProvider so the Landing, Login,
+  // NamePrompt, Onboarding and Sidebar can all call useT(). Locale persists
+  // via dispatch → profile.locale → cloud sync, with localStorage fallback
+  // inside the provider for the first render before profile loads.
+  const i18nWrap = (children) => (
+    <I18nProvider
+      profile={state.profile}
+      onChangeLocale={loc => dispatch({ type: 'setProfile', patch: { locale: loc } })}
+    >
+      {children}
+    </I18nProvider>
+  );
+
+  if (session === undefined) return i18nWrap(<FullScreenLoader message="Checking session…" />);
+  if (isRecoveryMode) return i18nWrap(<ResetPassword session={session} onDone={() => { setIsRecoveryMode(false); }} />);
 
   // Force-preview the landing at any time via #landing (signed in or not).
-  // Lets local-only users review the marketing page without clearing their data.
   if (authPage === 'preview') {
-    return <Landing onSignIn={() => { window.location.hash = session ? 'dashboard' : 'login'; }} />;
+    return i18nWrap(<Landing onSignIn={() => { window.location.hash = session ? 'dashboard' : 'login'; }} />);
   }
 
   if (isConfigured && !session) {
-    // Invite links carry clear intent — skip the landing and go straight to login.
     if (pendingInvite || authPage === 'login' || authPage === 'signup') {
-      return <Login pendingInvite={pendingInvite} initialMode={authPage === 'signup' ? 'signup' : 'signin'} />;
+      return i18nWrap(<Login pendingInvite={pendingInvite} initialMode={authPage === 'signup' ? 'signup' : 'signin'} />);
     }
-    return <Landing onSignIn={() => setAuthPage('login')} />;
+    return i18nWrap(<Landing onSignIn={() => setAuthPage('login')} />);
   }
-  if (!stateReady) return <FullScreenLoader message="Loading your portfolio…" />;
+  if (!stateReady) return i18nWrap(<FullScreenLoader message="Loading your portfolio…" />);
 
   // Wrap dispatch in a read-only guard for viewers — declared early so the
   // Onboarding gate below can use it.
@@ -577,14 +589,14 @@ export default function App() {
   };
 
   if (!state.profile.name) {
-    return <NamePrompt onSubmit={name => dispatch({ type:'setProfile', patch: { name } })} />;
+    return i18nWrap(<NamePrompt onSubmit={name => dispatch({ type:'setProfile', patch: { name } })} />);
   }
 
   // First-run onboarding wizard — shows when the user has a name but zero
   // assets and hasn't explicitly dismissed it. Sets profile.onboardedAt when
   // "I'll add more later" or "Load sample" runs, so it never re-fires.
   if (state.assets.length === 0 && !state.profile.onboardedAt && role !== 'viewer') {
-    return (
+    return i18nWrap(
       <Onboarding
         profile={state.profile}
         dispatch={guardedDispatch}
@@ -625,7 +637,7 @@ export default function App() {
 
   const showTopBar = nav !== 'advisor';
 
-  return (
+  return i18nWrap(
     <ErrorBoundary>
       <a href="#main-content" className="skip-to-main">Skip to main content</a>
       <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
@@ -660,3 +672,4 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
