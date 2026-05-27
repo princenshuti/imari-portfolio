@@ -230,12 +230,48 @@ export async function createInvitation(portfolioId, email, role) {
     .select()
     .single();
   if (error) throw error;
+
+  // Send the email. Surface failures so the owner knows to retry — the row
+  // is already created, so they can also "Resend" from the UI.
+  try {
+    await sendInvitationEmail(data.id);
+  } catch (e) {
+    const err = new Error(`Invitation created but email failed to send: ${e.message}. Use "Resend" or copy the link manually.`);
+    err.invitation = data;
+    throw err;
+  }
   return data;
 }
 
 export async function revokeInvitation(invitationId) {
+  if (!UUID_RE.test(invitationId)) throw new Error('Invalid invitation ID');
   const { error } = await supabase.from('portfolio_invitations').delete().eq('id', invitationId);
   if (error) throw error;
+}
+
+/**
+ * Triggers the send-invitation edge function. Used both immediately after
+ * createInvitation and by the "Resend" button for pending invites.
+ */
+export async function sendInvitationEmail(invitationId) {
+  if (!supabase) throw new Error('Not configured');
+  if (!UUID_RE.test(invitationId)) throw new Error('Invalid invitation ID');
+  const { data, error } = await supabase.functions.invoke('send-invitation', {
+    body: { invitationId },
+  });
+  if (error) {
+    // Try to extract the structured {error} body the function returns on failure.
+    let detail = error.message || 'Unknown error';
+    try {
+      const ctx = error.context;
+      if (ctx && typeof ctx.json === 'function') {
+        const body = await ctx.json();
+        if (body?.error) detail = body.error;
+      }
+    } catch { /* swallow — fall back to error.message */ }
+    throw new Error(detail);
+  }
+  return data;
 }
 
 export async function peekInvitation(token) {

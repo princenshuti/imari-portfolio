@@ -3,7 +3,7 @@ import { CURRENCIES, MILESTONES, LIVE_FX } from '../data.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { exportJSON, importJSONFile } from '../store.js';
 import { getApiKey, setApiKey, hasEnvKey } from '../ai.js';
-import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, isConfigured } from '../cloud.js';
+import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, sendInvitationEmail, isConfigured } from '../cloud.js';
 import { Field, inputStyle } from '../components/Field.jsx';
 import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
 import { RowSkeleton } from '../components/Skeleton.jsx';
@@ -48,7 +48,10 @@ function MembersSection({ portfolioId, role, session }) {
   const [inviteRole, setInviteRole] = useState('editor');
   const [busy, setBusy] = useState(false);
   const [copiedToken, setCopiedToken] = useState(null);
+  const [resendingId, setResendingId] = useState(null);
+  const [resentId, setResentId] = useState(null);
   const [error, setError] = useState(null);
+  const [info, setInfo] = useState(null);
 
   const refresh = async () => {
     setLoading(true); setError(null);
@@ -73,22 +76,38 @@ function MembersSection({ portfolioId, role, session }) {
   const invite = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setInfo(null);
+    const targetEmail = email.trim().toLowerCase();
     try {
       const inv = await createInvitation(portfolioId, email, inviteRole);
       setEmail('');
       await refresh();
-      // Auto-copy invite link
+      setInfo(`Invitation email sent to ${targetEmail}.`);
+      setTimeout(() => setInfo(null), 4000);
+      // Best-effort: also copy the link to clipboard for the owner's convenience.
       const link = `${window.location.origin}${window.location.pathname}?invite=${inv.token}`;
       try {
         await navigator.clipboard.writeText(link);
         setCopiedToken(inv.token);
         setTimeout(() => setCopiedToken(null), 3000);
-      } catch {
-        // Clipboard unavailable (http context, permissions) — invite still created, just not auto-copied
-      }
-    } catch (e) { setError(e.message); }
+      } catch { /* clipboard unavailable — no-op */ }
+    } catch (e) {
+      setError(e.message);
+      // If the row was created but email failed, refresh so the new pending
+      // invite shows up and the owner can "Resend" or copy the link.
+      if (e.invitation) { setEmail(''); await refresh(); }
+    }
     finally { setBusy(false); }
+  };
+
+  const handleResend = async (inv) => {
+    setResendingId(inv.id); setError(null); setInfo(null);
+    try {
+      await sendInvitationEmail(inv.id);
+      setResentId(inv.id);
+      setTimeout(() => setResentId(null), 2500);
+    } catch (e) { setError(`Could not resend: ${e.message}`); }
+    finally { setResendingId(null); }
   };
 
   const copyLink = async (token) => {
@@ -126,7 +145,7 @@ function MembersSection({ portfolioId, role, session }) {
     <Section
       title="Members"
       subtitle={isOwner
-        ? 'Invite people by email. Editors can add and update assets. Viewers can see your portfolio but not modify it.'
+        ? 'Invite people by email — they\'ll get a message with an accept link. Editors can add and update assets. Viewers can see your portfolio but not modify it.'
         : 'You can view who has access to this portfolio. Only the owner can invite or remove members.'}
     >
       {isOwner && (
@@ -138,9 +157,18 @@ function MembersSection({ portfolioId, role, session }) {
             <option value="viewer">Viewer</option>
           </select>
           <button type="submit" disabled={busy} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
-            {busy ? 'Sending…' : '＋ Invite'}
+            {busy ? 'Sending…' : '＋ Send invite'}
           </button>
         </form>
+      )}
+
+      {info && (
+        <div style={{
+          padding: 10, borderRadius: 8, background:'var(--up-soft, #e6f4ea)', color:'var(--up, #1b6e2c)',
+          fontSize: 12.5, marginBottom: 14,
+        }}>
+          {info}
+        </div>
       )}
 
       {error && (
@@ -216,10 +244,19 @@ function MembersSection({ portfolioId, role, session }) {
                       <button onClick={() => copyLink(inv.token)} style={{
                         padding:'5px 9px', fontSize: 11, borderRadius: 6, border:'1px solid var(--line)', background:'var(--paper)', color:'var(--ink-2)', cursor:'pointer',
                       }}>{copiedToken === inv.token ? '✓ Copied' : 'Copy link'}</button>
-                      <a href={`mailto:${inv.email}?subject=${encodeURIComponent('You\'re invited to Imari Portfolio')}&body=${encodeURIComponent(`Hi,\n\nI'd like to share my Imari Portfolio with you as a ${inv.role}.\n\nAccept the invitation here: ${window.location.origin}${window.location.pathname}?invite=${inv.token}\n\nThis link expires in 14 days.`)}`}
+                      <button
+                        onClick={() => handleResend(inv)}
+                        disabled={resendingId === inv.id}
                         style={{
-                          padding:'5px 9px', fontSize: 11, borderRadius: 6, border:'1px solid var(--line)', background:'var(--paper)', color:'var(--brand)', cursor:'pointer', textDecoration:'none',
-                        }}>Email →</a>
+                          padding:'5px 9px', fontSize: 11, borderRadius: 6,
+                          border:'1px solid var(--line)', background:'var(--paper)',
+                          color: resentId === inv.id ? 'var(--up, #1b6e2c)' : 'var(--brand)',
+                          cursor: resendingId === inv.id ? 'default' : 'pointer',
+                          opacity: resendingId === inv.id ? 0.6 : 1,
+                        }}
+                      >
+                        {resendingId === inv.id ? 'Sending…' : resentId === inv.id ? '✓ Sent' : 'Resend email'}
+                      </button>
                       <button onClick={() => handleRevoke(inv)} style={{
                         padding:'5px 9px', fontSize: 11, borderRadius: 6, border:'1px solid var(--down-soft)', background:'var(--paper)', color:'var(--down)', cursor:'pointer',
                       }}>Revoke</button>

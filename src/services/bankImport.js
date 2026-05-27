@@ -195,6 +195,9 @@ const EXPENSE_MAP = [
   { cat: 'sacco-cont',   kws: ['sacco', 'cooperative', 'umurenge', 'coopec', 'contribution', 'savings deduction'] },
   { cat: 'insurance',    kws: ['insurance', 'insur', 'premium', 'rssb', 'mutuelle', 'csr ', 'sanlam', 'sonarwa', 'radiant'] },
   { cat: 'school-fees',  kws: ['school', 'tuition', 'education', 'university', 'college', 'nursery', 'academic'] },
+  // Bank/MoMo fees must come BEFORE utilities — "mtn fee" should hit bank-fees,
+  // not be miscategorised as airtime.
+  { cat: 'bank-fees',    kws: ['atm withdrawal', 'atm fee', 'ledger fee', 'monthly fee', 'maintenance fee', 'sms fee', 'sms charge', 'service charge', 'transfer fee', 'transaction fee', 'momo fee', 'momo charge', 'wallet fee', 'commission'] },
   { cat: 'utilities',    kws: ['electricity', 'reco', 'wasac', 'water bill', 'airtime', 'mtn ', 'airtel', 'internet', 'wifi', 'utility', 'tv sub', 'netflix', 'dstv', 'startimes', 'canal+', 'canalplus'] },
 ];
 
@@ -208,25 +211,65 @@ function suggestCategory(desc, isExpense) {
 }
 
 // ─── Parse a date string (or Date) into YYYY-MM-DD ───────────────────────────
-function normaliseDate(raw) {
+// fmt: 'dmy' (Rwanda/Europe — default) or 'mdy' (US). Auto-detected per sheet
+// by detectDateFormat() so an entire statement is parsed consistently.
+function normaliseDate(raw, fmt = 'dmy') {
   if (!raw) return new Date().toISOString().slice(0, 10);
   if (raw instanceof Date && !isNaN(raw)) return raw.toISOString().slice(0, 10);
   const s = String(raw).trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  const dmy = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
-  if (dmy) {
-    const y = dmy[3].length === 2 ? '20' + dmy[3] : dmy[3];
-    return `${y}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+  const parts = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (parts) {
+    const a = parts[1], b = parts[2];
+    const y = parts[3].length === 2 ? '20' + parts[3] : parts[3];
+    const day   = fmt === 'mdy' ? b : a;
+    const month = fmt === 'mdy' ? a : b;
+    return `${y}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
   const parsed = new Date(s);
   if (!isNaN(parsed)) return parsed.toISOString().slice(0, 10);
   return new Date().toISOString().slice(0, 10);
 }
 
+// Scan the whole date column once and decide DD/MM vs MM/DD.
+// Returns 'dmy' (default — covers BK, Equity, I&M, MTN, Airtel) or 'mdy'.
+function detectDateFormat(rows, dateCol) {
+  if (!dateCol) return 'dmy';
+  let firstMax = 0, secondMax = 0;
+  for (const row of rows) {
+    const v = row[dateCol];
+    if (!v || v instanceof Date) continue;
+    const m = String(v).trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.]/);
+    if (!m) continue;
+    firstMax  = Math.max(firstMax,  parseInt(m[1], 10));
+    secondMax = Math.max(secondMax, parseInt(m[2], 10));
+  }
+  // First segment definitely a month → MM/DD
+  if (firstMax  > 12 && secondMax <= 12) return 'dmy'; // first is day → DD/MM
+  if (secondMax > 12 && firstMax  <= 12) return 'mdy'; // second is day → MM/DD
+  return 'dmy'; // ambiguous → Rwanda default
+}
+
 function parseAmount(raw) {
   if (!raw && raw !== 0) return 0;
   const n = parseFloat(String(raw).replace(/[^0-9.\-]/g, ''));
   return isNaN(n) ? 0 : Math.abs(n);
+}
+
+// Pull a "fee 100" / "charge: 50" / "(commission 75)" mention out of a
+// description when the statement has no dedicated fee column. Returns the
+// numeric value, or 0 if no inline fee is found.
+const INLINE_FEE_RE = /\b(?:fee|fees|charge|charges|commission|tariff)s?\b[:\s.,()]*(?:rwf|frw|usd|kes|eur)?\s*([\d,]+(?:\.\d+)?)/i;
+function extractInlineFee(desc, mainAmount) {
+  if (!desc) return 0;
+  const m = String(desc).match(INLINE_FEE_RE);
+  if (!m) return 0;
+  const n = parseFloat(m[1].replace(/,/g, ''));
+  if (isNaN(n) || n <= 0) return 0;
+  // Sanity: a fee shouldn't equal the main amount (that's almost certainly
+  // the transaction itself being matched), and shouldn't be larger.
+  if (mainAmount && (n === mainAmount || n > mainAmount)) return 0;
+  return n;
 }
 
 // ─── Main: convert parsed rows → cashflow entry drafts ───────────────────────
@@ -243,11 +286,12 @@ function parseAmount(raw) {
 export function rowsToDrafts(rows, colMap, currency = 'RWF') {
   const drafts = [];
   let key = 0;
+  const dateFmt = detectDateFormat(rows, colMap.date);
 
   for (const row of rows) {
     const desc    = colMap.desc ? row[colMap.desc] || '' : '';
     const rawDate = colMap.date ? row[colMap.date] || '' : '';
-    const date    = normaliseDate(rawDate);
+    const date    = normaliseDate(rawDate, dateFmt);
 
     let amount = 0;
     let isExpense = false;
@@ -288,27 +332,29 @@ export function rowsToDrafts(rows, colMap, currency = 'RWF') {
       _desc:       desc,
     });
 
-    // MoMo service charge → its own utilities expense (so it doesn't get
-    // silently lumped into the transaction itself).
-    if (colMap.fee) {
-      const fee = parseAmount(row[colMap.fee]);
-      if (fee > 0) {
-        drafts.push({
-          _key:        ++key,
-          type:        'expense',
-          category:    'utilities',
-          _confidence: 'high',
-          amount:      fee,
-          currency,
-          date,
-          recurring:   'once',
-          notes:       `MoMo charge · ${desc}`.trim(),
-          accountId:   null,
-          attachment:  null,
-          _desc:       `Service charge — ${desc}`,
-          _isFee:      true,
-        });
-      }
+    // Fee handling — booked as its own bank-fees expense so the main
+    // transaction's amount stays clean and your category totals are honest.
+    // Two sources, in order of trust:
+    //   1. A dedicated fee column (MTN, Airtel, BK SMS-fee column)
+    //   2. Inline mention in the description ("Sent 5000 to John fee 100")
+    let fee = colMap.fee ? parseAmount(row[colMap.fee]) : 0;
+    if (!fee) fee = extractInlineFee(desc, amount);
+    if (fee > 0) {
+      drafts.push({
+        _key:        ++key,
+        type:        'expense',
+        category:    'bank-fees',
+        _confidence: 'high',
+        amount:      fee,
+        currency,
+        date,
+        recurring:   'once',
+        notes:       `Fee · ${desc}`.trim(),
+        accountId:   null,
+        attachment:  null,
+        _desc:       `Service charge — ${desc}`,
+        _isFee:      true,
+      });
     }
   }
   return drafts;
@@ -350,7 +396,7 @@ function hash(s) {
 }
 
 const INCOME_CAT_IDS  = ['salary', 'rental', 'dividends', 'bond-int', 'business', 'freelance', 'other-inc'];
-const EXPENSE_CAT_IDS = ['food', 'rent', 'transport', 'utilities', 'school-fees', 'healthcare', 'insurance', 'loan-repay', 'sacco-cont', 'entertainment', 'other-exp'];
+const EXPENSE_CAT_IDS = ['food', 'rent', 'transport', 'utilities', 'school-fees', 'healthcare', 'insurance', 'loan-repay', 'sacco-cont', 'entertainment', 'bank-fees', 'other-exp'];
 
 /**
  * Run AI categorization on low-confidence drafts. Mutates a *copy* and returns it.

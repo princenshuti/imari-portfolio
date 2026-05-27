@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { CLASSES, fmt, fmtBase, suggestValue, toBase, yearsBetween } from '../data.js';
 import AssetIcon from './AssetIcon.jsx';
 
-export default function AssetRow({ asset, displayCurrency, isSelected, onToggle, onEdit, onDelete, onSaveValue }) {
+export default function AssetRow({ asset, displayCurrency, isSelected, onToggle, onEdit, onDelete, onSaveValue, rowProps = {} }) {
   const cls = CLASSES.find(c => c.kind === asset.kind) || CLASSES[CLASSES.length - 1];
   const suggested = suggestValue(asset);
   const current = asset.currentValue !== '' && asset.currentValue != null ? asset.currentValue : suggested;
@@ -35,12 +35,20 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
   const cancel = () => setEditing(false);
 
   return (
-    <div style={{
-      display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
-      alignItems:'center', padding: '14px 22px', gap: 12,
-      background: isSelected ? 'color-mix(in oklab, var(--down) 6%, transparent)' : 'transparent',
-      transition: 'background 0.15s',
-    }}>
+    <div
+      {...rowProps}
+      role="option"
+      aria-selected={isSelected}
+      aria-label={`${asset.name}, ${fmt(current, asset.currency, { compact: true })}`}
+      className="asset-row-focusable"
+      style={{
+        display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
+        alignItems:'center', padding: '14px 22px', gap: 12,
+        background: isSelected ? 'color-mix(in oklab, var(--down) 6%, transparent)' : 'transparent',
+        transition: 'background 0.15s',
+        outline: 'none', // visible ring comes from .asset-row-focusable:focus-visible
+      }}
+    >
       <input
         type="checkbox" checked={!!isSelected} onChange={onToggle}
         onClick={e => e.stopPropagation()}

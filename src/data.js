@@ -383,6 +383,7 @@ export const EXPENSE_CATEGORIES = [
   { id:'loan-repay',  label:'Loan repayment',       color:'var(--down)' },
   { id:'sacco-cont',  label:'SACCO contribution',   color:'var(--gold)' },
   { id:'entertainment', label:'Entertainment',      color:'var(--gold)' },
+  { id:'bank-fees',   label:'Bank / MoMo fees',     color:'var(--ink-4)' },
   { id:'other-exp',   label:'Other expense',        color:'var(--ink-3)' },
 ];
 

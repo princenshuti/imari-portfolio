@@ -4,6 +4,7 @@ import AssetRow from '../components/AssetRow.jsx';
 import AssetEditor from '../components/AssetEditor.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { downloadAssetTemplate, parseAssetExcel, findExistingByNaturalKey } from '../excel.js';
+import { useRovingFocus } from '../hooks/useRovingFocus.js';
 
 // Canonical group order from CLASSES definition
 const ALL_GROUPS = Array.from(new Set(CLASSES.map(c => c.group)));
@@ -193,6 +194,24 @@ export default function AssetsView({ state, dispatch, showToast }) {
     filtered.forEach(g => g.items.forEach(a => ids.add(a.id)));
     return ids;
   }, [filtered]);
+
+  // Flat ordered list of visible assets — drives roving-tabindex so arrow
+  // keys move across rows in render order, including across group breaks.
+  const flatAssets = useMemo(() => filtered.flatMap(g => g.items), [filtered]);
+
+  // Keyboard nav: arrow keys move row focus; Enter / E edits; Delete /
+  // Backspace deletes; Space toggles selection. Wired on the list wrapper
+  // so users get one Tab stop into the table, then full arrow navigation.
+  const { containerProps, getItemProps } = useRovingFocus(flatAssets.length, {
+    onActivate: (i) => { const a = flatAssets[i]; if (a) setEditing(a); },
+    onItemKeyDown: (e, i) => {
+      const a = flatAssets[i];
+      if (!a) return;
+      if (e.key === 'e' || e.key === 'E') { e.preventDefault(); setEditing(a); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); setPendingDelete({ kind: 'single', asset: a }); }
+      else if (e.key === ' ') { e.preventDefault(); toggleOne(a.id); }
+    },
+  });
 
   const allVisibleSelected = visibleIds.size > 0 && [...visibleIds].every(id => selected.has(id));
   const someSelected       = selected.size > 0;
@@ -439,7 +458,13 @@ export default function AssetsView({ state, dispatch, showToast }) {
         </div>
       )}
 
-      {/* ─ Asset group cards ───────────────────────────────────── */}
+      {/* ─ Asset group cards ─ wrapped in a single keyboard-nav region
+            so arrow keys move focus across groups in render order. */}
+      <div
+        {...containerProps}
+        role="listbox"
+        aria-label="Assets — use arrow keys to navigate, Enter to edit, Delete to remove, Space to select"
+      >
       {filtered.map(g => {
         // Recompute group totals from filtered items only
         const gCost  = g.items.reduce((s, a) => s + costRWF(a), 0);
@@ -516,25 +541,32 @@ export default function AssetsView({ state, dispatch, showToast }) {
             <div className="hr" />
 
             {/* Asset rows */}
-            {g.items.map((a, i) => (
-              <React.Fragment key={a.id}>
-                {i > 0 && <div className="hr" style={{ margin: '0 22px' }} />}
-                <AssetRow
-                  asset={a}
-                  displayCurrency={profile.displayCurrency}
-                  isSelected={selected.has(a.id)}
-                  onToggle={() => toggleOne(a.id)}
-                  onEdit={asset => setEditing(asset)}
-                  onDelete={asset => setPendingDelete({ kind: 'single', asset })}
-                  onSaveValue={(asset, newValue) =>
-                    dispatch({ type: 'upsertAsset', asset: { ...asset, currentValue: newValue } })
-                  }
-                />
-              </React.Fragment>
-            ))}
+            {g.items.map((a, i) => {
+              // Resolve the row's index in the flat ordered list so roving
+              // focus can move across group boundaries.
+              const flatIdx = flatAssets.indexOf(a);
+              return (
+                <React.Fragment key={a.id}>
+                  {i > 0 && <div className="hr" style={{ margin: '0 22px' }} />}
+                  <AssetRow
+                    asset={a}
+                    displayCurrency={profile.displayCurrency}
+                    isSelected={selected.has(a.id)}
+                    onToggle={() => toggleOne(a.id)}
+                    onEdit={asset => setEditing(asset)}
+                    onDelete={asset => setPendingDelete({ kind: 'single', asset })}
+                    onSaveValue={(asset, newValue) =>
+                      dispatch({ type: 'upsertAsset', asset: { ...asset, currentValue: newValue } })
+                    }
+                    rowProps={getItemProps(flatIdx)}
+                  />
+                </React.Fragment>
+              );
+            })}
           </div>
         );
       })}
+      </div>
 
       {/* ─ Empty state ─────────────────────────────────────────── */}
       {filtered.length === 0 && assets.length > 0 && (

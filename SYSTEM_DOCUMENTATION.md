@@ -250,6 +250,15 @@ This is the honest state of the project. Adding Vitest + a smoke test for the re
 
 ### Supabase Edge Function secrets (server-only)
 - `ANTHROPIC_KEY` — used by `ai-proxy`; never exposed to the browser.
+- `RESEND_API_KEY` — used by `send-invitation`; from [resend.com](https://resend.com).
+- `FROM_EMAIL` — verified sender, e.g. `Imari <invites@yourdomain.com>`.
+- `APP_URL` — public app origin used to build accept links, e.g. `https://princenshuti.github.io/imari-portfolio/`.
+
+Deploy the function with:
+```bash
+supabase functions deploy send-invitation
+supabase secrets set RESEND_API_KEY=re_... FROM_EMAIL='Imari <invites@yourdomain.com>' APP_URL='https://princenshuti.github.io/imari-portfolio/'
+```
 
 ### Local development
 ```bash

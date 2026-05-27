@@ -239,25 +239,31 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
   // ── Generate drafts + (optionally) run AI ──────────────────────────────────
   const goToReview = async () => {
     setErr(null);
+    if (!colMap.date) {
+      setErr('Pick the Date column before continuing — every transaction needs a date.');
+      return;
+    }
     try {
       const d = rowsToDrafts(parsed.rows, colMap, curr);
       if (!d.length) throw new Error('No transactions matched. Check your column mapping — debit+credit OR amount+type must be filled.');
-      setDrafts(d);
 
+      let final = d;
       const lowDrafts = d.filter(x => x._confidence === 'low');
       if (aiAvailable && lowDrafts.length > 0) {
+        setDrafts(d);
         setStep('ai');
         setAiProgress({ done: 0, total: d.length });
-        const refined = await aiCategorize(d, {
+        final = await aiCategorize(d, {
           onProgress: (done, total) => setAiProgress({ done, total }),
         });
-        // Sort low-confidence to top so user sees what needs attention first
-        const sorted = [...refined].sort((a, b) => {
-          if (a._confidence === b._confidence) return 0;
-          return a._confidence === 'low' ? -1 : 1;
-        });
-        setDrafts(sorted);
       }
+
+      // Always surface anything that still needs the user's attention first
+      const sorted = [...final].sort((a, b) => {
+        if (a._confidence === b._confidence) return 0;
+        return a._confidence === 'low' ? -1 : 1;
+      });
+      setDrafts(sorted);
       setStep('review');
     } catch (e) { setErr(e.message); setStep('map'); }
   };
@@ -284,17 +290,30 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
 
   // ── Column mapping helpers ─────────────────────────────────────────────────
   const colOpts = ['', ...(parsed?.headers || [])];
-  const colField = (label, key, hint) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <label style={{ fontSize: 12, color: 'var(--ink-2)', width: 120, flexShrink: 0 }}>
-        {label}
-        {hint && <span className="muted" style={{ display: 'block', fontSize: 10, marginTop: 1 }}>{hint}</span>}
-      </label>
-      <select value={colMap[key] || ''} onChange={e => setColMap(m => ({ ...m, [key]: e.target.value || null }))} style={{ ...inputStyle, flex: 1, fontSize: 12 }}>
-        {colOpts.map(o => <option key={o} value={o}>{o || '— skip —'}</option>)}
-      </select>
-    </div>
-  );
+  const colField = (label, key, hint, required = false) => {
+    const missing = required && !colMap[key];
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <label style={{ fontSize: 12, color: 'var(--ink-2)', width: 120, flexShrink: 0 }}>
+          {label}{required && <span style={{ color: 'var(--down)', marginLeft: 2 }}>*</span>}
+          {hint && <span className="muted" style={{ display: 'block', fontSize: 10, marginTop: 1 }}>{hint}</span>}
+        </label>
+        <select
+          value={colMap[key] || ''}
+          onChange={e => setColMap(m => ({ ...m, [key]: e.target.value || null }))}
+          style={{
+            ...inputStyle, flex: 1, fontSize: 12,
+            borderColor: missing ? 'var(--down)' : undefined,
+            background: missing ? 'var(--down-soft)' : undefined,
+          }}
+          aria-required={required}
+          aria-invalid={missing || undefined}
+        >
+          {colOpts.map(o => <option key={o} value={o}>{o || '— skip —'}</option>)}
+        </select>
+      </div>
+    );
+  };
 
   const incCats = INCOME_CATEGORIES;
   const expCats = EXPENSE_CATEGORIES;
@@ -431,13 +450,13 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
             Fill <em>Debit + Credit</em> <strong>or</strong> <em>Amount + Type</em>.
           </div>
           <div className="col" style={{ gap: 12 }}>
-            {colField('Date', 'date')}
+            {colField('Date', 'date', null, true)}
             {colField('Description', 'desc')}
             {colField('Money out', 'debit', 'Debit / Withdrawal / Sent')}
             {colField('Money in', 'credit', 'Credit / Deposit / Received')}
             {colField('Amount', 'amount', 'Single-amount column')}
             {colField('Type', 'type', 'Dr/Cr column')}
-            {colField('Fee / Charge', 'fee', 'Booked as separate utilities expense')}
+            {colField('Fee / Charge', 'fee', 'Booked as separate bank-fees expense')}
           </div>
 
           {/* Preview the first 3 rows */}
