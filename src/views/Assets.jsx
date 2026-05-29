@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { CLASSES, valueRWF, costRWF, fmtBase } from '../data.js';
 import AssetRow from '../components/AssetRow.jsx';
 import AssetEditor from '../components/AssetEditor.jsx';
@@ -8,6 +8,9 @@ import { useRovingFocus } from '../hooks/useRovingFocus.js';
 
 // Canonical group order from CLASSES definition
 const ALL_GROUPS = Array.from(new Set(CLASSES.map(c => c.group)));
+
+// Page size for the asset list (B5). Config constant so it's easy to tune.
+const PAGE_SIZE = 10;
 
 const SORT_OPTIONS = [
   { value: 'default',    label: 'Default (by group)' },
@@ -189,23 +192,52 @@ export default function AssetsView({ state, dispatch, showToast }) {
     return { cost, value, gain, gainPct, count };
   }, [filtered]);
 
-  const visibleIds = useMemo(() => {
-    const ids = new Set();
-    filtered.forEach(g => g.items.forEach(a => ids.add(a.id)));
-    return ids;
-  }, [filtered]);
-
-  // Flat ordered list of visible assets — drives roving-tabindex so arrow
-  // keys move across rows in render order, including across group breaks.
+  // Flat ordered list across all filtered groups — drives pagination + roving focus.
   const flatAssets = useMemo(() => filtered.flatMap(g => g.items), [filtered]);
 
-  // Keyboard nav: arrow keys move row focus; Enter / E edits; Delete /
-  // Backspace deletes; Space toggles selection. Wired on the list wrapper
-  // so users get one Tab stop into the table, then full arrow navigation.
-  const { containerProps, getItemProps } = useRovingFocus(flatAssets.length, {
-    onActivate: (i) => { const a = flatAssets[i]; if (a) setEditing(a); },
+  // ── Pagination (B5) — paginate the filtered/sorted RESULT, 10 per page ──
+  const [page, setPage] = useState(1);
+  const listRef = useRef(null);
+  const focusFirstRowRef = useRef(false);
+  // Reset to page 1 whenever the filtered/sorted set changes.
+  useEffect(() => { setPage(1); }, [typeFilter, locationFilter, sortBy, search]);
+
+  const totalPages = Math.max(1, Math.ceil(flatAssets.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  useEffect(() => { if (page !== safePage) setPage(safePage); }, [safePage]); // clamp when result shrinks
+  const pageStart  = (safePage - 1) * PAGE_SIZE;
+  const pageItems  = useMemo(
+    () => flatAssets.slice(pageStart, pageStart + PAGE_SIZE),
+    [flatAssets, pageStart],
+  );
+  // After Prev/Next, move focus to the first row of the new page (FR-ASSET-7).
+  useEffect(() => {
+    if (!focusFirstRowRef.current) return;
+    focusFirstRowRef.current = false;
+    listRef.current?.querySelector('.asset-row-focusable')?.focus();
+  }, [safePage]);
+  const goToPage = (p) => { focusFirstRowRef.current = true; setPage(Math.min(Math.max(1, p), totalPages)); };
+
+  // Re-bucket the current page's items into their groups for display. Group
+  // headers use the FULL filtered group (allItems) so totals stay meaningful
+  // when a group spans pages; only the page's rows render.
+  const pagedGroups = useMemo(() => {
+    const pageSet = new Set(pageItems.map(a => a.id));
+    return filtered
+      .map(g => ({ ...g, allItems: g.items, items: g.items.filter(a => pageSet.has(a.id)) }))
+      .filter(g => g.items.length > 0);
+  }, [filtered, pageItems]);
+
+  // "Select all visible" = current page; the bulk bar offers an explicit
+  // "select all N" across the whole filtered set.
+  const visibleIds     = useMemo(() => new Set(pageItems.map(a => a.id)), [pageItems]);
+  const allFilteredIds = useMemo(() => new Set(flatAssets.map(a => a.id)), [flatAssets]);
+
+  // Keyboard nav across the current page's rows in render order.
+  const { containerProps, getItemProps } = useRovingFocus(pageItems.length, {
+    onActivate: (i) => { const a = pageItems[i]; if (a) setEditing(a); },
     onItemKeyDown: (e, i) => {
-      const a = flatAssets[i];
+      const a = pageItems[i];
       if (!a) return;
       if (e.key === 'e' || e.key === 'E') { e.preventDefault(); setEditing(a); }
       else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); setPendingDelete({ kind: 'single', asset: a }); }
@@ -423,6 +455,11 @@ export default function AssetsView({ state, dispatch, showToast }) {
                 · {fmtBase(selectedTotal, profile.displayCurrency, { compact: true })} total value
               </span>
             </span>
+            {selected.size < allFilteredIds.size && (
+              <button onClick={() => setSelected(new Set(allFilteredIds))} className="btn btn-ghost" style={{ fontSize: 12 }}>
+                Select all {allFilteredIds.size}
+              </button>
+            )}
             <button onClick={() => setSelected(new Set())} className="btn btn-ghost" style={{ fontSize: 12 }}>
               Deselect all
             </button>
@@ -462,13 +499,15 @@ export default function AssetsView({ state, dispatch, showToast }) {
             so arrow keys move focus across groups in render order. */}
       <div
         {...containerProps}
+        ref={listRef}
         role="listbox"
         aria-label="Assets — use arrow keys to navigate, Enter to edit, Delete to remove, Space to select"
       >
-      {filtered.map(g => {
-        // Recompute group totals from filtered items only
-        const gCost  = g.items.reduce((s, a) => s + costRWF(a), 0);
-        const gValue = g.items.reduce((s, a) => s + valueRWF(a, today), 0);
+      {pagedGroups.map(g => {
+        // Group header totals reflect the FULL filtered group, even when the
+        // group spans pages; only g.items (the current page slice) renders.
+        const gCost  = g.allItems.reduce((s, a) => s + costRWF(a), 0);
+        const gValue = g.allItems.reduce((s, a) => s + valueRWF(a, today), 0);
         const gGain  = gValue - gCost;
         const gPct   = gCost ? (gGain / gCost) * 100 : 0;
 
@@ -479,7 +518,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
               <div className="row" style={{ gap: 10, alignItems: 'center' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: g.color, flexShrink: 0 }} />
                 <div className="font-serif" style={{ fontSize: 17 }}>{g.group}</div>
-                <span className="pill pill-soft">{g.items.length}</span>
+                <span className="pill pill-soft">{g.allItems.length}</span>
               </div>
               <div className="row" style={{ gap: 14, fontSize: 12, flexWrap: 'wrap' }}>
                 <div className="col" style={{ gap: 1, alignItems: 'flex-end' }}>
@@ -542,9 +581,9 @@ export default function AssetsView({ state, dispatch, showToast }) {
 
             {/* Asset rows */}
             {g.items.map((a, i) => {
-              // Resolve the row's index in the flat ordered list so roving
-              // focus can move across group boundaries.
-              const flatIdx = flatAssets.indexOf(a);
+              // Resolve the row's index within the current page so roving
+              // focus moves across group boundaries on this page.
+              const flatIdx = pageItems.indexOf(a);
               return (
                 <React.Fragment key={a.id}>
                   {i > 0 && <div className="hr" style={{ margin: '0 22px' }} />}
@@ -567,6 +606,24 @@ export default function AssetsView({ state, dispatch, showToast }) {
         );
       })}
       </div>
+
+      {/* ─ Pagination controls (B5) ────────────────────────────── */}
+      {flatAssets.length > PAGE_SIZE && (
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
+          <div className="muted" style={{ fontSize: 12 }}>
+            Showing {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, flatAssets.length)} of {flatAssets.length}
+          </div>
+          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={safePage <= 1}
+              onClick={() => goToPage(safePage - 1)} aria-label="Previous page">← Prev</button>
+            <span className="muted num" style={{ fontSize: 12, minWidth: 96, textAlign: 'center' }}>
+              Page {safePage} of {totalPages}
+            </span>
+            <button type="button" className="btn btn-ghost btn-sm" disabled={safePage >= totalPages}
+              onClick={() => goToPage(safePage + 1)} aria-label="Next page">Next →</button>
+          </div>
+        </div>
+      )}
 
       {/* ─ Empty state ─────────────────────────────────────────── */}
       {filtered.length === 0 && assets.length > 0 && (

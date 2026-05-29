@@ -215,10 +215,27 @@ export async function listInvitations(portfolioId) {
   return data;
 }
 
+// Max invited members per portfolio (owner + MAX_INVITES). Config constant so a
+// future paid/Diaspora tier (§10) can raise it per entitlement. Mirrored by the
+// send-invitation edge function, which enforces it authoritatively server-side.
+export const MAX_INVITES = 2;
+
 export async function createInvitation(portfolioId, email, role) {
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user;
   if (!user) throw new Error('Session expired. Please sign in again.');
+
+  // Pre-check the cap so we don't insert an orphan over-limit row. The edge
+  // function re-checks authoritatively (don't rely on the client alone).
+  const [existingMembers, pending] = await Promise.all([
+    listMembers(portfolioId),
+    listInvitations(portfolioId),
+  ]);
+  const invitedCount = existingMembers.filter(m => m.role !== 'owner').length + pending.length;
+  if (invitedCount >= MAX_INVITES) {
+    throw new Error(`Invite limit reached — a portfolio allows the owner plus ${MAX_INVITES} members. Remove someone or revoke a pending invite first.`);
+  }
+
   const { data, error } = await supabase
     .from('portfolio_invitations')
     .insert({
@@ -285,5 +302,52 @@ export async function acceptInvitation(token) {
   if (!supabase) throw new Error('Not configured');
   const { data, error } = await supabase.rpc('accept_invitation', { invitation_token: token });
   if (error) throw error;
+  return data;
+}
+
+// ─── B4: in-portfolio member chat ─────────────────────────────
+export async function listMessages(portfolioId) {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('portfolio_messages')
+    .select('*')
+    .eq('portfolio_id', portfolioId)
+    .order('created_at', { ascending: true })
+    .limit(200);
+  if (error) throw error;
+  return data;
+}
+
+export async function sendMessage(portfolioId, body) {
+  if (!supabase) throw new Error('Not configured');
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
+  if (!user) throw new Error('Session expired. Please sign in again.');
+  const clean = String(body || '').trim().slice(0, 2000);
+  if (!clean) return;
+  const { error } = await supabase
+    .from('portfolio_messages')
+    .insert({ portfolio_id: portfolioId, sender_user_id: user.id, body: clean });
+  if (error) throw error;
+}
+
+/** Realtime INSERT subscription for a portfolio's chat. Returns an unsubscribe fn. */
+export function subscribeMessages(portfolioId, onInsert) {
+  if (!supabase) return () => {};
+  const channel = supabase
+    .channel(`messages:${portfolioId}`)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'portfolio_messages', filter: `portfolio_id=eq.${portfolioId}` },
+      (payload) => onInsert(payload.new))
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}
+
+// ─── §10: entitlements (read-only from the client) ────────────
+export async function getEntitlements(portfolioId) {
+  if (!supabase || !portfolioId) return { tier: 'free', features: [] };
+  const { data, error } = await supabase
+    .from('entitlements').select('*').eq('portfolio_id', portfolioId).maybeSingle();
+  if (error || !data) return { tier: 'free', features: [] };
   return data;
 }

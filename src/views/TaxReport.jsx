@@ -115,7 +115,18 @@ function TaxTable({ columns, rows, footerRow }) {
 // ─── Main view ────────────────────────────────────────────────
 
 export default function TaxReportView({ state, dispatch }) {
-  const { assets, profile } = state;
+  const { assets, profile, cashflows = [] } = state;
+  // §6 — RRA EBM: VAT input credit + turnover from cashflows tagged source:'ebm'.
+  const ebm = (() => {
+    const rows = cashflows.filter(c => c.source === 'ebm');
+    if (rows.length === 0) return null;
+    const purchases = rows.filter(c => c.type === 'expense');
+    const sales = rows.filter(c => c.type === 'income');
+    const sum = (arr, k = 'amount') => arr.reduce((s, c) => s + toBase(c[k] || 0, c.currency || 'RWF'), 0);
+    const vatCredit = purchases.reduce((s, c) => s + toBase(c.vatAmount || 0, c.currency || 'RWF'), 0);
+    const unmatched = purchases.filter(c => !c.matchedCashflowId).length;
+    return { count: rows.length, purchaseTotal: sum(purchases), turnover: sum(sales), vatCredit, unmatched };
+  })();
   const today = new Date();
   const year  = today.getFullYear();
   const [dueDate, setDueDate] = useState('');
@@ -220,6 +231,21 @@ export default function TaxReportView({ state, dispatch }) {
           🖨 Print / Save PDF
         </button>
       </div>
+
+      {/* §6 — RRA EBM VAT input credit (when EBM-sourced cashflows exist) */}
+      {ebm && (
+        <Section title="RRA EBM — VAT input credit" sub="From certified EBM 2.1 invoices on your TIN" accent="var(--gold)">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+            <KpiCard label="EBM purchases" value={fmtBase(ebm.purchaseTotal, profile.displayCurrency, { compact: true })} sub={`${ebm.count} certified invoices`} />
+            <KpiCard label="VAT input credit" value={fmtBase(ebm.vatCredit, profile.displayCurrency, { compact: true })} color="var(--up)" highlight sub="claimable at filing" />
+            {ebm.turnover > 0 && <KpiCard label="Turnover (EBM sales)" value={fmtBase(ebm.turnover, profile.displayCurrency, { compact: true })} />}
+            {ebm.unmatched > 0 && <KpiCard label="Unmatched purchases" value={String(ebm.unmatched)} color="var(--gold)" sub="reconcile to a supplier" />}
+          </div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 12, lineHeight: 1.5 }}>
+            v1 reconciles EBM e-receipt / EIS export files you import. A live VSDC API pull requires RRA accreditation — TIN consent is captured before any sync and is revocable.
+          </div>
+        </Section>
+      )}
 
       {/* Deadline countdown + missing-data audit ────────────────────────
           Two compact alert cards above the summary so the user sees

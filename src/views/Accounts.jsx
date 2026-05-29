@@ -181,10 +181,10 @@ function AccountCard({ acc, displayCurrency, cfCount, lastActivity, onEdit, onDe
           {acc.currency !== displayCurrency && `≈ ${fmtBase(toBase(balance, acc.currency), displayCurrency, { compact: true })}`}
         </div>
         <div className="row" style={{ gap: 2, marginTop: 6 }}>
-          <button type="button" onClick={() => onEdit(acc)} aria-label={`Edit ${acc.bank || acc.wallet || 'account'}`} className="btn-icon-sm">
+          <button type="button" onClick={() => onEdit(acc)} aria-label={`Edit ${acc.bank || acc.wallet || 'account'}`} className="btn-icon-sm is-row-action">
             <span aria-hidden="true">✎</span>
           </button>
-          <button type="button" onClick={() => onDelete(acc)} aria-label={`Delete ${acc.bank || acc.wallet || 'account'}`} className="btn-icon-sm is-danger">
+          <button type="button" onClick={() => onDelete(acc)} aria-label={`Delete ${acc.bank || acc.wallet || 'account'}`} className="btn-icon-sm is-row-action is-danger">
             <span aria-hidden="true">×</span>
           </button>
         </div>

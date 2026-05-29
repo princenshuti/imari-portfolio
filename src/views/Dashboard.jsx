@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   CLASSES, TREND_DOMAINS, valueRWF, costRWF, suggestValue,
   toBase, fmtBase, fmt, GOAL_CATEGORIES,
+  fixedAssetTax, VEHICLE_CATEGORIES, EXPENSE_CATEGORIES,
 } from '../data.js';
 import { getApiKey, completeText } from '../ai.js';
 import { AreaChart, PortfolioChart, BenchmarkBar, Donut } from '../components/charts.jsx';
@@ -10,6 +11,13 @@ import AssetIcon from '../components/AssetIcon.jsx';
 import { filterByRange, calcReturn } from '../services/snapshots.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { monthlyPayment } from '../services/finance.js';
+import { runInsights } from '../engine/insights/index.js';
+import { SEVERITY_RANK } from '../engine/insights/_shared.js';
+import { staleNetWorthInsight, netWorthAsOf } from '../engine/freshness.js';
+import { REFERENCE } from '../engine/insights/refs.js';
+import { projectPension } from '../engine/retirement/index.js';
+import CostOfAbsence from '../components/CostOfAbsence.jsx';
+import MetricWidget from '../components/MetricWidget.jsx';
 
 // ─── Asset classification ──────────────────────────────────────────────────
 // Liquid = cash or near-cash (withdrawable same-day)
@@ -49,95 +57,71 @@ function renderMD(s) {
 }
 
 // ─── AI Insight card ──────────────────────────────────────────────────────
-function DashboardInsight({ state, dispatch }) {
-  const { profile, assets, insight } = state;
+// The Insight Engine decides WHAT to surface (deterministic, testable); the AI
+// only PHRASES it (§2 step 4). If the AI proxy is unreachable, the raw engine
+// headlines still render — graceful degrade, never a blank card (NFR-REL-1).
+function DashboardInsight({ state, dispatch, insights = [] }) {
+  const { profile, insight } = state;
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState(null);
+  const [aiError, setAiError] = useState(false);
 
-  const snapshot = useMemo(() => {
-    const today = new Date();
-    let totalRWF = 0, totalCost = 0;
-    const byGroup = {};
-    const items = assets.map(a => {
-      const cls = CLASSES.find(c => c.kind === a.kind) || CLASSES[CLASSES.length - 1];
-      const cur = a.currentValue !== '' && a.currentValue != null ? a.currentValue : suggestValue(a, today);
-      const vRWF = toBase(cur, a.currency || 'RWF');
-      const cRWF = toBase(a.purchasePrice || 0, a.currency || 'RWF');
-      totalRWF += vRWF; totalCost += cRWF;
-      byGroup[cls.group] = (byGroup[cls.group] || 0) + vRWF;
-      return {
-        name: a.name, class: cls.label, group: cls.group, currency: a.currency,
-        purchasePrice: a.purchasePrice, purchaseDate: a.purchaseDate,
-        currentValue: Math.round(cur),
-        gainPct: a.purchasePrice ? +((cur - a.purchasePrice) / a.purchasePrice * 100).toFixed(1) : 0,
-        valueRWF: Math.round(vRWF),
-      };
-    });
-    const compositionPct = Object.fromEntries(
-      Object.entries(byGroup).map(([k, v]) => [k, +(v / (totalRWF || 1) * 100).toFixed(1)])
-    );
-    return {
-      profile: { name: profile.name, displayCurrency: profile.displayCurrency },
-      totals: {
-        netWorthRWF: Math.round(totalRWF),
-        costBasisRWF: Math.round(totalCost),
-        unrealisedGainRWF: Math.round(totalRWF - totalCost),
-        gainPct: totalCost ? +((totalRWF - totalCost) / totalCost * 100).toFixed(2) : 0,
-      },
-      compositionPct,
-      assets: items,
-    };
-  }, [assets, profile]);
-
-  // Stable hash of user-controlled inputs only — purchasePrice/currentValue/kind/currency
-  // per asset. Excludes time-derived suggestValue() output so timestamp drift across
-  // page loads doesn't trigger needless AI regeneration.
-  const snapshotKey = useMemo(() => JSON.stringify(
-    assets.map(a => [a.id, a.kind, a.currency, a.purchasePrice, a.currentValue, a.yieldPct, a.purchaseDate])
-  ), [assets]);
+  // Cache key: re-narrate only when the engine's output actually changes.
+  const insightsKey = useMemo(() => JSON.stringify(
+    insights.map(i => [i.id, i.dataAsOf, i.costOfAbsence?.amount ?? null])
+  ), [insights]);
 
   const INSIGHT_TTL_MS = 24 * 60 * 60 * 1000; // 24h hard refresh ceiling
 
   const generate = async () => {
     if (pending) return;
     const apiKey = getApiKey();
-    if (!apiKey) { setError('Add your Anthropic API key in Settings to see AI insights.'); return; }
-    setPending(true); setError(null);
-    const prompt = `You are Imari Advisor, an AI financial assistant for ${profile.name || 'the user'} in Rwanda. You see their full portfolio below.
+    if (!apiKey || insights.length === 0) return; // no key → fallback bullets render
+    setPending(true); setAiError(false);
+    const lines = insights.map((i, idx) =>
+      `${idx + 1}. ${i.headline} — ${i.body}${i.costOfAbsence ? ` (cost if ignored: ${i.costOfAbsence.costStatement})` : ''}`
+    ).join('\n');
+    const prompt = `You are Imari Advisor for ${profile.name || 'the user'} in Rwanda. Below are factual insights ALREADY computed from their portfolio. The numbers are correct — do NOT change them and do NOT invent new ones.
 
-Write a SHORT dashboard insight (3 bullet points, max 1 sentence each, total under 80 words) that this person should know RIGHT NOW about THEIR portfolio. Be specific — cite actual asset names and concrete numbers from the data. Each bullet should fit one of:
-  • a concentration / diversification observation
-  • a top performer or laggard worth noting
-  • one actionable next step (savings, tax, rebalance — grounded in Rwanda RRA/BNR/CMA rules)
+Rewrite each insight as ONE short, warm, plain-English bullet (max one sentence, ~20 words). Keep the exact figures. Start each line with "• ". Bold the key number or name with **...**. No greeting, no preamble, no disclaimer.
 
-Tone: warm, plain English, like a friend who's good with money. NO greeting. NO disclaimer. Start each bullet with "• " (bullet + space). Bold key numbers/names with **...**. Display amounts in ${profile.displayCurrency} unless quoting the asset's own currency.
-
-PORTFOLIO DATA:
-${JSON.stringify(snapshot, null, 2)}`;
-
+INSIGHTS:
+${lines}`;
     try {
       const reply = await completeText(apiKey, prompt);
-      dispatch({ type: 'setInsight', insight: { content: reply.trim(), generatedAt: Date.now(), key: snapshotKey } });
-    } catch (e) {
-      setError(e.message || 'Could not reach the AI service.');
+      dispatch({ type: 'setInsight', insight: { content: reply.trim(), generatedAt: Date.now(), key: insightsKey } });
+    } catch {
+      setAiError(true); // fall back to raw engine bullets below
     } finally {
       setPending(false);
     }
   };
 
   useEffect(() => {
-    if (assets.length === 0 || !getApiKey()) return;
+    if (insights.length === 0 || !getApiKey()) return;
     const expired = insight?.generatedAt && (Date.now() - insight.generatedAt > INSIGHT_TTL_MS);
-    if (!insight || insight.key !== snapshotKey || expired) {
+    if (!insight || insight.key !== insightsKey || expired) {
       const t = setTimeout(() => generate(), 600);
       return () => clearTimeout(t);
     }
-  }, [snapshotKey, assets.length]);
+  }, [insightsKey, insights.length]);
 
-  if (assets.length === 0) return null;
+  if (insights.length === 0) return null;
+
   const expired = insight?.generatedAt && (Date.now() - insight.generatedAt > INSIGHT_TTL_MS);
-  const stale = insight && (insight.key !== snapshotKey || expired);
-  const bullets = insight?.content ? insight.content.split(/\n+/).filter(l => l.trim()) : [];
+  const aiFresh = insight?.content && insight.key === insightsKey && !expired;
+  const aiBullets = aiFresh ? insight.content.split(/\n+/).filter(l => l.trim()) : null;
+  const hasKey = !!getApiKey();
+
+  // Raw engine bullets — the deterministic fallback that always works.
+  const engineBullets = insights.map(i => `${i.headline} — ${i.body}`);
+  const bullets = aiBullets || engineBullets;
+  const usingAI = !!aiBullets;
+
+  let footnote;
+  if (pending && !aiBullets) footnote = ' · personalizing…';
+  else if (usingAI && insight?.generatedAt) footnote = ` · ${timeAgo(insight.generatedAt)}`;
+  else if (aiError) footnote = ' · showing computed insights (AI unavailable)';
+  else if (!hasKey) footnote = ' · connect AI in Settings to personalize';
 
   return (
     <div className="dash-insight-card" style={{
@@ -156,24 +140,24 @@ ${JSON.stringify(snapshot, null, 2)}`;
           <div>
             <div className="font-serif" style={{ fontSize: 19, lineHeight: 1.1 }}>What I'm seeing in your portfolio</div>
             <div className="muted" style={{ fontSize: 11, marginTop: 3 }}>
-              Imari Advisor · auto-generated from your {assets.length} assets
-              {insight?.generatedAt && !pending && !stale && ` · ${timeAgo(insight.generatedAt)}`}
-              {stale && ' · portfolio changed — refreshing'}
+              Imari Advisor · {insights.length} insight{insights.length === 1 ? '' : 's'} from your data{footnote}
             </div>
           </div>
         </div>
         <div className="row" style={{ gap: 6, flexShrink: 0 }}>
-          <button onClick={generate} disabled={pending} title="Regenerate" aria-label="Regenerate insight" style={{
-            padding: '7px 12px', borderRadius: 'var(--r-pill)',
-            border: '0.5px solid var(--line-strong)', background: 'var(--paper)',
-            cursor: pending ? 'default' : 'pointer', fontSize: 11, color: 'var(--ink-3)',
-            fontFamily: 'inherit', opacity: pending ? 0.7 : 1,
-            transition: 'background 140ms ease-out, opacity 140ms ease-out',
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-          }}>
-            <span className={`dash-refresh-icon${pending ? ' is-spinning' : ''}`} aria-hidden="true">↻</span>
-            {pending ? 'Refreshing' : 'Refresh'}
-          </button>
+          {hasKey && (
+            <button onClick={generate} disabled={pending} title="Regenerate" aria-label="Regenerate insight" style={{
+              padding: '7px 12px', borderRadius: 'var(--r-pill)',
+              border: '0.5px solid var(--line-strong)', background: 'var(--paper)',
+              cursor: pending ? 'default' : 'pointer', fontSize: 11, color: 'var(--ink-3)',
+              fontFamily: 'inherit', opacity: pending ? 0.7 : 1,
+              transition: 'background 140ms ease-out, opacity 140ms ease-out',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              <span className={`dash-refresh-icon${pending ? ' is-spinning' : ''}`} aria-hidden="true">↻</span>
+              {pending ? 'Refreshing' : 'Refresh'}
+            </button>
+          )}
           <button onClick={() => dispatch({ type: 'nav', to: 'advisor' })} style={{
             padding: '7px 14px', borderRadius: 'var(--r-pill)',
             border: 0, background: 'var(--brand)', color: 'var(--brand-ink)',
@@ -181,52 +165,78 @@ ${JSON.stringify(snapshot, null, 2)}`;
           }}>Open chat →</button>
         </div>
       </div>
-      {pending && bullets.length === 0 && (
-        <div className="col" style={{ gap: 10 }}>
-          {[0, 1, 2].map(i => (
-            <div key={i} className="row" style={{ gap: 10 }}>
-              <span style={{ color: 'var(--brand)', fontSize: 14, opacity: 0.4 }}>•</span>
-              <div style={{
-                flex: 1, height: 14, borderRadius: 4,
-                background: 'linear-gradient(90deg, var(--bg-2) 0%, var(--brand-soft) 50%, var(--bg-2) 100%)',
-                backgroundSize: '200% 100%', animation: 'imari-shimmer 1.6s infinite',
-              }} />
+      <div className="col" style={{ gap: 10 }}>
+        {bullets.map((line, i) => {
+          const text = line.replace(/^[•\-\*]\s*/, '');
+          return (
+            <div key={i} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
+              <span style={{
+                flexShrink: 0, marginTop: 2,
+                width: 22, height: 22, borderRadius: '50%',
+                background: 'var(--brand-soft)', color: 'var(--brand)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'Geist Mono', fontSize: 11, fontWeight: 700,
+              }}>{i + 1}</span>
+              <div style={{ flex: 1, fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)' }}
+                dangerouslySetInnerHTML={{ __html: renderMD(text) }} />
             </div>
-          ))}
-        </div>
-      )}
-      {!pending && error && (
-        <div role="alert" style={{ padding: 14, borderRadius: 'var(--r-md)', background: 'var(--down-soft)', color: 'var(--down-ink)', fontSize: 12.5, lineHeight: 1.5 }}>
-          {error}{!error.includes('Settings') && (
-            <button type="button" onClick={generate} className="btn-link" style={{ marginLeft: 6, color: 'var(--down-ink)', textDecoration: 'underline' }}>Try again</button>
-          )}
-        </div>
-      )}
-      {bullets.length > 0 && (
-        <div className="col" style={{ gap: 10 }}>
-          {bullets.map((line, i) => {
-            const text = line.replace(/^[•\-\*]\s*/, '');
-            return (
-              <div key={i} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
-                <span style={{
-                  flexShrink: 0, marginTop: 2,
-                  width: 22, height: 22, borderRadius: '50%',
-                  background: 'var(--brand-soft)', color: 'var(--brand)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'Geist Mono', fontSize: 11, fontWeight: 700,
-                }}>{i + 1}</span>
-                <div style={{ flex: 1, fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)' }}
-                  dangerouslySetInnerHTML={{ __html: renderMD(text) }} />
-              </div>
-            );
-          })}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
+
+/** §9 — Idle-cash card: running forgone-yield counter + a CMA-licensed broker
+ *  INTRODUCTION (referral only — Imari never executes a trade or moves money). */
+function IdleCashCard({ insight, displayCurrency, now }) {
+  const [showBroker, setShowBroker] = useState(false);
+  const monthly = insight.costOfAbsence?.amount || 0;
+  const days = insight.dataAsOf ? Math.max(0, Math.floor((now - new Date(insight.dataAsOf)) / 86400000)) : 0;
+  const cumulative = (monthly / 30.44) * days;
+  return (
+    <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
+        <div>
+          <div className="font-serif" style={{ fontSize: 19 }}>Idle cash is costing you</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{insight.body}</div>
+        </div>
+        <span className="muted" style={{ fontSize: 9, padding: '3px 8px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', alignSelf: 'flex-start' }}>Reference yield</span>
+      </div>
+      <div className="row" style={{ gap: 22, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div>
+          <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Forgone / month</div>
+          <div className="num" style={{ fontSize: 24, fontWeight: 700, color: 'var(--gold-ink, var(--gold))' }}>{fmtBase(monthly, displayCurrency, { compact: true })}</div>
+        </div>
+        {days > 0 && (
+          <div>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Forgone since {new Date(insight.dataAsOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+            <div className="num" style={{ fontSize: 24, fontWeight: 700, color: 'var(--down)' }}>{fmtBase(cumulative, displayCurrency, { compact: true })}</div>
+          </div>
+        )}
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <button onClick={() => setShowBroker(v => !v)} style={{
+          padding: '8px 16px', borderRadius: 'var(--r-pill)', border: 0,
+          background: 'var(--brand)', color: 'var(--brand-ink)', cursor: 'pointer',
+          fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+        }}>{showBroker ? 'Hide' : 'Request a broker introduction →'}</button>
+        {showBroker && (
+          <div role="region" style={{ marginTop: 12, padding: '14px 16px', borderRadius: 'var(--r-md)', background: 'var(--bg-2)', border: '0.5px solid var(--line)' }}>
+            <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-2)' }}>
+              Imari can introduce you to a <strong>CMA-licensed intermediary</strong> who runs BNR Treasury-bill / bond auctions. This is an <strong>introduction only</strong> — Imari does not give investment advice, execute trades, or move your money. You deal with the broker directly and decide everything yourself.
+            </div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>
+              To proceed, contact your bank's treasury desk or a CMA-licensed broker. <em>Not professional financial advice.</em>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /** Single KPI tile in the executive strip — semantic <button> when clickable */
 function KpiTile({ label, value, sub, accent, delay, onClick }) {
@@ -463,9 +473,14 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
 // ─── Dashboard layout: drag-to-reorder + hideable sections ────────────────
 const SECTION_META = {
   kpi:        { label: 'KPI Strip',              canHide: false },
+  widgets:    { label: 'Key Metrics',             canHide: true  },
   hero:       { label: 'Portfolio Overview',      canHide: false },
   insight:    { label: 'AI Insight',              canHide: true  },
+  retirement: { label: 'Retirement Readiness',     canHide: true  },
+  idlecash:   { label: 'Idle Cash / T-Bill',       canHide: true  },
   financials: { label: 'Financial Monitoring',    canHide: true  },
+  cashflow:   { label: 'Cash Flow by Category',    canHide: true  },
+  macro:      { label: 'Personal Macro Overlay',   canHide: true  },
   chart:      { label: 'Net Worth Timeline',      canHide: true  },
   category:   { label: 'Category Performance',    canHide: true  },
   movers:     { label: 'Top Movers',              canHide: true  },
@@ -473,15 +488,21 @@ const SECTION_META = {
   benchmarks: { label: 'Benchmarks & Goals',      canHide: true  },
   markets:    { label: 'Markets Watchlist',       canHide: true  },
 };
-// "Am I OK?" (kpi+hero) → "What needs attention?" (alerts+insight) → "What changed?"
-// (movers+chart) → "How am I positioned?" (financials+category+benchmarks) → "Markets".
-const DEFAULT_SECTION_ORDER = ['kpi','hero','alerts','insight','movers','chart','financials','category','benchmarks','markets'];
+// "Am I OK?" (kpi+widgets+hero) → "What needs attention?" (alerts+insight) → "What
+// changed?" (movers+chart) → "How am I positioned?" (financials+cashflow+macro+
+// category+benchmarks) → "Markets".
+const DEFAULT_SECTION_ORDER = ['kpi','widgets','hero','alerts','insight','retirement','idlecash','movers','chart','cashflow','financials','macro','category','benchmarks','markets'];
 
 function useDashboardLayout() {
   const [order, setOrder] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('imari-dash-order') || 'null');
-      if (Array.isArray(s) && s.every(x => DEFAULT_SECTION_ORDER.includes(x))) return s;
+      if (Array.isArray(s) && s.every(x => DEFAULT_SECTION_ORDER.includes(x))) {
+        // Append any sections added since this layout was saved so new features
+        // (widgets, cashflow, macro…) appear instead of silently vanishing.
+        const missing = DEFAULT_SECTION_ORDER.filter(x => !s.includes(x));
+        return [...s, ...missing];
+      }
     } catch {}
     return [...DEFAULT_SECTION_ORDER];
   });
@@ -609,6 +630,29 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReord
 export default function DashboardView({ state, dispatch, netWorth: appNetWorth, totalCost: appTotalCost }) {
   const { profile, assets, snapshots = [], goals = [], liabilities = [], cashflows = [] } = state;
   const today = new Date();
+
+  // ── Insight Engine + Cost-of-Absence (Phase 0 foundations) ────
+  // The engine decides WHAT matters (deterministic, tested); the dashboard pins
+  // the single highest-severity cost above the KPI strip and lets the AI card
+  // narrate the rest. Dismissals are session-local — a cost re-surfaces on reload
+  // or when the underlying data changes.
+  const [dismissedCosts, setDismissedCosts] = useState(() => new Set());
+  const engine = useMemo(
+    () => runInsights(state, { now: today, dismissed: dismissedCosts }),
+    [state, dismissedCosts],
+  );
+  const pinnedCost = useMemo(() => {
+    const rank = c => SEVERITY_RANK[c?.costOfAbsence?.severity] || 0;
+    const candidates = [engine.topCost, staleNetWorthInsight(state, { now: today })]
+      .filter(Boolean)
+      .filter(c => !dismissedCosts.has(c.id));
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => rank(b) - rank(a) || (b.costOfAbsence?.amount || 0) - (a.costOfAbsence?.amount || 0));
+    return candidates[0];
+  }, [engine, state, dismissedCosts]);
+  const dismissCost = useCallback((id) => {
+    setDismissedCosts(prev => new Set(prev).add(id));
+  }, []);
 
   // Live market overrides for the "Markets you watch" watchlist. Reads from the
   // same context Trends uses, so USD/RWF (and crypto, gold, S&P) shows the same
@@ -855,6 +899,88 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
   const [chartRange, setChartRange] = useState('3M');
   const chartSnaps = useMemo(() => filterByRange(snapshots, chartRange), [snapshots, chartRange]);
   const portfolioReturn = useMemo(() => calcReturn(chartSnaps), [chartSnaps]);
+  // B11: same-period prior-year comparison + synthetic-seed honesty flag.
+  const yearAgo = useMemo(() => {
+    const sorted = [...(snapshots || [])].sort((a, b) => a.date.localeCompare(b.date));
+    if (sorted.length < 2) return null;
+    const last = sorted[sorted.length - 1];
+    const targetMs = new Date(last.date).getTime() - 365 * 86400000;
+    // Closest snapshot to one year before the latest.
+    let best = null, bestGap = Infinity;
+    for (const s of sorted) {
+      const gap = Math.abs(new Date(s.date).getTime() - targetMs);
+      if (gap < bestGap) { bestGap = gap; best = s; }
+    }
+    if (!best || bestGap > 75 * 86400000 || !best.netWorth) return null; // need a point near a year back
+    const delta = last.netWorth - best.netWorth;
+    return { delta, pct: (delta / best.netWorth) * 100, since: best.date, synthetic: !!best.synthetic };
+  }, [snapshots]);
+  const chartHasSynthetic = useMemo(() => chartSnaps.some(s => s.synthetic), [chartSnaps]);
+
+  // ── B10: expense-by-category for the dashboard (matches Cash Flow module) ──
+  const expenseByCategory = useMemo(() => {
+    const monthIdx = (d) => d.getFullYear() * 12 + d.getMonth();
+    const curM = monthIdx(today);
+    const forMonth = (target) => {
+      const cats = {};
+      cashflows.forEach(cf => {
+        if (cf.type !== 'expense') return;
+        const d = new Date(cf.date);
+        const dIdx = monthIdx(d);
+        const base = toBase(cf.amount || 0, cf.currency || 'RWF');
+        let amt = 0;
+        if (cf.recurring && cf.recurring !== 'once') {
+          if (dIdx <= target) amt = cf.recurring === 'quarterly' ? base / 3 : cf.recurring === 'annually' ? base / 12 : base;
+        } else if (dIdx === target) {
+          amt = base;
+        }
+        if (amt > 0) { const c = cf.category || 'other-exp'; cats[c] = (cats[c] || 0) + amt; }
+      });
+      return cats;
+    };
+    const cur = forMonth(curM);
+    const prev = forMonth(curM - 1);
+    const total = Object.values(cur).reduce((s, v) => s + v, 0);
+    const rows = Object.entries(cur)
+      .map(([id, amount]) => {
+        const meta = EXPENSE_CATEGORIES.find(c => c.id === id);
+        const prevAmt = prev[id] || 0;
+        return {
+          id, label: meta?.label || id, color: meta?.color || 'var(--ink-3)',
+          amount, pct: total > 0 ? (amount / total) * 100 : 0,
+          momPct: prevAmt > 0 ? ((amount - prevAmt) / prevAmt) * 100 : null,
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+    return { rows, total };
+  }, [cashflows]);
+
+  // ── B17: personalized macro (NISR CPI Reference + Modeled category weights) ──
+  const macroOverlay = useMemo(() => {
+    const cpiDom = TREND_DOMAINS.find(d => d.id === 'cpi');
+    const rseDom = TREND_DOMAINS.find(d => d.id === 'rse-asi');
+    const headlineCpi = cpiDom?.value ?? 5.1;
+    // Modeled per-category YoY inflation (illustrative; provenance = Modeled).
+    const CAT_INFL = { food: 7, rent: 6, 'school-fees': 9, transport: 8, utilities: 5, healthcare: 6, insurance: 4, 'loan-repay': 0, 'sacco-cont': 0, entertainment: 5, 'bank-fees': 3, 'other-exp': 5 };
+    let personalCpi = headlineCpi, personalized = false;
+    if (expenseByCategory.total > 0) {
+      personalCpi = expenseByCategory.rows.reduce(
+        (s, r) => s + (r.amount / expenseByCategory.total) * (CAT_INFL[r.id] ?? headlineCpi), 0);
+      personalized = true;
+    }
+    const rseAssets = assets.filter(a => a.kind === 'rse-equity');
+    let rseGain = null;
+    if (rseAssets.length) {
+      const v = rseAssets.reduce((s, a) => s + valueRWF(a, today), 0);
+      const c = rseAssets.reduce((s, a) => s + costRWF(a), 0);
+      rseGain = c > 0 ? ((v - c) / c) * 100 : 0;
+    }
+    return {
+      headlineCpi, personalCpi, personalized, cpiAsOf: cpiDom?.asOf,
+      rseGain, rseChange: rseDom?.change ?? 0, rseAsOf: rseDom?.asOf,
+      nominalYoY: yearAgo?.pct ?? null,
+    };
+  }, [assets, expenseByCategory, yearAgo]);
 
   const benchmarks = [
     { label: 'USD/RWF appreciation',   ret: 1.2 },
@@ -938,6 +1064,59 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         />
       );
       return <div className="dash-kpi-grid">{tiles}</div>;
+    })(),
+
+    // ── B6–B9 Key-metric widgets (shared MetricWidget on engine numbers) ──
+    widgets: (() => {
+      const wAsOf = netWorthAsOf(state);
+      const avgMonthlyExpense = totExp6M / 6;
+      const liquid = stats.liquidValue || 0;
+      const months = avgMonthlyExpense > 0 ? liquid / avgMonthlyExpense : null;
+      const nav = (to) => dispatch({ type: 'nav', to });
+
+      // Tax estimate: Fixed Asset Tax (properties) + Vehicle Levy + nearest deadline.
+      const nextAnnual = (m, d) => { const y = today.getFullYear(); let dt = new Date(y, m, d, 23, 59, 59); if (dt < today) dt = new Date(y + 1, m, d, 23, 59, 59); return dt; };
+      let fat = 0; assets.filter(a => a.kind === 'realestate-land' || a.kind === 'realestate-house').forEach(a => { fat += fixedAssetTax(a, valueRWF(a, today)).tax; });
+      let levy = 0; assets.filter(a => a.kind === 'vehicle').forEach(a => { levy += VEHICLE_CATEGORIES.find(v => v.id === a.vehicleCategory)?.levy ?? 50_000; });
+      const taxTotal = fat + levy;
+      const taxDeadline = [fat > 0 ? nextAnnual(2, 31) : null, levy > 0 ? nextAnnual(11, 31) : null].filter(Boolean).sort((a, b) => a - b)[0] || null;
+      const taxDays = taxDeadline ? Math.ceil((taxDeadline - today) / 86400000) : null;
+
+      // Investable surplus = liquid − a 3-month emergency buffer.
+      const buffer = avgMonthlyExpense > 0 ? avgMonthlyExpense * 3 : 0;
+      const investable = Math.max(0, liquid - buffer);
+      const forgoneYr = investable * REFERENCE.tBillYieldPct / 100;
+
+      const widgets = [
+        <MetricWidget key="cash" delay={0} title="Cash in Hand"
+          value={fmtBase(liquid, profile.displayCurrency, { compact: liquid > 1e7 })}
+          subtext={months != null ? `${months.toFixed(1)} months of expenses` : 'cash + mobile money + bank'}
+          asOf={wAsOf} now={today} deepLink="accounts" onNav={nav}
+          severity={months != null && months < 3 ? 'warning' : 'good'}
+          costHook={months != null && months < 3 ? 'Below the 3-month safety floor — thin cover if income pauses.' : undefined} />,
+      ];
+      if (taxTotal > 0) widgets.push(
+        <MetricWidget key="tax" delay={40} title="Tax Estimate"
+          value={fmtBase(taxTotal, profile.displayCurrency, { compact: taxTotal > 1e7 })}
+          subtext={taxDays != null ? `next deadline in ${taxDays} days` : 'RRA obligations'}
+          asOf={wAsOf} now={today} deepLink="tax" onNav={nav}
+          severity={taxDays != null && taxDays <= 30 ? 'warning' : 'info'}
+          costHook="Estimate, not a filing — late penalties accrue if a deadline is missed." />);
+      if (liabilities.length > 0) widgets.push(
+        <MetricWidget key="debt" delay={80} title="Debt"
+          value={fmtBase(totalDebt, profile.displayCurrency, { compact: totalDebt > 1e7 })}
+          subtext={`${debtToAsset.toFixed(1)}% debt-to-asset`}
+          asOf={wAsOf} now={today} deepLink="liabilities" onNav={nav}
+          severity={debtToAsset > 50 ? 'warning' : 'info'}
+          costHook={financialStats.monthlyObligations > 0 ? `${fmtBase(financialStats.monthlyObligations, profile.displayCurrency, { compact: true })}/mo in repayments.` : undefined} />);
+      widgets.push(
+        <MetricWidget key="investable" delay={120} title="Investable"
+          value={fmtBase(investable, profile.displayCurrency, { compact: investable > 1e7 })}
+          subtext="liquid minus a 3-month buffer"
+          asOf={wAsOf} now={today} deepLink="trends" onNav={nav}
+          severity={investable > REFERENCE.idleCashFloorRWF ? 'warning' : 'good'}
+          costHook={investable > REFERENCE.idleCashFloorRWF ? `Idle — at ~${REFERENCE.tBillYieldPct}% T-bill that's ~${fmtBase(forgoneYr, profile.displayCurrency, { compact: true })}/yr forgone.` : undefined} />);
+      return <div className="dash-kpi-grid">{widgets}</div>;
     })(),
 
     hero: (
@@ -1092,7 +1271,71 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       </div>
     ),
 
-    insight: <DashboardInsight state={state} dispatch={dispatch} />,
+    insight: <DashboardInsight state={state} dispatch={dispatch} insights={engine.insights} />,
+
+    // ── §9: idle-cash card (forgone-yield counter + broker introduction) ──
+    idlecash: (() => {
+      const ins = engine.insights.find(i => i.id === 'idle-cash-yield-gap');
+      return ins ? <IdleCashCard insight={ins} displayCurrency={profile.displayCurrency} now={today} /> : null;
+    })(),
+
+    // ── §5/B15: Retirement Readiness tile ──
+    retirement: (() => {
+      const pens = assets.filter(a => a.kind === 'rssb' || a.kind === 'ejoheza');
+      if (pens.length === 0) return null;
+      const contributionsToDate = pens.reduce((s, a) => s + valueRWF(a, today), 0);
+      const monthlyContribution = pens.reduce((s, a) => s + (+a.monthlyContribution || 0), 0);
+      const employerMatch = pens.reduce((s, a) => s + (+a.employerMatch || 0), 0);
+      const ageAsset = pens.find(a => a.currentAge);
+      const currentAge = ageAsset ? +ageAsset.currentAge : null;
+      const annualSalary = pens.reduce((s, a) => Math.max(s, +a.annualSalary || 0), 0);
+      const proj = projectPension({ currentAge, contributionsToDate, monthlyContribution, employerMatch, annualSalary, retirementAge: 60 });
+      const lowReplacement = proj?.replacementRatio != null && proj.replacementRatio < 50;
+      return (
+        <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
+            <div>
+              <div className="font-serif" style={{ fontSize: 19 }}>Retirement readiness</div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>RSSB / Ejo Heza · projected to age 60 · modeled</div>
+            </div>
+          </div>
+          {!proj ? (
+            <div className="muted" style={{ fontSize: 12.5 }}>Add your age on the pension asset to project your replacement ratio and readiness score.</div>
+          ) : (
+            <div className="row" style={{ gap: 26, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              {proj.readiness != null && (
+                <div>
+                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Readiness</div>
+                  <div className="num" style={{ fontSize: 28, fontWeight: 700, color: proj.readiness >= 80 ? 'var(--up)' : proj.readiness >= 50 ? 'var(--gold)' : 'var(--down)' }}>{proj.readiness}<span style={{ fontSize: 16 }}>/100</span></div>
+                </div>
+              )}
+              <div>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Projected pot @60</div>
+                <div className="num" style={{ fontSize: 22, fontWeight: 700 }}>{fmtBase(proj.projectedPot, profile.displayCurrency, { compact: true })}</div>
+              </div>
+              <div>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Monthly pension</div>
+                <div className="num" style={{ fontSize: 22, fontWeight: 700 }}>{fmtBase(proj.monthlyPension, profile.displayCurrency, { compact: true })}</div>
+              </div>
+              {proj.replacementRatio != null && (
+                <div>
+                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Replacement</div>
+                  <div className="num" style={{ fontSize: 22, fontWeight: 700, color: lowReplacement ? 'var(--down)' : 'var(--ink)' }}>{Math.floor(proj.replacementRatio)}%</div>
+                </div>
+              )}
+            </div>
+          )}
+          {lowReplacement && (
+            <div style={{ marginTop: 14 }}>
+              <CostOfAbsence severity="warning"
+                costStatement={`At your current contributions you'll replace only ${Math.floor(proj.replacementRatio)}% of income at 60 — below a comfortable 60%. Topping up Ejo Heza closes the gap.`}
+                action={{ label: 'Review pension', to: 'assets' }}
+                onAction={(to) => dispatch({ type: 'nav', to })} />
+            </div>
+          )}
+        </div>
+      );
+    })(),
 
     financials: (assets.length > 0 || cashflows.length > 0) ? (() => {
       const fs = financialStats;
@@ -1304,6 +1547,14 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
               Net worth vs cost basis · {portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(1)}% this period
             </div>
+            {yearAgo && (
+              <div style={{ fontSize: 11, marginTop: 4, color: 'var(--ink-2)' }}>
+                <span aria-hidden="true" style={{ color: yearAgo.delta >= 0 ? 'var(--up)' : 'var(--down)' }}>{yearAgo.delta >= 0 ? '▲' : '▼'}</span>{' '}
+                vs 1 year ago: <strong style={{ color: yearAgo.delta >= 0 ? 'var(--up)' : 'var(--down)' }}>
+                  {yearAgo.delta >= 0 ? '+' : ''}{fmtBase(yearAgo.delta, profile.displayCurrency, { compact: true })} ({yearAgo.pct >= 0 ? '+' : ''}{yearAgo.pct.toFixed(1)}%)
+                </strong>
+              </div>
+            )}
           </div>
           <div className="row" style={{ gap: 6 }}>
             {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
@@ -1317,8 +1568,122 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           </div>
         </div>
         <PortfolioChart snapshots={chartSnaps} displayCurrency={profile.displayCurrency} height={200} />
+        {chartHasSynthetic && (
+          <div className="muted" style={{ fontSize: 10.5, marginTop: 8, fontStyle: 'italic' }}>
+            Early history is a synthetic seed for illustration — real daily snapshots accrue from when you started using Imari.
+          </div>
+        )}
       </div>
     ),
+
+    // ── B10: cash-flow by category (matches the Cash Flow module) ──
+    cashflow: expenseByCategory.rows.length > 0 ? (
+      <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16, gap: 10 }}>
+          <div>
+            <div className="font-serif" style={{ fontSize: 19 }}>Where your money goes</div>
+            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+              This month · {fmtBase(expenseByCategory.total, profile.displayCurrency, { compact: true })} across {expenseByCategory.rows.length} categories
+            </div>
+          </div>
+          <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit', padding: 0 }}>
+            Open Cash Flow →
+          </button>
+        </div>
+        <div className="row" style={{ gap: 22, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Donut size={104} thickness={14}
+            slices={expenseByCategory.rows.map(r => ({ value: r.amount, color: r.color, label: r.label }))}
+            ariaLabel={`Expenses by category: ${expenseByCategory.rows.slice(0, 5).map(r => `${r.label} ${r.pct.toFixed(0)} percent`).join(', ')}`} />
+          <div className="col" style={{ flex: 1, minWidth: 240, gap: 9 }}>
+            {expenseByCategory.rows.slice(0, 6).map(r => (
+              <button key={r.id} onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} className="dash-link"
+                style={{ all: 'unset', cursor: 'pointer', display: 'block' }}
+                aria-label={`${r.label}: ${fmtBase(r.amount, profile.displayCurrency, { compact: true })}, ${r.pct.toFixed(0)}% of spend`}>
+                <div className="row" style={{ justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                  <div className="row" style={{ gap: 8, minWidth: 0, alignItems: 'center' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</span>
+                  </div>
+                  <div className="row" style={{ gap: 10, flexShrink: 0, alignItems: 'center' }}>
+                    {r.momPct != null && (
+                      <span style={{ fontSize: 10.5, color: r.momPct >= 0 ? 'var(--down)' : 'var(--up)' }}>
+                        <span aria-hidden="true">{r.momPct >= 0 ? '▲' : '▼'}</span>{Math.abs(r.momPct).toFixed(0)}%
+                      </span>
+                    )}
+                    <span className="num" style={{ fontSize: 12.5, fontWeight: 600 }}>{fmtBase(r.amount, profile.displayCurrency, { compact: true })}</span>
+                    <span className="muted num" style={{ fontSize: 10.5, minWidth: 34, textAlign: 'right' }}>{r.pct.toFixed(0)}%</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    ) : null,
+
+    // ── B17: personalized macro overlay (provenance-tagged) ──
+    macro: (() => {
+      const m = macroOverlay;
+      const Pill = ({ kind, asOf }) => (
+        <span className="muted" style={{ fontSize: 9, padding: '2px 6px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>
+          {kind}{asOf ? ` · ${asOf}` : ''}
+        </span>
+      );
+      const Card = ({ title, children }) => (
+        <div className="card" style={{ padding: 18, flex: 1, minWidth: 240 }}>{title}{children}</div>
+      );
+      const realYoY = m.nominalYoY != null ? m.nominalYoY - m.headlineCpi : null;
+      return (
+        <div>
+          <div className="font-serif" style={{ fontSize: 19, marginBottom: 4 }}>Your personal macro</div>
+          <div className="muted" style={{ fontSize: 11, marginBottom: 14 }}>How Rwanda's economy lands on your money — not the headlines.</div>
+          <div className="row" style={{ gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
+            {/* Personal inflation */}
+            <Card title={
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
+                <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Your inflation</span>
+                <Pill kind={m.personalized ? 'Modeled' : 'Reference'} asOf={m.cpiAsOf} />
+              </div>
+            }>
+              <div className="num" style={{ fontSize: 24, fontWeight: 700, color: m.personalCpi > m.headlineCpi ? 'var(--down)' : 'var(--ink)' }}>{m.personalCpi.toFixed(1)}%</div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                Headline CPI {m.headlineCpi}% · {m.personalized ? 'weighted by your spending mix' : 'add expenses to personalize'}
+              </div>
+              {m.personalized && m.personalCpi > m.headlineCpi && (
+                <div style={{ fontSize: 11, marginTop: 8, color: 'var(--ink-2)' }}>Your basket inflates faster than the national average.</div>
+              )}
+            </Card>
+            {/* Real net-worth growth */}
+            <Card title={
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
+                <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Real growth (1y)</span>
+                <Pill kind="Reference" asOf={m.cpiAsOf} />
+              </div>
+            }>
+              {realYoY != null ? (
+                <>
+                  <div className="num" style={{ fontSize: 24, fontWeight: 700, color: realYoY >= 0 ? 'var(--up)' : 'var(--down)' }}>{realYoY >= 0 ? '+' : ''}{realYoY.toFixed(1)}%</div>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Nominal {m.nominalYoY >= 0 ? '+' : ''}{m.nominalYoY.toFixed(1)}% − CPI {m.headlineCpi}% = real purchasing power</div>
+                </>
+              ) : (
+                <div className="muted" style={{ fontSize: 12 }}>Needs ~a year of history to compare real vs nominal.</div>
+              )}
+            </Card>
+            {/* RSE vs benchmark */}
+            {m.rseGain != null && (
+              <Card title={
+                <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
+                  <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>RSE vs All-Share</span>
+                  <Pill kind="Reference" asOf={m.rseAsOf} />
+                </div>
+              }>
+                <BenchmarkBar label="You vs RSESI" portfolioReturn={m.rseGain} benchmarkReturn={m.rseChange} />
+              </Card>
+            )}
+          </div>
+        </div>
+      );
+    })(),
 
     category: stats.groups.length > 0 ? (
       <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
@@ -1529,6 +1894,32 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         .dash-arrange-btn { transition: background 0.14s ease-out, color 0.14s ease-out, box-shadow 0.14s ease-out, border-color 0.14s ease-out; }
         .dash-arrange-btn:active { transform: scale(0.97); }
       `}</style>
+
+      {/* ── Pinned Cost-of-Absence (§1) — exactly one highest-severity item ── */}
+      {pinnedCost ? (
+        <CostOfAbsence
+          severity={pinnedCost.costOfAbsence.severity}
+          headline={pinnedCost.headline}
+          costStatement={pinnedCost.costOfAbsence.costStatement}
+          action={pinnedCost.costOfAbsence.action}
+          asOf={pinnedCost.dataAsOf}
+          now={today}
+          onAction={(to) => dispatch({ type: 'nav', to })}
+          onDismiss={() => dismissCost(pinnedCost.id)}
+        />
+      ) : assets.length > 0 ? (
+        <div role="status" style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '12px 16px', marginBottom: 16, borderRadius: 'var(--r-lg)',
+          background: 'color-mix(in oklab, var(--up) 7%, var(--paper))',
+          border: '0.5px solid color-mix(in oklab, var(--up) 28%, transparent)',
+        }}>
+          <span aria-hidden="true" style={{ color: 'var(--up)', fontSize: 15 }}>✓</span>
+          <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+            Nothing urgent today — no accruing costs or deadlines in your data right now.
+          </span>
+        </div>
+      ) : null}
 
       {/* ── Arrange button ─────────────────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: editMode ? 10 : 8 }}>

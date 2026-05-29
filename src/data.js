@@ -39,17 +39,36 @@ export function fromBase(amountRWF, currency) {
   const live = LIVE_FX[currency]?.sell;
   return amountRWF / (live ?? FX[currency] ?? 1);
 }
+// Floor toward −∞ (never round UP) so a displayed figure never exceeds the real
+// value. Floor (not trunc) is correct for BOTH signs: +118.9M → 118M, and a
+// −118.9M loss → −119M (never understated). Overstating wealth — or understating
+// a loss — is a trust failure in a money app.
+function floorTo(val, decimals) {
+  const f = 10 ** decimals;
+  return Math.floor(val * f) / f;
+}
+
+/** Plain number, floored to `maxDecimals` (never rounds up). Thousands-grouped. */
+export function fmtNum(value, maxDecimals = 2) {
+  if (value == null || isNaN(value)) return '—';
+  return floorTo(value, maxDecimals).toLocaleString('en-US', { maximumFractionDigits: maxDecimals });
+}
+
 export function fmt(amount, currency = 'RWF', opts = {}) {
   if (amount == null || isNaN(amount)) return '—';
   const cur = CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
-  const sign = amount < 0 ? '-' : '';
   const abs = Math.abs(amount);
   const compact = opts.compact ?? false;
-  let body;
-  if (compact && abs >= 1_000_000_000) body = (abs/1_000_000_000).toFixed(abs >= 10_000_000_000 ? 0 : 1) + 'B';
-  else if (compact && abs >= 1_000_000) body = (abs/1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1) + 'M';
-  else if (compact && abs >= 1_000) body = (abs/1_000).toFixed(0) + 'k';
-  else body = abs.toLocaleString('en-US', { maximumFractionDigits: opts.decimals ?? 0 });
+  let disp, dec, suffix = '';
+  if (compact && abs >= 1_000_000_000) { dec = abs >= 10_000_000_000 ? 0 : 1; disp = floorTo(amount / 1_000_000_000, dec); suffix = 'B'; }
+  else if (compact && abs >= 1_000_000) { dec = abs >= 10_000_000 ? 0 : 1; disp = floorTo(amount / 1_000_000, dec); suffix = 'M'; }
+  else if (compact && abs >= 1_000) { dec = 0; disp = floorTo(amount / 1_000, dec); suffix = 'k'; }
+  else { dec = opts.decimals ?? 0; disp = floorTo(amount, dec); }
+  const sign = disp < 0 ? '-' : '';
+  const mag = Math.abs(disp);
+  const body = suffix
+    ? mag.toFixed(dec) + suffix
+    : mag.toLocaleString('en-US', { maximumFractionDigits: dec });
   return `${sign}${cur.symbol === cur.code ? cur.code + ' ' : cur.symbol}${body}`;
 }
 export function fmtBase(amountRWF, displayCurrency, opts) {
@@ -135,6 +154,18 @@ export const CLASSES = [
     fields:['debtor','dueDate','yieldPct'],
     rule: (a, today) => simpleGrowth(a, (a.yieldPct || 0) / 100, today),
     note: 'Accrues at agreed rate',
+  },
+  {
+    kind:'rssb', label:'RSSB pension (Imisanzu)', group:'Pension', glyph:'⛨', color:'var(--sky)',
+    fields:['monthlyContribution','employerMatch','currentAge','annualSalary'],
+    rule: (a) => a.currentValue || a.purchasePrice || 0,
+    note: 'Value = contributions to date; projection uses contributions + your age',
+  },
+  {
+    kind:'ejoheza', label:'Ejo Heza (long-term savings)', group:'Pension', glyph:'⛨', color:'var(--sky)',
+    fields:['monthlyContribution','employerMatch','currentAge','annualSalary'],
+    rule: (a) => a.currentValue || a.purchasePrice || 0,
+    note: 'Long-term savings scheme — value = contributions to date',
   },
   {
     kind:'other', label:'Other', group:'Other', glyph:'·', color:'var(--ink-3)',

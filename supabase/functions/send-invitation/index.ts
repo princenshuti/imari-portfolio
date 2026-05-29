@@ -110,6 +110,10 @@ interface RequestBody {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+// Max invited members per portfolio (owner + MAX_INVITES). Overridable via env
+// so a paid tier can raise it without redeploying. Mirrors cloud.js MAX_INVITES.
+const MAX_INVITES = Number(Deno.env.get('MAX_INVITES') ?? '2');
+
 Deno.serve(async (req: Request) => {
   const CORS = corsHeaders(req.headers.get('Origin'));
   const reply = (body: unknown, status = 200) => json(body, status, CORS);
@@ -166,6 +170,20 @@ Deno.serve(async (req: Request) => {
     .single();
   if (memErr || membership?.role !== 'owner') {
     return reply({ error: 'forbidden — only the portfolio owner can send invitations' }, 403);
+  }
+
+  // 3.5 Enforce the invite cap (B3): owner + MAX_INVITES invited members.
+  // Count non-owner members + pending (unaccepted) invitations. pendingCount
+  // includes the invitation being sent, so a total over the cap means this is
+  // the (cap+1)th — reject it. A resend at exactly the cap stays allowed.
+  const [{ count: memberCount }, { count: pendingCount }] = await Promise.all([
+    admin.from('portfolio_members').select('id', { count: 'exact', head: true })
+      .eq('portfolio_id', inv.portfolio_id).neq('role', 'owner'),
+    admin.from('portfolio_invitations').select('id', { count: 'exact', head: true })
+      .eq('portfolio_id', inv.portfolio_id).is('accepted_at', null),
+  ]);
+  if ((memberCount ?? 0) + (pendingCount ?? 0) > MAX_INVITES) {
+    return reply({ error: `Invite limit reached — a portfolio allows the owner plus ${MAX_INVITES} members.` }, 409);
   }
 
   // 4. Look up portfolio profile for inviter name.

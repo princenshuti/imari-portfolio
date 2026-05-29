@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { CURRENCIES, MILESTONES, LIVE_FX } from '../data.js';
+import { CURRENCIES, MILESTONES, LIVE_FX, fmtNum } from '../data.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { useT, SUPPORTED_LOCALES } from '../contexts/I18nContext.jsx';
 import { exportJSON, importJSONFile } from '../store.js';
 import { getApiKey, setApiKey, hasEnvKey } from '../ai.js';
-import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, sendInvitationEmail, isConfigured } from '../cloud.js';
+import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, sendInvitationEmail, isConfigured, MAX_INVITES } from '../cloud.js';
+import PortfolioChat from '../components/PortfolioChat.jsx';
 import { Field, inputStyle } from '../components/Field.jsx';
 import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
 import { RowSkeleton } from '../components/Skeleton.jsx';
@@ -141,6 +142,10 @@ function MembersSection({ portfolioId, role, session }) {
 
   if (!isConfigured || !portfolioId) return null;
   const isOwner = role === 'owner';
+  // Invite usage (B3): owner + MAX_INVITES invited members. Counts non-owner
+  // members + pending invitations; the form disables at the cap.
+  const invitedCount = members.filter(m => m.role !== 'owner').length + invitations.length;
+  const atCap = invitedCount >= MAX_INVITES;
 
   return (
     <Section
@@ -150,17 +155,25 @@ function MembersSection({ portfolioId, role, session }) {
         : 'You can view who has access to this portfolio. Only the owner can invite or remove members.'}
     >
       {isOwner && (
-        <form onSubmit={invite} className="row" style={{ gap: 8, marginBottom: 18 }}>
-          <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="invite-friend@example.com" style={{ ...inputStyle, flex: 1 }} />
-          <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} style={{ ...inputStyle, width: 130 }}>
-            <option value="editor">Editor</option>
-            <option value="viewer">Viewer</option>
-          </select>
-          <button type="submit" disabled={busy} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
-            {busy ? 'Sending…' : '＋ Send invite'}
-          </button>
-        </form>
+        <>
+          <form onSubmit={invite} className="row" style={{ gap: 8, marginBottom: atCap ? 8 : 18 }}>
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+              disabled={atCap}
+              placeholder="invite-friend@example.com" style={{ ...inputStyle, flex: 1, opacity: atCap ? 0.55 : 1 }} />
+            <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} disabled={atCap} style={{ ...inputStyle, width: 130, opacity: atCap ? 0.55 : 1 }}>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+            <button type="submit" disabled={busy || atCap} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
+              {busy ? 'Sending…' : '＋ Send invite'}
+            </button>
+          </form>
+          <div className="muted" style={{ fontSize: 11, marginBottom: 18 }}>
+            {atCap
+              ? `${invitedCount} of ${MAX_INVITES} member slots used — remove someone or revoke a pending invite to add another.`
+              : `${invitedCount} of ${MAX_INVITES} member slots used.`}
+          </div>
+        </>
       )}
 
       {info && (
@@ -269,6 +282,9 @@ function MembersSection({ portfolioId, role, session }) {
           )}
         </>
       )}
+
+      {/* B4 — in-portfolio member chat (realtime, members only) */}
+      {portfolioId && <PortfolioChat portfolioId={portfolioId} session={session} />}
     </Section>
   );
 }
@@ -309,10 +325,8 @@ function MilestoneSection({ profile, dispatch, showToast }) {
 
   const reset = () => save(MILESTONES.slice());
 
-  const fmt = (n) => n >= 1e9 ? (n / 1e9).toFixed(n % 1e9 === 0 ? 0 : 1) + 'B'
-    : n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1) + 'M'
-    : n >= 1e3 ? (n / 1e3).toFixed(n % 1e3 === 0 ? 0 : 1) + 'K'
-    : String(n);
+  // Floor (never round up) the milestone chip label.
+  const fmt = (n) => `${fmtNum(n / (n >= 1e9 ? 1e9 : n >= 1e6 ? 1e6 : n >= 1e3 ? 1e3 : 1), 1)}${n >= 1e9 ? 'B' : n >= 1e6 ? 'M' : n >= 1e3 ? 'K' : ''}`;
 
   return (
     <Section title="Net Worth Milestones" subtitle="Celebrate when your net worth crosses these RWF thresholds.">
@@ -347,6 +361,75 @@ function MilestoneSection({ profile, dispatch, showToast }) {
       </div>
       <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>
         Enter shorthand like <strong>10M</strong>, <strong>250M</strong>, <strong>1B</strong> or full numbers. Press Enter or click Add.
+      </div>
+    </Section>
+  );
+}
+
+// §3 MoMo auto-sync consent · §4 WhatsApp connect (B16) · §10 Diaspora waitlist.
+// All persist to profile. SMS capture (Android companion), WhatsApp Business API
+// provisioning, and billing (Stripe/Flutterwave) are EXTERNAL — flagged inline.
+function ConnectionsSection({ profile, dispatch }) {
+  const set = (patch) => dispatch({ type: 'setProfile', patch });
+  const momo = profile.momoSync || { enabled: false, mtn: true, airtel: true };
+  const wa = profile.whatsapp || { phone: '', optInNudges: false };
+  const onWaitlist = !!profile.diasporaWaitlist;
+  const card = { padding: '12px 14px', borderRadius: 10, background: 'var(--bg-2)', border: '0.5px solid var(--line)' };
+  const flag = { fontSize: 10.5, color: 'var(--gold-ink, var(--gold))', marginTop: 6 };
+
+  return (
+    <Section title="Connections & sync" subtitle="Auto-ingest your money from MoMo and WhatsApp, and the diaspora oversight tier.">
+      {/* §3 MoMo Auto-Sync */}
+      <div style={{ ...card, marginBottom: 12 }}>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+          <input type="checkbox" checked={!!momo.enabled} onChange={e => set({ momoSync: { ...momo, enabled: e.target.checked } })} style={{ accentColor: 'var(--brand)' }} />
+          <span style={{ fontSize: 13, fontWeight: 600 }}>MoMo Auto-Sync</span>
+        </label>
+        <div className="muted" style={{ fontSize: 11.5, marginTop: 6, lineHeight: 1.5 }}>
+          Reads only MTN/Airtel confirmation SMS and posts parsed transactions. Raw SMS is never stored — only structured fields.
+        </div>
+        {momo.enabled && (
+          <div className="row" style={{ gap: 14, marginTop: 8 }}>
+            {['mtn', 'airtel'].map(s => (
+              <label key={s} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, cursor: 'pointer' }}>
+                <input type="checkbox" checked={momo[s] !== false} onChange={e => set({ momoSync: { ...momo, [s]: e.target.checked } })} style={{ accentColor: 'var(--brand)' }} />
+                {s === 'mtn' ? 'MTN MoMo' : 'Airtel Money'}
+              </label>
+            ))}
+          </div>
+        )}
+        <div style={flag}>⚠ Requires the Imari Android companion to read SMS — a browser cannot. Manual entry always works.</div>
+      </div>
+
+      {/* §4 WhatsApp + B16 guide */}
+      <div style={{ ...card, marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Connect WhatsApp</div>
+        <div className="muted" style={{ fontSize: 11.5, marginBottom: 8, lineHeight: 1.5 }}>
+          Add expenses by texting — no app needed. 1) Connect your number · 2) text an example like “spent 25k fuel” · 3) see it appear.
+        </div>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <input type="tel" value={wa.phone} onChange={e => set({ whatsapp: { ...wa, phone: e.target.value } })}
+            placeholder="+2507XXXXXXXX" style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, cursor: 'pointer' }}>
+            <input type="checkbox" checked={!!wa.optInNudges} onChange={e => set({ whatsapp: { ...wa, optInNudges: e.target.checked } })} style={{ accentColor: 'var(--brand)' }} />
+            Daily nudge (opt-in)
+          </label>
+        </div>
+        <div className="muted" style={{ fontSize: 10.5, marginTop: 8 }}>Commands: <code>why</code> · <code>balance</code> · <code>networth</code> · <code>help</code> · <code>stop</code>. Max one nudge/day, quiet hours 21:00–07:00.</div>
+        <div style={flag}>⚠ Phone verification + messaging require a WhatsApp Business API number (external provisioning).</div>
+      </div>
+
+      {/* §10 Diaspora Oversight waitlist */}
+      <div style={card}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Diaspora Oversight (≈ $9.99/mo)</div>
+        <div className="muted" style={{ fontSize: 11.5, marginBottom: 8, lineHeight: 1.5 }}>
+          Read-only trustee access, twice-monthly “State of Your Rwanda Assets” PDF, accountant export pack, document vault, USD/EUR/GBP display. Free core stays fully functional.
+        </div>
+        <button type="button" onClick={() => set({ diasporaWaitlist: !onWaitlist })}
+          className={onWaitlist ? 'btn btn-ghost' : 'btn btn-primary'} style={{ fontSize: 12 }}>
+          {onWaitlist ? '✓ On the waitlist — leave' : 'Join the waitlist'}
+        </button>
+        <div style={flag}>⚠ Billing is handled by the payment processor — Imari never stores card data or auto-charges.</div>
       </div>
     </Section>
   );
@@ -588,6 +671,8 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
 
       <MembersSection portfolioId={portfolioId} role={role} session={session} />
 
+      <ConnectionsSection profile={state.profile} dispatch={dispatch} />
+
       <Section
         title="AI Advisor"
         subtitle={hasEnvKey
@@ -656,7 +741,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
               </div>
               <div className="muted" style={{ fontSize:11, marginTop:4, fontFamily:'Geist Mono, monospace' }}>
                 {Object.entries(bnrInfo.rates).map(([c, r]) =>
-                  `${c}: buy ${r.buy.toFixed(2)} / sell ${r.sell.toFixed(2)}`
+                  `${c}: buy ${fmtNum(r.buy, 2)} / sell ${fmtNum(r.sell, 2)}`
                 ).join('  ·  ')}
               </div>
               <div className="muted" style={{ fontSize:10, marginTop:4, lineHeight:1.5 }}>

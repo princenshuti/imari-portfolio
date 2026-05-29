@@ -1,8 +1,9 @@
 import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense, Component } from 'react';
-import { FX, valueRWF, costRWF, toBase, fromBase, fmtBase, MILESTONES } from './data.js';
+import { FX, valueRWF, costRWF, toBase, fmtBase, MILESTONES } from './data.js';
 import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
-import { addSnapshot, seedHistory } from './services/snapshots.js';
+import { seedHistory } from './services/snapshots.js';
+import { reducer } from './reducer.js';
 import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
@@ -27,6 +28,8 @@ const LiabilitiesView = lazy(() => import('./views/Liabilities.jsx'));
 const GoalsView       = lazy(() => import('./views/Goals.jsx'));
 const CashFlowView    = lazy(() => import('./views/CashFlow.jsx'));
 const TaxReportView   = lazy(() => import('./views/TaxReport.jsx'));
+const BalanceSheetView = lazy(() => import('./views/BalanceSheet.jsx'));
+const ProjectionsView = lazy(() => import('./views/Projections.jsx'));
 
 // ─ Shared UI primitives ───────────────────────────────────────
 function FullScreenLoader({ message = 'Loading…' }) {
@@ -70,137 +73,22 @@ class ErrorBoundary extends Component {
   }
 }
 
-function upsert(arr, item, key = 'id') {
-  const i = arr.findIndex(x => x[key] === item[key]);
-  return i >= 0 ? arr.map((x, idx) => idx === i ? item : x) : [...arr, item];
-}
-
-// Recompute an account's currentValue from its purchasePrice (opening balance)
-// plus the net of all one-time cashflows linked to it.
-// Each cashflow amount is converted to the account's own currency via the RWF
-// base rate so cross-currency entries (e.g. a USD cashflow on an RWF account)
-// are handled correctly.
-function syncAccountBalance(assets, cashflows, accountId) {
-  if (!accountId) return assets;
-  const account = assets.find(a => a.id === accountId);
-  if (!account) return assets;
-  const acctCurrency = account.currency || 'RWF';
-  const linked = (cashflows || []).filter(
-    c => c.accountId === accountId && c.recurring === 'once'
-  );
-  const delta = linked.reduce((sum, c) => {
-    // Convert cashflow amount → RWF → account currency
-    const inAcctCcy = fromBase(toBase(c.amount || 0, c.currency || 'RWF'), acctCurrency);
-    return sum + (c.type === 'income' ? inAcctCcy : -inAcctCcy);
-  }, 0);
-  const base = typeof account.purchasePrice === 'number' ? account.purchasePrice : 0;
-  return assets.map(a => a.id !== accountId ? a : { ...a, currentValue: base + delta });
-}
-
-function reducer(state, action) {
-  switch (action.type) {
-    case 'setProfile':
-      return { ...state, profile: { ...state.profile, ...action.patch } };
-
-    // ── Assets ──────────────────────────────────────────────────
-    case 'upsertAsset': {
-      const newAssets = upsert(state.assets, action.asset);
-      // If it's a bank/MoMo account, recompute currentValue from purchasePrice + linked cashflows
-      const isAccount = action.asset.kind === 'savings' || action.asset.kind === 'momo-cash';
-      if (isAccount) {
-        return { ...state, assets: syncAccountBalance(newAssets, state.cashflows || [], action.asset.id) };
-      }
-      return { ...state, assets: newAssets };
-    }
-    case 'deleteAsset':
-      return { ...state, assets: state.assets.filter(a => a.id !== action.id) };
-    case 'bulkDeleteAssets':
-      return { ...state, assets: state.assets.filter(a => !action.ids.has(a.id)) };
-    case 'clearAssets':
-      return { ...state, assets: [] };
-    case 'reset':
-      return { ...defaultState(), profile: state.profile };
-
-    // ── Liabilities ─────────────────────────────────────────────
-    case 'upsertLiability':
-      return { ...state, liabilities: upsert(state.liabilities || [], action.liability) };
-    case 'deleteLiability':
-      return { ...state, liabilities: (state.liabilities || []).filter(l => l.id !== action.id) };
-
-    // ── Goals ───────────────────────────────────────────────────
-    case 'upsertGoal':
-      return { ...state, goals: upsert(state.goals || [], action.goal) };
-    case 'deleteGoal':
-      return { ...state, goals: (state.goals || []).filter(g => g.id !== action.id) };
-
-    // ── Cash flows ──────────────────────────────────────────────
-    case 'upsertCashflow': {
-      const newCashflows = upsert(state.cashflows || [], action.entry);
-      // Sync any accounts affected: the newly linked account, and the previously
-      // linked account (if the user changed which account is linked on an edit).
-      const oldEntry = (state.cashflows || []).find(c => c.id === action.entry.id);
-      const toSync = new Set();
-      if (action.entry.accountId) toSync.add(action.entry.accountId);
-      if (oldEntry?.accountId && oldEntry.accountId !== action.entry.accountId) {
-        toSync.add(oldEntry.accountId);
-      }
-      let newAssets = state.assets;
-      toSync.forEach(aid => { newAssets = syncAccountBalance(newAssets, newCashflows, aid); });
-      return { ...state, cashflows: newCashflows, assets: newAssets };
-    }
-    case 'deleteCashflow': {
-      const deletedEntry = (state.cashflows || []).find(c => c.id === action.id);
-      const newCashflows = (state.cashflows || []).filter(c => c.id !== action.id);
-      let newAssets = state.assets;
-      if (deletedEntry?.accountId) {
-        newAssets = syncAccountBalance(newAssets, newCashflows, deletedEntry.accountId);
-      }
-      return { ...state, cashflows: newCashflows, assets: newAssets };
-    }
-
-    // ── Snapshots ────────────────────────────────────────────────
-    case 'addSnapshot':
-      return { ...state, snapshots: addSnapshot(state.snapshots || [], action.netWorth, action.costBasis) };
-    case 'seedSnapshots':
-      return { ...state, snapshots: action.snapshots };
-
-    // ── FX / Chat / Insight ──────────────────────────────────────
-    case 'setFx': {
-      Object.assign(FX, action.fx);
-      return { ...state, fx: action.fx };
-    }
-    case 'appendChat': {
-      // Cap at 80 messages — prevents unbounded DB growth and keeps AI context lean.
-      // Drop the oldest user+assistant pair (2 messages) when over the limit.
-      const MAX_CHAT = 80;
-      const next = [...state.chat, action.msg];
-      return { ...state, chat: next.length > MAX_CHAT ? next.slice(next.length - MAX_CHAT) : next };
-    }
-    case 'clearChat':
-      return { ...state, chat: [] };
-    case 'setInsight':
-      return { ...state, insight: action.insight };
-    case 'reachMilestone':
-      return { ...state, reachedMilestones: [...(state.reachedMilestones || []), action.value] };
-    case 'replaceAll':
-      if (action.state.fx) Object.assign(FX, action.state.fx);
-      return { ...action.state };
-    case 'nav':
-      return { ...state, _nav: action.to };
-    default:
-      return state;
-  }
-}
-
-// Kinyarwanda greetings keyed to time of day. Previous version returned
-// 'Mwiriwe' (good afternoon) for h<5 — wrong at 2 AM. Now uses Muraho for the
-// catch-all night hours and Muramuke as evening (post-sunset) greeting.
-function greetingFor() {
+// Time-of-day greeting in the user's selected language. Slots: night (catch-all
+// for early/late hours), morning, afternoon, evening (post-sunset). Falls back
+// to English when the locale is unknown — so an English user never sees
+// Kinyarwanda, and vice-versa.
+const GREETINGS = {
+  en: { night: 'Hello',     morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening' },
+  fr: { night: 'Bonjour',   morning: 'Bonjour',      afternoon: 'Bon après-midi', evening: 'Bonsoir' },
+  rw: { night: 'Muraho',    morning: 'Mwaramutse',   afternoon: 'Mwiriwe',        evening: 'Muramuke' },
+};
+function greetingFor(locale = 'en') {
+  const g = GREETINGS[locale] || GREETINGS.en;
   const h = new Date().getHours();
-  if (h < 5)  return 'Muraho';     // late night / early hours — neutral greeting
-  if (h < 12) return 'Mwaramutse'; // morning
-  if (h < 17) return 'Mwiriwe';    // afternoon
-  return 'Muramuke';               // evening
+  if (h < 5)  return g.night;
+  if (h < 12) return g.morning;
+  if (h < 17) return g.afternoon;
+  return g.evening;
 }
 
 // ─ Theme management ───────────────────────────────────────────
@@ -240,7 +128,7 @@ export default function App() {
     if (saved && saved.fx) Object.assign(FX, saved.fx);
     return saved || defaultState();
   });
-  const VALID_VIEWS = new Set(['dashboard','accounts','assets','trends','advisor','settings','liabilities','goals','cashflow','tax']);
+  const VALID_VIEWS = new Set(['dashboard','accounts','assets','trends','advisor','settings','liabilities','goals','cashflow','tax','balancesheet','projections']);
   function hashToNav() {
     const h = window.location.hash.replace('#', '');
     return VALID_VIEWS.has(h) ? h : 'dashboard';
@@ -607,8 +495,13 @@ export default function App() {
   }
 
   const accountCount = state.assets.filter(a => a.kind === 'savings' || a.kind === 'momo-cash').length;
+  // Active language for the time-of-day greeting: synced profile locale first,
+  // then the localStorage mirror the I18nProvider uses, else English.
+  const activeLocale = state.profile.locale
+    || (typeof localStorage !== 'undefined' && localStorage.getItem('imari:locale'))
+    || 'en';
   const titles = {
-    dashboard:   { title: `${greetingFor()}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
+    dashboard:   { title: `${greetingFor(activeLocale)}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
     accounts:    { title: 'Accounts', subtitle: `${accountCount} bank / mobile money` },
     assets:      { title: 'Your assets', subtitle: `${state.assets.length} positions tracked` },
     trends:      { title: 'Markets & trends', subtitle: 'Domains you watch' },
@@ -618,6 +511,8 @@ export default function App() {
     goals:       { title: 'Goals', subtitle: `${(state.goals||[]).filter(g=>!g.achieved).length} active goals` },
     cashflow:    { title: 'Cash Flow', subtitle: 'Income · Expenses · Savings rate' },
     tax:         { title: 'Tax Report', subtitle: `${new Date().getFullYear()} · Rwanda RRA estimate` },
+    balancesheet:{ title: 'Balance Sheet', subtitle: 'Assets − liabilities = net worth' },
+    projections: { title: 'Fast Forward', subtitle: 'Net-worth projection · modeled' },
   };
 
   const view = (() => {
@@ -631,6 +526,8 @@ export default function App() {
       case 'goals':       return <GoalsView       state={state} dispatch={guardedDispatch} />;
       case 'cashflow':    return <CashFlowView    state={state} dispatch={guardedDispatch} />;
       case 'tax':         return <TaxReportView   state={state} dispatch={guardedDispatch} />;
+      case 'balancesheet':return <BalanceSheetView state={state} dispatch={guardedDispatch} />;
+      case 'projections': return <ProjectionsView  state={state} dispatch={guardedDispatch} />;
       default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} netWorth={netWorth} totalCost={totalCost} />;
     }
   })();

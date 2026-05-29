@@ -101,12 +101,13 @@ Deno.serve(async (req: Request) => {
   try { body = await req.json(); }
   catch { return reply({ error: 'Invalid JSON body' }, 400); }
 
-  const { userQuestion, systemPrompt, messages, model = 'claude-haiku-4-5-20251001' } =
+  const { userQuestion, systemPrompt, messages, model = 'claude-haiku-4-5-20251001', image } =
     body as {
       userQuestion?: unknown;
       systemPrompt?: unknown;
       messages?: unknown;
       model?: unknown;
+      image?: unknown;
     };
 
   // ── 3. Validate & sanitize ────────────────────────────────────────────────
@@ -141,11 +142,25 @@ Deno.serve(async (req: Request) => {
   // ── 4. Guard: key must be set ─────────────────────────────────────────────
   if (!ANTHROPIC_KEY) return reply({ error: 'AI service not configured on server' }, 503);
 
+  // ── 4b. Optional vision input (§8/B13 — receipt / statement OCR) ──────────
+  let userContent: unknown = userQuestion;
+  if (image && typeof image === 'object') {
+    const img = image as { data?: unknown; mediaType?: unknown };
+    if (typeof img.data === 'string' && typeof img.mediaType === 'string') {
+      if (img.data.length > 7_000_000) return reply({ error: 'Image too large (max ~5 MB)' }, 400);
+      if (!/^image\/(png|jpeg|webp|gif)$/.test(img.mediaType)) return reply({ error: 'Unsupported image type' }, 400);
+      userContent = [
+        { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } },
+        { type: 'text', text: userQuestion },
+      ];
+    }
+  }
+
   // ── 5. Call Anthropic ─────────────────────────────────────────────────────
   const reqBody: Record<string, unknown> = {
     model,
     max_tokens: MAX_TOKENS,
-    messages: [...safeMessages, { role: 'user', content: userQuestion }],
+    messages: [...safeMessages, { role: 'user', content: userContent }],
   };
   if (safeSystem) reqBody.system = safeSystem;
 

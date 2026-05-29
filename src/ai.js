@@ -140,3 +140,42 @@ export async function completeChat(_apiKey, systemPrompt, messages, userQuestion
   if (!key) throw new Error('No API key available');
   return callDirect(key, systemPrompt, messages, userQuestion, 'claude-sonnet-4-6');
 }
+
+/**
+ * Vision completion for receipt / statement OCR (§8/B13).
+ * `image` = { data: base64 (no data: prefix), mediaType: 'image/png'|... }.
+ * Uses Haiku (cheap) and routes through the proxy when configured.
+ */
+export async function completeVision(prompt, image, model = 'claude-haiku-4-5-20251001') {
+  if (isConfigured && supabase) {
+    throttle();
+    const { data, error } = await supabase.functions.invoke('ai-proxy', {
+      body: { userQuestion: String(prompt).slice(0, 2000), model, image },
+    });
+    if (error) {
+      if (error.context && typeof error.context.json === 'function') {
+        try { const b = await error.context.json(); if (b?.error) throw new Error(b.error); } catch (e) { if (e.message && e.message !== 'Unexpected end of JSON input') throw e; }
+      }
+      throw new Error(error.message || 'AI request failed');
+    }
+    if (data?.error) throw new Error(data.error);
+    return data.text;
+  }
+  const key = ENV_KEY || _memKey;
+  if (!key) throw new Error('No API key available');
+  throttle();
+  const { default: Anthropic } = await import('@anthropic-ai/sdk');
+  const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+  const response = await client.messages.create({
+    model,
+    max_tokens: 1024,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.data } },
+        { type: 'text', text: String(prompt).slice(0, 2000) },
+      ],
+    }],
+  });
+  return response.content[0].text;
+}

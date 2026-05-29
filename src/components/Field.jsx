@@ -1,5 +1,6 @@
 import { Children, cloneElement, isValidElement, useId } from 'react';
 import { Sparkline } from './charts.jsx';
+import { fmtNum } from '../data.js';
 
 export const inputStyle = {
   width: '100%', padding: '9px 12px', borderRadius: 'var(--r-sm)',
@@ -162,7 +163,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
             <div className="font-serif num" style={{
               fontSize: big ? 24 : 18, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)',
             }}>
-              {override.spread.buy.toLocaleString('en-US', { maximumFractionDigits: 4 })}
+              {fmtNum(override.spread.buy, 4)}
             </div>
           </div>
           <div>
@@ -173,7 +174,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
             <div className="font-serif num" style={{
               fontSize: big ? 24 : 18, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)',
             }}>
-              {override.spread.sell.toLocaleString('en-US', { maximumFractionDigits: 4 })}
+              {fmtNum(override.spread.sell, 4)}
             </div>
           </div>
         </div>
@@ -185,7 +186,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
             lineHeight: 1,
           }}>
             {d.unit === '$' ? '$' : ''}
-            {(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+            {fmtNum(value ?? 0, 2)}
             {d.unit && d.unit !== '$' ? d.unit : ''}
           </div>
           {hasChange && (
@@ -193,7 +194,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
               fontSize: 11, fontWeight: 600,
               color: isUp ? 'var(--up-ink)' : 'var(--down-ink)',
             }}>
-              <span aria-hidden="true">{isUp ? '▲' : '▼'}</span> {Math.abs(change).toFixed(2)}{d.unit === '%' ? 'pp' : '%'}
+              <span aria-hidden="true">{isUp ? '▲' : '▼'}</span> {fmtNum(Math.abs(change), 2)}{d.unit === '%' ? 'pp' : '%'}
             </div>
           )}
           {!hasChange && kind === 'live' && (

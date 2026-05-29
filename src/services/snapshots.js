@@ -57,7 +57,9 @@ export function seedHistory(currentNetWorth, currentCostBasis, days = 60) {
     const ratio = (days - i) / days;
     const nw = Math.round(currentNetWorth * (0.88 + ratio * 0.12) * noise);
     const cb = Math.round(currentCostBasis * (0.92 + ratio * 0.08));
-    snapshots.push({ date: d.toISOString().slice(0, 10), netWorth: nw, costBasis: cb });
+    // Tagged synthetic so the UI can flag seeded history honestly (B11) — real
+    // daily snapshots (addSnapshot) carry no `synthetic` flag.
+    snapshots.push({ date: d.toISOString().slice(0, 10), netWorth: nw, costBasis: cb, synthetic: true });
   }
   return snapshots;
 }

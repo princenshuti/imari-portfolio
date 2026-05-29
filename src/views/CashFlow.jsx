@@ -4,6 +4,7 @@ import { Field, inputStyle } from '../components/Field.jsx';
 import Modal, { ImageLightbox } from '../components/Modal.jsx';
 import { parseFile, detectColumns, rowsToDrafts, aiCategorize } from '../services/bankImport.js';
 import { hasEnvKey } from '../ai.js';
+import { parseReceiptImage, fileToImage } from '../services/receiptOcr.js';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { Donut } from '../components/charts.jsx';
 
@@ -51,6 +52,30 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
   const [attachLoading, setAttachLoading] = useState(false);
   const [attachErr, setAttachErr] = useState(null);
   const [showFull, setShowFull] = useState(false);
+  const ocrRef = useRef(null);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrMsg, setOcrMsg] = useState(null);
+
+  // B13 — snap a receipt → vision parse → pre-fill the draft (user still confirms).
+  const handleSnap = async (file) => {
+    if (!file) return;
+    setOcrBusy(true); setOcrMsg(null);
+    try {
+      const image = await fileToImage(file);
+      const r = await parseReceiptImage(image);
+      setE(s => ({
+        ...s, type: 'expense', amount: String(r.amount || ''), category: r.category,
+        date: r.date, recurring: 'once',
+        notes: r.merchant ? `${r.merchant}${s.notes ? ` · ${s.notes}` : ''}` : s.notes,
+      }));
+      try { u('attachment', await compressImage(file)); } catch { /* attach is best-effort */ }
+      setOcrMsg({ ok: true, text: r.confidence < 0.6
+        ? `Low confidence (${Math.round(r.confidence * 100)}%) — check the fields before saving.`
+        : `Filled from your receipt (${Math.round(r.confidence * 100)}% confidence) — review and save.` });
+    } catch (err) {
+      setOcrMsg({ ok: false, text: err.message });
+    } finally { setOcrBusy(false); }
+  };
 
   const handleAttach = async (file) => {
     if (!file) return;
@@ -88,6 +113,20 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
             </button>
           ))}
         </div>
+
+        {/* B13 — Snap a receipt to auto-fill (vision OCR via the shared ai-proxy path) */}
+        {hasEnvKey && (
+          <div style={{ marginBottom: 16 }}>
+            <input ref={ocrRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+              onChange={ev => { const f = ev.target.files?.[0]; if (f) handleSnap(f); ev.target.value = ''; }} />
+            <button type="button" onClick={() => ocrRef.current?.click()} disabled={ocrBusy} className="btn btn-ghost" style={{ width: '100%' }}>
+              {ocrBusy ? 'Reading receipt…' : '📷 Snap a receipt — auto-fill from a photo'}
+            </button>
+            {ocrMsg && (
+              <div role="status" style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: ocrMsg.ok ? 'var(--ink-2)' : 'var(--down)' }}>{ocrMsg.text}</div>
+            )}
+          </div>
+        )}
 
         {/* Category */}
         <Field label="Category">

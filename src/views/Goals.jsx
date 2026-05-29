@@ -191,7 +191,15 @@ function GoalEditor({ goal, onSave, onCancel, assets = [] }) {
   );
 }
 
-function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete }) {
+// §9 — next BNR Treasury auction (Reference: ~bi-weekly Wednesdays). Approx.
+function nextBnrAuction() {
+  const d = new Date();
+  let add = (3 - d.getDay() + 7) % 7; if (add === 0) add = 7; // next Wednesday
+  d.setDate(d.getDate() + add);
+  return d.toISOString().slice(0, 10);
+}
+
+function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLock }) {
   const cat = GOAL_CATEGORIES.find(c => c.id === goal.category) || GOAL_CATEGORIES[0];
   const targetRWF = toBase(goal.targetAmount || 0, goal.currency || 'RWF');
   // currentValue is derived per-fundingType by the parent — net-worth / liquid / linked-sum
@@ -315,6 +323,24 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete }) {
           Save <strong>{fmtBase(monthlySavingsNeeded, displayCurrency, { compact: true })}/month</strong> to hit this goal on time.
         </div>
       )}
+
+      {/* §9 Goal Lockbox — commitment against a real BNR instrument (no execution) */}
+      {!isAchieved && onLock && (
+        goal.lock?.locked ? (
+          <div className="row" style={{ marginTop: 10, justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: 'var(--r-sm)', background: 'var(--gold-soft)', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, color: 'var(--gold-ink, var(--gold))' }}>
+              <span aria-hidden="true">🔒</span> Locked to <strong>{goal.lock.instrumentRef}</strong>
+              {goal.lock.auctionDate ? ` · next auction ${new Date(goal.lock.auctionDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+            </span>
+            <button type="button" onClick={() => onLock(null)} className="btn btn-ghost btn-xs">Unlock</button>
+          </div>
+        ) : (
+          <button type="button" className="btn btn-ghost btn-xs" style={{ marginTop: 10 }}
+            onClick={() => onLock({ locked: true, instrumentRef: 'BNR T-bill', auctionDate: nextBnrAuction() })}>
+            <span aria-hidden="true">🔒</span> Lock to a T-bill
+          </button>
+        )
+      )}
     </div>
   );
 }
@@ -410,6 +436,7 @@ export default function GoalsView({ state, dispatch }) {
         <GoalCard key={g.id} goal={g} currentValue={currentValueFor(g)} displayCurrency={profile.displayCurrency}
           onEdit={() => setEditing(g)}
           onDelete={() => setPendingDelete(g)}
+          onLock={(lock) => dispatch({ type: 'upsertGoal', goal: { ...g, lock } })}
         />
       ))}
 

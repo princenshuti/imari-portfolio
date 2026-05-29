@@ -339,6 +339,18 @@ body {
 .btn-icon-sm.is-danger { color: var(--down); }
 .btn-icon-sm.is-danger:hover { background: var(--down-soft); color: var(--down-ink); }
 
+/* Row-action variant (B1) — a transparent ghost icon reads as plain text on a
+   dark card, so list-row Edit/Delete controls get a visible resting surface +
+   border + stronger ink so they're unmistakably interactive in both themes. */
+.btn-icon-sm.is-row-action {
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-2);
+}
+.btn-icon-sm.is-row-action:hover { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
+.btn-icon-sm.is-row-action.is-danger { color: var(--down); }
+.btn-icon-sm.is-row-action.is-danger:hover { background: var(--down-soft); color: var(--down-ink); border-color: var(--down); }
+
 /* Link-styled button — replaces clickable <span> patterns */
 .btn-link {
   background: transparent; border: 0; padding: 4px 0;
@@ -604,6 +616,17 @@ input:focus, select:focus, textarea:focus {
   top: 8px;
   outline: 2px solid var(--brand-ink);
   outline-offset: 2px;
+}
+
+/* ── Visually-hidden (screen-reader-only) utility ─────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ── Dashboard grids ──────────────────────────────────────────── */

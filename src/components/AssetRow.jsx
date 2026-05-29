@@ -179,13 +179,13 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
           type="button"
           onClick={() => onEdit(asset)}
           aria-label={`Edit ${asset.name}`}
-          className="btn-icon-sm"
+          className="btn-icon-sm is-row-action"
         ><span aria-hidden="true">✎</span></button>
         <button
           type="button"
           onClick={() => onDelete(asset)}
           aria-label={`Delete ${asset.name}`}
-          className="btn-icon-sm is-danger"
+          className="btn-icon-sm is-row-action is-danger"
         ><span aria-hidden="true">×</span></button>
       </div>
     </div>

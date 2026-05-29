@@ -151,6 +151,17 @@ export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
     debtor:          asset.debtor          || '',
     dueDate:         asset.dueDate         || '',
     vehicleCategory: asset.vehicleCategory || 'car',
+    // Pension (§5) projection inputs
+    monthlyContribution: asset.monthlyContribution ?? '',
+    employerMatch:       asset.employerMatch       ?? '',
+    currentAge:          asset.currentAge          ?? '',
+    annualSalary:        asset.annualSalary         ?? '',
+    // UPI / land-title (§7)
+    titleDocId:      asset.titleDocId      || '',
+    registeredOwner: asset.registeredOwner || '',
+    district:        asset.district        || '',
+    ownerConfirmed:  asset.ownerConfirmed  || false,
+    lastRevaluedAt:  asset.lastRevaluedAt  || '',
     // ── NEW fields ──────────────────────────────────────────
     location: asset.location || {
       country: 'Rwanda', province: '', district: '',
@@ -343,6 +354,29 @@ export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
               <Input value={a.upi} onChange={v => update('upi', v)} placeholder="e.g. 1/01/01/01/0001" />
             </Field>
           )}
+          {cls.fields.includes('upi') && (
+            <Field label="Registered owner (on title)">
+              <Input value={a.registeredOwner} onChange={v => update('registeredOwner', v)} placeholder="Name as on the NLA e-title" />
+            </Field>
+          )}
+          {cls.fields.includes('upi') && (
+            <Field label="District">
+              <Input value={a.district} onChange={v => update('district', v)} placeholder="e.g. Kicukiro" />
+            </Field>
+          )}
+          {cls.fields.includes('upi') && (
+            <Field label="Last revalued" hint="Used to prompt a re-valuation when stale">
+              <Input value={a.lastRevaluedAt} onChange={v => update('lastRevaluedAt', v)} type="date" />
+            </Field>
+          )}
+          {cls.fields.includes('upi') && (
+            <Field label="Owner verification" hint="Self-check — Imari does no automated NID lookup (privacy)">
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, cursor: 'pointer' }}>
+                <input type="checkbox" checked={!!a.ownerConfirmed} onChange={e => update('ownerConfirmed', e.target.checked)} style={{ accentColor: 'var(--brand)' }} />
+                Registered owner matches my NID
+              </label>
+            </Field>
+          )}
           {cls.fields.includes('propertyCategory') && (
             <Field label="Property category">
               <select
@@ -449,6 +483,26 @@ export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
           {cls.fields.includes('dueDate') && (
             <Field label="Due date">
               <Input value={a.dueDate} onChange={v => update('dueDate', v)} type="date" />
+            </Field>
+          )}
+          {cls.fields.includes('monthlyContribution') && (
+            <Field label="Monthly contribution">
+              <Input value={a.monthlyContribution} onChange={v => update('monthlyContribution', v)} type="number" placeholder="e.g. 50000" />
+            </Field>
+          )}
+          {cls.fields.includes('employerMatch') && (
+            <Field label="Employer match / month">
+              <Input value={a.employerMatch} onChange={v => update('employerMatch', v)} type="number" placeholder="e.g. 50000" />
+            </Field>
+          )}
+          {cls.fields.includes('currentAge') && (
+            <Field label="Your current age">
+              <Input value={a.currentAge} onChange={v => update('currentAge', v)} type="number" placeholder="e.g. 35" />
+            </Field>
+          )}
+          {cls.fields.includes('annualSalary') && (
+            <Field label="Annual salary (for replacement %)">
+              <Input value={a.annualSalary} onChange={v => update('annualSalary', v)} type="number" placeholder="e.g. 6000000" />
             </Field>
           )}
         </div>

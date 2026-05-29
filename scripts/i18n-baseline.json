@@ -1,0 +1,17 @@
+[
+  "src/views/Landing.jsx:130  \"Imari home\"",
+  "src/views/Landing.jsx:132  \"Imari\"",
+  "src/views/Landing.jsx:193  \"Cash\"",
+  "src/views/Landing.jsx:194  \"Bonds\"",
+  "src/views/Landing.jsx:195  \"Other\"",
+  "src/views/Landing.jsx:277  \"Estimates, not market quotes\"",
+  "src/views/Landing.jsx:292  \"Supabase\"",
+  "src/views/Landing.jsx:336  \"Imari\"",
+  "src/views/Landing.jsx:340  \"Maxventures\"",
+  "src/views/Login.jsx:80  \"Configuration required\"",
+  "src/views/Login.jsx:146  \"you@example.com\"",
+  "src/views/Login.jsx:204  \"Maxventures\"",
+  "src/components/Sidebar.jsx:81  \"Imari\"",
+  "src/components/Sidebar.jsx:163  \"Main navigation\"",
+  "src/components/Sidebar.jsx:245  \"Sign out\""
+]
