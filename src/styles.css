@@ -1206,9 +1206,10 @@ input:focus, select:focus, textarea:focus {
   transition: opacity 220ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
+  /* Hover stays stable — no transform that shifts the card and disturbs the
+     grid layout. Stronger shadow + border feedback only (UI/UX rule). */
   .landing-feature:hover {
     box-shadow: var(--shadow-3);
-    transform: translateY(-2px);
     border-color: var(--line);
   }
   .landing-feature:hover::before { opacity: 1; }
@@ -1294,7 +1295,6 @@ input:focus, select:focus, textarea:focus {
   .landing-trust-card:hover {
     box-shadow: var(--shadow-2);
     border-color: var(--line);
-    transform: translateY(-1px);
   }
 }
 .landing-trust-icon {
@@ -1549,7 +1549,7 @@ input:focus, select:focus, textarea:focus {
   transition: box-shadow 220ms var(--ease-out), transform 220ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .landing-cost:hover { box-shadow: var(--shadow-3); transform: translateY(-2px); }
+  .landing-cost:hover { box-shadow: var(--shadow-3); border-color: var(--line); }
 }
 .landing-cost-badge {
   width: 28px; height: 28px; border-radius: 8px;
@@ -1611,6 +1611,14 @@ input:focus, select:focus, textarea:focus {
   .landing-nav { top: 8px; left: 8px; right: 8px; }
   .landing-nav-inner { padding: 8px 10px 8px 14px; }
   .landing-link { display: none; }
+  /* Touch target ≥ 44×44 (WCAG 2.5.5) — nav Sign-in is small at desktop sizes. */
+  .landing-cta-sm {
+    min-height: 44px;
+    padding-top: 0;
+    padding-bottom: 0;
+    display: inline-flex;
+    align-items: center;
+  }
   .landing-features { grid-template-columns: 1fr; }
   .landing-costs { grid-template-columns: 1fr; }
   .landing-pain { padding: 22px 18px; }
@@ -1620,6 +1628,10 @@ input:focus, select:focus, textarea:focus {
   .landing-section { padding: 64px 18px; }
   .landing-footer-cta { padding: 64px 18px 24px; }
   .landing-footer-card { padding: 40px 22px; }
+  /* Bump body copy on mobile for readability (legibility rule). */
+  .landing-feature-desc { font-size: 14px; line-height: 1.65; }
+  .landing-cost-desc    { font-size: 13px; line-height: 1.6; }
+  .landing-rwanda-pill  { padding: 10px 16px; }
   .landing-preview-mini {
     right: 8px;
     min-width: 0;
