@@ -1192,8 +1192,10 @@ input:focus, select:focus, textarea:focus {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-1);
-  transition: box-shadow 220ms var(--ease-out), transform 220ms var(--ease-out), border-color 220ms var(--ease-out);
-  animation: landing-fade-up 560ms var(--ease-out) both;
+  /* Specify exact properties — no `all`, no dead `transform` (the hover scrap
+     was removed in 275d90d). Snappier 460ms entrance on a strong ease-out. */
+  transition: box-shadow 220ms var(--ease-out), border-color 220ms var(--ease-out);
+  animation: landing-fade-up 460ms var(--ease-out) both;
   animation-delay: var(--feature-delay, 0ms);
 }
 .landing-feature::before {
@@ -1289,7 +1291,7 @@ input:focus, select:focus, textarea:focus {
   border: 0.5px solid var(--line-soft);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
-  transition: box-shadow 220ms var(--ease-out), transform 220ms var(--ease-out), border-color 220ms var(--ease-out);
+  transition: box-shadow 220ms var(--ease-out), border-color 220ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .landing-trust-card:hover {
@@ -1526,9 +1528,10 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ── Reveal: fade + rise once on view, strong ease-out, staggered. CSS-only
-   so it always ends visible — no JS dependency that could strand content. ── */
+   so it always ends visible — no JS dependency that could strand content.
+   460ms (was 560) — same cascade, more responsive on screen. ── */
 .landing-reveal {
-  animation: landing-fade-up 560ms var(--ease-out) both;
+  animation: landing-fade-up 460ms var(--ease-out) both;
   animation-delay: var(--reveal-delay, 0ms);
 }
 
@@ -1546,7 +1549,9 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--r-lg);
   padding: 24px 22px;
   box-shadow: var(--shadow-1);
-  transition: box-shadow 220ms var(--ease-out), transform 220ms var(--ease-out);
+  /* Add border-color to the transition — the hover changes border-color, so
+     without this it would snap instead of fading. (Specific props only.) */
+  transition: box-shadow 220ms var(--ease-out), border-color 220ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .landing-cost:hover { box-shadow: var(--shadow-3); border-color: var(--line); }

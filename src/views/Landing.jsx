@@ -218,7 +218,7 @@ export default function Landing({ onSignIn }) {
           {COSTS.map((c, i) => {
             const s = SEV[c.sev];
             return (
-              <article key={c.label} data-reveal className="landing-cost landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 70, 280)}ms`, '--cost-accent': s.color }}>
+              <article key={c.label} data-reveal className="landing-cost landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 60, 220)}ms`, '--cost-accent': s.color }}>
                 <div className="landing-cost-badge" aria-hidden style={{ background: s.color }}>{s.glyph}</div>
                 <div className="landing-cost-stat num">{c.stat}</div>
                 <div className="landing-cost-label">{c.label}</div>
@@ -238,7 +238,7 @@ export default function Landing({ onSignIn }) {
         </div>
         <div className="landing-features">
           {FEATURES.map((f, i) => (
-            <article key={f.title} className="landing-feature" style={{ '--feature-accent': f.accent, '--feature-delay': `${Math.min(i * 40, 320)}ms` }}>
+            <article key={f.title} className="landing-feature" style={{ '--feature-accent': f.accent, '--feature-delay': `${Math.min(i * 30, 210)}ms` }}>
               <div className="landing-feature-icon" style={{ color: f.accent }}><Icon name={f.icon} /></div>
               <h3 className="landing-feature-title">{f.title}</h3>
               <p className="landing-feature-desc">{f.desc}</p>
@@ -256,7 +256,7 @@ export default function Landing({ onSignIn }) {
         </div>
         <div className="landing-rwanda">
           {RWANDA.map((r, i) => (
-            <span key={r} data-reveal className="landing-rwanda-pill landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 45, 360)}ms` }}>{r}</span>
+            <span key={r} data-reveal className="landing-rwanda-pill landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 35, 200)}ms` }}>{r}</span>
           ))}
         </div>
       </section>
