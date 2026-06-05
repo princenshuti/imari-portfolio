@@ -1525,6 +1525,73 @@ input:focus, select:focus, textarea:focus {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Reveal: fade + rise once on view, strong ease-out, staggered. CSS-only
+   so it always ends visible — no JS dependency that could strand content. ── */
+.landing-reveal {
+  animation: landing-fade-up 560ms var(--ease-out) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+/* ── Cost-of-Absence cards ────────────────────────────────────── */
+.landing-costs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.landing-cost {
+  position: relative;
+  background: var(--paper);
+  border: 0.5px solid var(--line-soft);
+  border-top: 2px solid var(--cost-accent, var(--brand));
+  border-radius: var(--r-lg);
+  padding: 24px 22px;
+  box-shadow: var(--shadow-1);
+  transition: box-shadow 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .landing-cost:hover { box-shadow: var(--shadow-3); transform: translateY(-2px); }
+}
+.landing-cost-badge {
+  width: 28px; height: 28px; border-radius: 8px;
+  color: var(--brand-ink);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Geist Mono', monospace; font-weight: 700; font-size: 14px;
+  margin-bottom: 16px;
+}
+.landing-cost-stat {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--cost-accent, var(--ink)); line-height: 1; margin-bottom: 8px;
+}
+.landing-cost-label { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+.landing-cost-desc  { font-size: 12.5px; line-height: 1.6; color: var(--ink-3); margin: 0; }
+
+/* ── Built-for-Rwanda pills ───────────────────────────────────── */
+.landing-rwanda {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  max-width: 760px; margin: 0 auto;
+}
+.landing-rwanda-pill {
+  font-size: 13px; font-weight: 500; color: var(--ink-2);
+  padding: 9px 16px; border-radius: var(--r-pill);
+  background: var(--paper); border: 0.5px solid var(--line);
+  box-shadow: var(--shadow-1);
+}
+
+/* ── Hero preview: cost-of-absence chip ───────────────────────── */
+.landing-preview-costchip {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 14px; padding: 8px 11px; border-radius: 10px;
+  background: color-mix(in oklab, var(--gold) 12%, var(--paper));
+  border: 0.5px solid color-mix(in oklab, var(--gold) 32%, transparent);
+  font-size: 11.5px; color: var(--ink-2); line-height: 1.3;
+}
+.landing-preview-costglyph {
+  flex-shrink: 0; width: 16px; height: 16px; border-radius: 5px;
+  background: var(--gold); color: var(--brand-ink);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Geist Mono', monospace; font-weight: 700; font-size: 10px;
+}
+
 /* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 960px) {
   .landing-hero {
@@ -1535,6 +1602,7 @@ input:focus, select:focus, textarea:focus {
   }
   .landing-preview-mini { right: 0; }
   .landing-features  { grid-template-columns: repeat(2, 1fr); }
+  .landing-costs     { grid-template-columns: repeat(2, 1fr); }
   .landing-pains     { grid-template-columns: 1fr; gap: 8px; }
   .landing-trust-grid{ grid-template-columns: 1fr; }
   .landing-steps     { grid-template-columns: 1fr; gap: 32px; }
@@ -1544,6 +1612,7 @@ input:focus, select:focus, textarea:focus {
   .landing-nav-inner { padding: 8px 10px 8px 14px; }
   .landing-link { display: none; }
   .landing-features { grid-template-columns: 1fr; }
+  .landing-costs { grid-template-columns: 1fr; }
   .landing-pain { padding: 22px 18px; }
   .landing-trust-card { padding: 20px 18px; gap: 14px; }
   .landing-trust-foot { padding: 14px 16px; font-size: 12.5px; align-items: flex-start; }
@@ -1568,11 +1637,14 @@ input:focus, select:focus, textarea:focus {
   }
   .landing-feature:hover,
   .landing-trust-card:hover,
+  .landing-cost:hover,
   .landing-cta:active,
   .landing-cta-sm:active,
   .landing-cta-ghost:active,
   .hover-lift:hover,
   .card-stat:hover { transform: none !important; }
+  /* Reveal elements must not stay hidden if the observer hasn't run yet. */
+  .landing-reveal { opacity: 1 !important; transform: none !important; }
 }
 
 /* Hide landing from print */

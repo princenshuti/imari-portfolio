@@ -79,7 +79,12 @@ async function scanFile(rel) {
       re.lastIndex = 0;
       let m;
       while ((m = re.exec(line))) {
-        if (looksHuman(m[1])) violations.push(`${rel}:${i + 1}  "${m[1].trim()}"`);
+        if (looksHuman(m[1])) {
+          const text = m[1].trim();
+          // Key by file+content (NOT line number) so moving a line never reads
+          // as a new violation — only genuinely new strings fail the gate.
+          violations.push({ key: `${rel}::${text}`, where: `${rel}:${i + 1}  "${text}"` });
+        }
       }
     }
   });
@@ -98,15 +103,16 @@ const missing = await auditKeys();
 const hardcoded = await auditHardcoded();
 
 if (update) {
-  await writeFile(BASELINE_PATH, JSON.stringify(hardcoded, null, 2) + '\n');
-  console.log(`i18n-audit: baseline updated (${hardcoded.length} known literals).`);
+  const keys = [...new Set(hardcoded.map(v => v.key))].sort();
+  await writeFile(BASELINE_PATH, JSON.stringify(keys, null, 2) + '\n');
+  console.log(`i18n-audit: baseline updated (${keys.length} known literals).`);
   process.exit(0);
 }
 
 let baseline = [];
 try { baseline = JSON.parse(await readFile(BASELINE_PATH, 'utf8')); } catch { /* no baseline yet */ }
 const baselineSet = new Set(baseline);
-const newViolations = hardcoded.filter(v => !baselineSet.has(v));
+const newViolations = hardcoded.filter(v => !baselineSet.has(v.key));
 
 let failed = false;
 console.log('— i18n missing-keys report (chrome) —');
@@ -120,7 +126,7 @@ for (const code of ['fr', 'rw']) {
 console.log('\n— hardcoded-string gate (chrome files) —');
 if (newViolations.length) {
   console.log(`  ${newViolations.length} NEW hardcoded string(s) — wrap in t() or add // i18n-ignore:`);
-  newViolations.forEach(v => console.log(`     · ${v}`));
+  newViolations.forEach(v => console.log(`     · ${v.where}`));
   failed = true;
 } else {
   console.log(`  OK — no new hardcoded strings (baseline: ${baseline.length}).`);
