@@ -1,0 +1,46 @@
+# ── Imari · cPanel (Apache) config ─────────────────────────────────
+# Single-page app served at the document root of imaliai.maxventures.rw.
+# Routing is hash-based, so the server only ever needs to serve index.html.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Force HTTPS (cPanel/AutoSSL terminates TLS). Skip if already https.
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # SPA fallback: any path that is not a real file/dir → index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# ── Caching ────────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+  # Content-hashed build assets — cache hard, forever.
+  <FilesMatch "\.(js|css|woff2|png|jpg|jpeg|gif|svg|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Entry points & PWA control files — always revalidate.
+  <FilesMatch "(index\.html|sw\.js|registerSW\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+
+  # Baseline security headers.
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ── Compression ────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
+    application/javascript application/json image/svg+xml application/manifest+json
+</IfModule>
+
+# Correct MIME type for the web manifest.
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>

@@ -9,8 +9,8 @@ export { isConfigured };
 // Site URL setting alone. Works on both localhost and production.
 function appRedirectURL() {
   const origin = window.location.origin;
-  // On GitHub Pages the app lives under /imari-portfolio/
-  // On localhost (Vite) it lives under /imari-portfolio/ too (base config)
+  // The app is served at the document root on both cPanel
+  // (imaliai.maxventures.rw) and localhost (Vite), so BASE_URL is '/'.
   const base = import.meta.env.BASE_URL || '/';
   return `${origin}${base}`;
 }

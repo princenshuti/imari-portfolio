@@ -1,21 +1,16 @@
-name: Deploy to GitHub Pages
+name: Deploy to cPanel (imaliai.maxventures.rw)
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: pages
+  group: deploy-cpanel
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,20 +25,21 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          # VITE_ANTHROPIC_KEY is intentionally NOT passed here.
-          # The Anthropic key lives in a Supabase Edge Function secret (server-side only).
-          # Local-dev fallback: add VITE_ANTHROPIC_KEY to your .env.local file.
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
+          # VITE_ANTHROPIC_KEY is intentionally NOT passed.
+          # The Anthropic key lives in the Supabase Edge Function `ai-proxy` (server-side).
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # Upload the built dist/ to the cPanel subdomain document root over FTP(S).
+      # Requires repo secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+      # and (optional) variable CPANEL_DIR — the document root for the subdomain,
+      # relative to the FTP user's home (default: imali.princenshuti.com/).
+      - name: Deploy to cPanel via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./dist/
+          server-dir: ${{ vars.CPANEL_DIR || 'imali.princenshuti.com/' }}
+          # Don't wipe files the build doesn't manage (e.g. cPanel-generated cgi-bin).
+          dangerous-clean-slate: false
