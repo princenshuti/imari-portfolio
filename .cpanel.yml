@@ -1,0 +1,30 @@
+---
+# cPanel Git Version Control deployment manifest.
+# Runs on the cPanel host when you click "Deploy HEAD Commit" in the
+# Git Version Control UI (or via the deploy webhook).
+#
+# Prerequisites:
+#   1. Build locally: `npm run build` (produces dist/ at repo root).
+#   2. Verify the build at the staging preview before promoting:
+#      https://princenshuti.github.io/imari-portfolio/
+#   3. Push dist/ to the branch cPanel watches. The repo's .gitignore
+#      excludes dist/ by default — either un-ignore it on a dedicated
+#      `production` branch, or `git add -f dist/` on the deploy commit.
+#
+# What this manifest does:
+#   - Copies dist/* into the subdomain document root.
+#   - Includes dotfiles (.htaccess in particular) — `cp -R dist/.` is
+#     deliberate: trailing dot copies contents including hidden files.
+#   - Does NOT prune stale files. cPanel quotas are finite; periodically
+#     clean old hashed chunks by hand (or replace the cp with an rsync
+#     --delete if the host has rsync available).
+#
+# DEPLOYPATH is the document root for imali.princenshuti.com. cPanel's
+# default for a subdomain created as "imali" under princenshuti.com is
+# $HOME/imali.princenshuti.com/. Confirm in cPanel → Domains before the
+# first deploy; adjust if your account uses public_html/imali/ instead.
+deployment:
+  tasks:
+    - export DEPLOYPATH=$HOME/imali.princenshuti.com/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R dist/. $DEPLOYPATH
