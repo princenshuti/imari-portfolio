@@ -1,8 +1,9 @@
 # Imari Platform — System Documentation
 
 **Repository:** [princenshuti/imari-portfolio](https://github.com/princenshuti/imari-portfolio)
-**Live:** https://princenshuti.github.io/imari-portfolio/
-**Last updated:** 2026-05-25
+**Live:** https://imali.princenshuti.com/ (cPanel, deployed via Git Version Control)
+**Staging preview:** https://princenshuti.github.io/imari-portfolio/ (local build pushed to verify before promoting)
+**Last updated:** 2026-06-09
 
 ---
 
@@ -189,7 +190,7 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 
 ### 4.1 Cold start
 
-1. Browser loads `index.html` from GitHub Pages at `/imari-portfolio/`.
+1. Browser loads `index.html` from cPanel at the document root of `imali.princenshuti.com`.
 2. Vite bundle boots React; [App.jsx](src/App.jsx) calls `supabase.auth.getSession()`.
 3. If a session exists, [`loadOrCreatePortfolio`](src/cloud.js) queries `portfolios` joined with `portfolio_members` for the current user.
 4. The returned portfolio JSON is dispatched as `replaceAll`, hydrating the reducer.
@@ -252,12 +253,12 @@ This is the honest state of the project. Adding Vitest + a smoke test for the re
 - `ANTHROPIC_KEY` — used by `ai-proxy`; never exposed to the browser.
 - `RESEND_API_KEY` — used by `send-invitation`; from [resend.com](https://resend.com).
 - `FROM_EMAIL` — verified sender, e.g. `Imari <invites@yourdomain.com>`.
-- `APP_URL` — public app origin used to build accept links, e.g. `https://princenshuti.github.io/imari-portfolio/`.
+- `APP_URL` — public app origin used to build accept links, e.g. `https://imali.princenshuti.com/`. Must match the deployed cPanel origin (no trailing slash is stripped at line 31 of `supabase/functions/send-invitation/index.ts`).
 
 Deploy the function with:
 ```bash
 supabase functions deploy send-invitation
-supabase secrets set RESEND_API_KEY=re_... FROM_EMAIL='Imari <invites@yourdomain.com>' APP_URL='https://princenshuti.github.io/imari-portfolio/'
+supabase secrets set RESEND_API_KEY=re_... FROM_EMAIL='Imari <invites@yourdomain.com>' APP_URL='https://imali.princenshuti.com/'
 ```
 
 ### Local development
@@ -271,22 +272,46 @@ npm run dev                  # http://localhost:5173
 
 If `VITE_SUPABASE_URL` is empty, the app falls back to `localStorage` persistence and the AI advisor is disabled.
 
+### Post-migration checklist (cPanel cutover)
+
+The cutover from GitHub Pages (`princenshuti.github.io/imari-portfolio/`) to cPanel (`imali.princenshuti.com`) changes the production origin. The frontend was updated, but three things live outside this repo and must be changed by hand once per environment:
+
+1. **Rotate the `APP_URL` Supabase secret.** `supabase/functions/send-invitation/index.ts` builds invitation accept links from this. While the secret still points at the GH Pages URL, every invitation email goes to a dead link.
+   ```bash
+   supabase secrets set APP_URL='https://imali.princenshuti.com/'
+   ```
+2. **Add the new origin to Supabase Auth → URL Configuration → Redirect URLs.** Both `appRedirectURL()` (signup verification, password reset) and Supabase's own templated links check this allowlist. Add `https://imali.princenshuti.com/` (and keep the GH Pages URL for staging if you still verify there).
+3. **Update the Supabase Auth Site URL** to `https://imali.princenshuti.com/`. This is the fallback Supabase uses when a `redirect_to` isn't in the allowlist — pointing it at the new prod avoids users landing on dead URLs.
+
+Until all three are done, email-based auth and the invitation flow silently break on the new domain.
+
 ---
 
 ## 7. Known limits & next steps
 
-- **No automated tests.** Regressions are caught visually or by users.
+- **No automated tests.** Regressions are caught visually or by users. *(Update 2026-06: 87 vitest tests now cover the calculation engines, reducer, and format helpers; UI flows remain uncovered.)*
 - **Single Postgres row per portfolio.** Portfolio state is one JSON blob; large portfolios will eventually need a normalised schema for query efficiency.
 - **No audit log.** Member edits overwrite silently — there's no per-field history beyond snapshots.
 - **Anthropic rate limits are global to the function**, not per user; abuse mitigation is basic.
 - **Tax report is hard-coded to 2024 RRA bands.** Needs yearly maintenance.
 
+### Deferred to the Imari mobile app (2026-06)
+
+These features are documented in `docs/IMARI_FEATURE_BUILD_GUIDE.md` and were partially scaffolded in the web codebase, but require capabilities a PWA can't provide. They were removed from the active web codebase and will be rebuilt as part of the mobile app:
+
+- **§3 MoMo SMS auto-sync** — needs `READ_SMS` permission (Android), not available to browsers. Web users use the bank/MoMo statement importer (`src/services/bankImport.js`, exposed in CashFlow) as the equivalent capture path. The parser code (`src/parsers/momo/`) was deleted.
+- **§4 WhatsApp Quick-Entry + nudges** — WhatsApp Business API provisioning, phone verification, and the always-on webhook lifecycle belong with the native build. The two Edge Function sources (`whatsapp-inbound`, `whatsapp-nudge`) were deleted from `supabase/functions/`.
+
+The `whatsapp_links` table (`supabase-migration-004.sql`) is **preserved in the schema** so the mobile rebuild reuses it without a new migration. Don't drop it without coordinating with mobile work.
+
 ---
 
 ## 8. Pointers
 
-- Live site: https://princenshuti.github.io/imari-portfolio/
+- Live site: https://imali.princenshuti.com/
+- Staging preview: https://princenshuti.github.io/imari-portfolio/
 - Repo: https://github.com/princenshuti/imari-portfolio
-- Deploy workflow: [.github/workflows/deploy.yml](.github/workflows/deploy.yml)
+- cPanel deployment manifest: [.cpanel.yml](.cpanel.yml)
+- Deploy workflow (legacy/optional FTP path): [.github/workflows/deploy.yml](.github/workflows/deploy.yml)
 - Schema: [supabase/schema/](supabase/schema/)
 - Edge functions: [supabase/functions/](supabase/functions/)
