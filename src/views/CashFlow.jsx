@@ -9,6 +9,7 @@ import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { Donut, AreaChart } from '../components/charts.jsx';
 import { auditRecurring } from '../engine/insights/recurringAudit.js';
 import { forecastCashflow } from '../engine/forecast.js';
+import { applyCatRules } from '../engine/catRules.js';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
@@ -241,7 +242,7 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
 const STEP_LABELS = { upload: 'Upload statement', map: 'Map columns', ai: 'AI categorising', review: 'Review & import' };
 const STEP_ORDER  = ['upload', 'map', 'ai', 'review'];
 
-function ImportModal({ accounts, currency, onImport, onCancel }) {
+function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) {
   const [step, setStep] = useState('upload');
   const [parsed, setParsed] = useState(null);            // { headers, rows }
   const [colMap, setColMap] = useState({});
@@ -285,7 +286,9 @@ function ImportModal({ accounts, currency, onImport, onCancel }) {
       return;
     }
     try {
-      const d = rowsToDrafts(parsed.rows, colMap, curr);
+      // User rules first (F5) — explicit, free, offline. The AI pass only sees
+      // what the keyword matcher AND the user's own rules couldn't place.
+      const d = applyCatRules(rowsToDrafts(parsed.rows, colMap, curr), catRules);
       if (!d.length) throw new Error('No transactions matched. Check your column mapping — debit+credit OR amount+type must be filled.');
 
       let final = d;
@@ -1149,7 +1152,7 @@ export default function CashFlowView({ state, dispatch }) {
         <CFEditor entry={editing} accounts={accounts} onSave={handleSave} onCancel={() => setEditing(null)} />
       )}
       {importing && (
-        <ImportModal accounts={accounts} currency={profile.displayCurrency} onImport={handleImport} onCancel={() => setImporting(false)} />
+        <ImportModal accounts={accounts} currency={profile.displayCurrency} catRules={state.catRules || []} onImport={handleImport} onCancel={() => setImporting(false)} />
       )}
 
       <ConfirmDestructive

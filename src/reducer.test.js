@@ -59,3 +59,25 @@ describe('account balance sync (money math)', () => {
     expect(syncAccountBalance(assets, [], 'missing')).toBe(assets);
   });
 });
+
+describe('categorisation rules (F5)', () => {
+  const rule = { id: 'r1', pattern: 'mtn', category: 'utilities' };
+
+  it('upsertCatRule adds a rule even when catRules is absent', () => {
+    const next = reducer(baseState(), { type: 'upsertCatRule', rule });
+    expect(next.catRules).toEqual([rule]);
+  });
+
+  it('upsertCatRule replaces a rule with the same id', () => {
+    const state = baseState({ catRules: [rule] });
+    const next = reducer(state, { type: 'upsertCatRule', rule: { ...rule, category: 'bank-fees' } });
+    expect(next.catRules).toHaveLength(1);
+    expect(next.catRules[0].category).toBe('bank-fees');
+  });
+
+  it('deleteCatRule removes only the matching rule', () => {
+    const state = baseState({ catRules: [rule, { id: 'r2', pattern: 'shop', category: 'food' }] });
+    const next = reducer(state, { type: 'deleteCatRule', id: 'r1' });
+    expect(next.catRules.map(r => r.id)).toEqual(['r2']);
+  });
+});

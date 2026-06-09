@@ -93,6 +93,12 @@ export function reducer(state, action) {
       return { ...state, cashflows: newCashflows, assets: newAssets };
     }
 
+    // ── Categorisation rules (F5) ───────────────────────────────
+    case 'upsertCatRule':
+      return { ...state, catRules: upsert(state.catRules || [], action.rule) };
+    case 'deleteCatRule':
+      return { ...state, catRules: (state.catRules || []).filter(r => r.id !== action.id) };
+
     // ── Snapshots ────────────────────────────────────────────────
     case 'addSnapshot':
       return { ...state, snapshots: addSnapshot(state.snapshots || [], action.netWorth, action.costBasis) };

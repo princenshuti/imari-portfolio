@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { CURRENCIES, MILESTONES, LIVE_FX, fmtNum } from '../data.js';
+import { CURRENCIES, MILESTONES, LIVE_FX, fmtNum, INCOME_CATEGORIES, EXPENSE_CATEGORIES, id as newId } from '../data.js';
+import { isValidRule } from '../engine/catRules.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { useT, SUPPORTED_LOCALES } from '../contexts/I18nContext.jsx';
 import { exportJSON, importJSONFile } from '../store.js';
@@ -369,6 +370,78 @@ function MilestoneSection({ profile, dispatch, showToast }) {
 // §10 Diaspora waitlist. MoMo SMS auto-sync (§3) and WhatsApp quick-entry (§4)
 // are deferred to the mobile app — neither is reachable from a PWA (browsers
 // can't read SMS; WhatsApp Business provisioning is tied to the mobile lifecycle).
+// F5 — user-defined categorisation rules: "when a description contains X,
+// categorise as Y". Applied before the AI pass on statement imports, so the
+// user's explicit word always wins (and costs nothing).
+function CatRulesSection({ catRules, dispatch, showToast }) {
+  const [pattern, setPattern] = useState('');
+  const [category, setCategory] = useState('food');
+  const allCats = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
+  const labelOf = (cid) => allCats.find(c => c.id === cid)?.label || cid;
+
+  const add = () => {
+    const rule = { id: newId(), pattern: pattern.trim(), category };
+    if (!isValidRule(rule)) {
+      showToast?.('Rule needs at least 2 characters to match on.', 'error');
+      return;
+    }
+    dispatch({ type: 'upsertCatRule', rule });
+    setPattern('');
+  };
+
+  const remove = (rule) => {
+    dispatch({ type: 'deleteCatRule', id: rule.id });
+    showToast?.(`Removed the "${rule.pattern}" rule.`, 'info', {
+      action: { label: 'Undo', onClick: () => dispatch({ type: 'upsertCatRule', rule }) },
+    });
+  };
+
+  return (
+    <Section title="Categorisation rules" subtitle="When an imported description contains your text, Imari files it under your category — before any AI guess.">
+      {catRules.length > 0 && (
+        <div className="col" style={{ gap: 6, marginBottom: 14 }}>
+          {catRules.map(r => (
+            <div key={r.id} className="row" style={{ gap: 10, padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 8, justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 12.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                contains <strong>“{r.pattern}”</strong>
+                <span className="muted"> → </span>
+                <span style={{ fontWeight: 600 }}>{labelOf(r.category)}</span>
+              </div>
+              <button type="button" onClick={() => remove(r)} className="btn-icon-sm" aria-label={`Delete rule for ${r.pattern}`}>
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <input
+          value={pattern}
+          onChange={e => setPattern(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') add(); }}
+          placeholder='Description contains… e.g. "MTN" or "Vision City"'
+          aria-label="Text the description must contain"
+          style={{ ...inputStyle, flex: 2, minWidth: 180 }}
+        />
+        <select value={category} onChange={e => setCategory(e.target.value)} aria-label="Category to apply" style={{ ...inputStyle, flex: 1, minWidth: 140 }}>
+          <optgroup label="Expense">
+            {EXPENSE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </optgroup>
+          <optgroup label="Income">
+            {INCOME_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </optgroup>
+        </select>
+        <button type="button" onClick={add} className="btn btn-primary">Add rule</button>
+      </div>
+      {catRules.length === 0 && (
+        <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
+          No rules yet. Every statement line your rules would have caught is one you'll re-categorise by hand — teach Imari once, it files them forever.
+        </div>
+      )}
+    </Section>
+  );
+}
+
 function ConnectionsSection({ profile, dispatch }) {
   const set = (patch) => dispatch({ type: 'setProfile', patch });
   const onWaitlist = !!profile.diasporaWaitlist;
@@ -734,6 +807,8 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
       </Section>
 
       <MilestoneSection profile={state.profile} dispatch={dispatch} showToast={showToast} />
+
+      <CatRulesSection catRules={state.catRules || []} dispatch={dispatch} showToast={showToast} />
 
       <Section title="Tax & Reporting" subtitle="View your estimated Rwanda tax liability and capital gains breakdown.">
         <div className="row" style={{ gap: 10 }}>
