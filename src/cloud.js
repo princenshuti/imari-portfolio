@@ -9,8 +9,8 @@ export { isConfigured };
 // Site URL setting alone. Works on both localhost and production.
 function appRedirectURL() {
   const origin = window.location.origin;
-  // The app is served at the document root on both cPanel
-  // (imaliai.maxventures.rw) and localhost (Vite), so BASE_URL is '/'.
+  // The app is served at the document root on cPanel
+  // (imali.princenshuti.com) and localhost (Vite), so BASE_URL is '/'.
   const base = import.meta.env.BASE_URL || '/';
   return `${origin}${base}`;
 }
