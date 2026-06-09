@@ -7,6 +7,7 @@ import { hasEnvKey } from '../ai.js';
 import { parseReceiptImage, fileToImage } from '../services/receiptOcr.js';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { Donut } from '../components/charts.jsx';
+import { auditRecurring } from '../engine/insights/recurringAudit.js';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
@@ -1119,6 +1120,11 @@ export default function CashFlowView({ state, dispatch }) {
         </div>
       )}
 
+      {/* Recurring-subscription audit — always-visible roll-up of every non-'once'
+          expense, so the user sees what they're paying every month without having
+          to look at it. Independent of the month picker (subscriptions don't move). */}
+      <RecurringAuditSection cashflows={cashflows} displayCurrency={profile.displayCurrency} />
+
       {cashflows.length === 0 && (
         <div className="card" style={{ padding: 60, textAlign: 'center' }}>
           <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>Track your cash flow</div>
@@ -1159,6 +1165,86 @@ export default function CashFlowView({ state, dispatch }) {
         )}
         confirmLabel="Delete entry"
       />
+    </div>
+  );
+}
+
+// Recurring-subscription roll-up. Cost-of-Absence framing: shows annual
+// equivalent of the monthly drip so the user feels the real cost.
+function RecurringAuditSection({ cashflows, displayCurrency }) {
+  const audit = useMemo(() => auditRecurring(cashflows), [cashflows]);
+  const [open, setOpen] = useState(false);
+  if (audit.count === 0) return null;
+
+  return (
+    <div className="card" style={{ padding: 0, marginBottom: 14 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        style={{
+          width: '100%', padding: '14px 20px', background: 'transparent', border: 0,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          cursor: 'pointer', color: 'inherit', fontFamily: 'inherit', textAlign: 'left',
+        }}
+      >
+        <div className="row" style={{ gap: 8, alignItems: 'baseline' }}>
+          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
+          <div className="font-serif" style={{ fontSize: 16 }}>Recurring subscriptions</div>
+          <span className="pill pill-soft">{audit.count}</span>
+          <span className="muted" style={{ fontSize: 11 }}>{open ? 'hide' : 'review'}</span>
+        </div>
+        <div className="col" style={{ alignItems: 'flex-end' }}>
+          <div className="num" style={{ fontSize: 14, fontWeight: 700 }}>
+            {fmtBase(audit.totalMonthly, displayCurrency, { compact: true })}/mo
+          </div>
+          <div className="muted" style={{ fontSize: 10 }}>
+            ≈ {fmtBase(audit.totalAnnual, displayCurrency, { compact: true })}/yr on autopilot
+          </div>
+        </div>
+      </button>
+
+      {open && (
+        <>
+          <div className="hr" />
+          <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+            {audit.byCategory.map(c => (
+              <div key={c.category} style={{ padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8 }}>
+                <div className="muted" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                  {c.category.replace(/-/g, ' ')}
+                </div>
+                <div className="num" style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>
+                  {fmtBase(c.monthly, displayCurrency, { compact: true })}<span className="muted" style={{ fontSize: 10, fontWeight: 500 }}>/mo</span>
+                </div>
+                <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{c.count} {c.count === 1 ? 'item' : 'items'}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hr" />
+          <div style={{ padding: '6px 0' }}>
+            {audit.subscriptions.map((s, i) => (
+              <div key={s.id}>
+                {i > 0 && <div className="hr" style={{ margin: '0 20px' }} />}
+                <div className="row" style={{ padding: '10px 20px', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.description}</div>
+                    <div className="muted" style={{ fontSize: 11 }}>
+                      {s.recurring} · {s.category.replace(/-/g, ' ')} · {fmt(s.amount, s.currency, { compact: true })} each
+                    </div>
+                  </div>
+                  <div className="num" style={{ fontSize: 13, fontWeight: 700, color: 'var(--down)', flexShrink: 0 }}>
+                    {fmtBase(s.monthly, displayCurrency, { compact: true })}/mo
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="muted" style={{ fontSize: 11, padding: '10px 20px', lineHeight: 1.5, background: 'var(--bg-2)' }}>
+            This is what you pay every month without thinking about it. Cancelling one RWF 5,000/mo subscription saves RWF 60,000/year — and compounds in your goal lockbox.
+          </div>
+        </>
+      )}
     </div>
   );
 }
