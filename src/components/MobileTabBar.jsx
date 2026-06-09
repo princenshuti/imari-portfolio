@@ -13,6 +13,7 @@ const TAB_KEY = {
   liabilities:  'nav.liabilities',
   accounts:     'nav.accounts',
   trends:       'nav.trends',
+  yearreview:   'nav.tabs_review',
   tax:          'nav.tax',
   balancesheet: 'nav.tabs_balance',
   projections:  'nav.tabs_forecast',

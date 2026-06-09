@@ -27,6 +27,7 @@ export default {
     balancesheet:'Balance Sheet',
     projections: 'Fast Forward',
     retirement:  'Retirement',
+    yearreview:  'Year in Review',
     advisor:     'AI Advisor',
     settings:    'Settings',
     home_label:  'Go to Dashboard',
@@ -42,6 +43,7 @@ export default {
     tabs_balance:  'Balance',
     tabs_forecast: 'Forecast',
     tabs_pension:  'Pension',
+    tabs_review:   'Review',
   },
 
   // TopBar — role pill + avatar fallback

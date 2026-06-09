@@ -17,6 +17,7 @@ const NAV_KEY = {
   goals:       'nav.goals',
   accounts:    'nav.accounts',
   trends:      'nav.trends',
+  yearreview:  'nav.yearreview',
   tax:         'nav.tax',
   balancesheet:'nav.balancesheet',
   projections: 'nav.projections',

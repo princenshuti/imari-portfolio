@@ -20,6 +20,7 @@ export default {
     balancesheet:'Bilan',
     projections: 'Avance rapide',
     retirement:  'Retraite',
+    yearreview:  'Bilan de l\'année',
     advisor:     'Conseiller IA',
     settings:    'Paramètres',
     home_label:  'Aller au tableau de bord',
@@ -34,6 +35,7 @@ export default {
     tabs_balance:  'Bilan',
     tabs_forecast: 'Prévision',
     tabs_pension:  'Retraite',
+    tabs_review:   'Bilan',
   },
 
   topbar: {

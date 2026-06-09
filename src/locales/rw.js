@@ -28,6 +28,7 @@ export default {
     balancesheet:'Urutonde rw\'ubutunzi',
     projections: 'Iteganya',
     retirement:  'Izabukuru',
+    yearreview:  'Incamake y\'umwaka',
     advisor:     'Umujyanama wa AI',
     settings:    'Igenamiterere',
     home_label:  'Jya ku Mbonerahamwe',
@@ -42,6 +43,7 @@ export default {
     tabs_balance:  'Urutonde',
     tabs_forecast: 'Iteganya',
     tabs_pension:  'Izabukuru',
+    tabs_review:   'Incamake',
   },
 
   topbar: {
