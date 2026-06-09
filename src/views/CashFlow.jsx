@@ -781,8 +781,8 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
           <div className="num" style={{ fontSize: 14, fontWeight: 700, color: isIncome ? 'var(--up)' : 'var(--down)' }}>
             {isIncome ? '+' : '−'}{fmt(cf.amount, cf.currency, { compact: true })}
           </div>
-          <button type="button" onClick={() => onEdit(cf)} aria-label={`Edit cashflow ${cf.description || cf.category || ''}`.trim()} style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid var(--line)', background: 'transparent', cursor: 'pointer' }}>Edit</button>
-          <button type="button" onClick={() => onDelete(cf.id)} aria-label={`Delete cashflow ${cf.description || cf.category || ''}`.trim()} style={{ padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down)', cursor: 'pointer' }}><span aria-hidden="true">×</span></button>
+          <button type="button" onClick={() => onEdit(cf)} aria-label={`Edit cashflow ${cf.description || cf.category || ''}`.trim()} className="btn-icon-sm is-row-action"><span aria-hidden="true">✎</span></button>
+          <button type="button" onClick={() => onDelete(cf.id)} aria-label={`Delete cashflow ${cf.description || cf.category || ''}`.trim()} className="btn-icon-sm is-row-action is-danger"><span aria-hidden="true">×</span></button>
         </div>
       </div>
       <ImageLightbox open={showImg && !!cf.attachment} onClose={() => setShowImg(false)} src={cf.attachment?.data} alt="Cashflow receipt" />
