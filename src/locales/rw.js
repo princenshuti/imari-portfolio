@@ -29,6 +29,7 @@ export default {
     projections: 'Iteganya',
     retirement:  'Izabukuru',
     yearreview:  'Incamake y\'umwaka',
+    reports:     'Raporo y\'ukwezi',
     advisor:     'Umujyanama wa AI',
     settings:    'Igenamiterere',
     home_label:  'Jya ku Mbonerahamwe',
@@ -44,6 +45,7 @@ export default {
     tabs_forecast: 'Iteganya',
     tabs_pension:  'Izabukuru',
     tabs_review:   'Incamake',
+    tabs_report:   'Raporo',
   },
 
   topbar: {

@@ -16,6 +16,7 @@ const TAB_KEY = {
   yearreview:   'nav.tabs_review',
   tax:          'nav.tax',
   balancesheet: 'nav.tabs_balance',
+  reports:      'nav.tabs_report',
   projections:  'nav.tabs_forecast',
   retirement:   'nav.tabs_pension',
   advisor:      'nav.advisor',

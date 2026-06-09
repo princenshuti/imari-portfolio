@@ -28,6 +28,7 @@ export default {
     projections: 'Fast Forward',
     retirement:  'Retirement',
     yearreview:  'Year in Review',
+    reports:     'Monthly Report',
     advisor:     'AI Advisor',
     settings:    'Settings',
     home_label:  'Go to Dashboard',
@@ -44,6 +45,7 @@ export default {
     tabs_forecast: 'Forecast',
     tabs_pension:  'Pension',
     tabs_review:   'Review',
+    tabs_report:   'Report',
   },
 
   // TopBar — role pill + avatar fallback

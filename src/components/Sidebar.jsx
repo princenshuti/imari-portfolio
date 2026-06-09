@@ -20,6 +20,7 @@ const NAV_KEY = {
   yearreview:  'nav.yearreview',
   tax:         'nav.tax',
   balancesheet:'nav.balancesheet',
+  reports:     'nav.reports',
   projections: 'nav.projections',
   retirement:  'nav.retirement',
   advisor:     'nav.advisor',

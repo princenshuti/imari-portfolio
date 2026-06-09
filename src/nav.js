@@ -14,6 +14,7 @@ export const NAV_ITEMS = {
   yearreview:  { id: 'yearreview',  labelDesktop: 'Year in Review', labelMobile: 'Review', glyph: '✺', group: 'Money & Markets'  },
   tax:         { id: 'tax',         labelDesktop: 'Tax Report',  labelMobile: 'Tax Report', glyph: '§', group: 'Money & Markets'  },
   balancesheet:{ id: 'balancesheet',labelDesktop: 'Balance Sheet', labelMobile: 'Balance',  glyph: '▦', group: 'Money & Markets'  },
+  reports:     { id: 'reports',     labelDesktop: 'Monthly Report', labelMobile: 'Report',  glyph: '▤', group: 'Money & Markets'  },
   projections: { id: 'projections', labelDesktop: 'Fast Forward', labelMobile: 'Forecast', glyph: '⤴', group: 'Tools'    },
   retirement:  { id: 'retirement',  labelDesktop: 'Retirement',   labelMobile: 'Pension',  glyph: '☂', group: 'Tools'    },
   advisor:     { id: 'advisor',     labelDesktop: 'AI Advisor',  labelMobile: 'AI Advisor', glyph: '✦', group: 'Tools'    },
@@ -34,5 +35,5 @@ export function navItemsByGroup() {
 export const MAIN_TABS = ['dashboard', 'assets', 'cashflow', 'goals']
   .map(k => ({ id: NAV_ITEMS[k].id, label: NAV_ITEMS[k].labelMobile, glyph: NAV_ITEMS[k].glyph }));
 
-export const MORE_ITEMS = ['liabilities', 'accounts', 'trends', 'yearreview', 'tax', 'balancesheet', 'projections', 'retirement', 'advisor', 'settings']
+export const MORE_ITEMS = ['liabilities', 'accounts', 'trends', 'yearreview', 'tax', 'balancesheet', 'reports', 'projections', 'retirement', 'advisor', 'settings']
   .map(k => ({ id: NAV_ITEMS[k].id, label: NAV_ITEMS[k].labelMobile, glyph: NAV_ITEMS[k].glyph }));

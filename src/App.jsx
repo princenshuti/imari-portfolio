@@ -32,6 +32,7 @@ const BalanceSheetView = lazy(() => import('./views/BalanceSheet.jsx'));
 const ProjectionsView = lazy(() => import('./views/Projections.jsx'));
 const RetirementView  = lazy(() => import('./views/Retirement.jsx'));
 const YearReviewView  = lazy(() => import('./views/YearReview.jsx'));
+const ReportsView     = lazy(() => import('./views/Reports.jsx'));
 
 // ─ Shared UI primitives ───────────────────────────────────────
 function FullScreenLoader({ message = 'Loading…' }) {
@@ -517,6 +518,7 @@ export default function App() {
     projections: { title: 'Fast Forward', subtitle: 'Net-worth projection · modeled' },
     retirement:  { title: 'Retirement readiness', subtitle: 'RSSB / Ejo Heza pension projection' },
     yearreview:  { title: 'Year in Review', subtitle: 'Your net worth, month by month' },
+    reports:     { title: 'Monthly Report', subtitle: 'Auto-generated from your entries' },
   };
 
   const view = (() => {
@@ -534,6 +536,7 @@ export default function App() {
       case 'projections': return <ProjectionsView  state={state} dispatch={guardedDispatch} />;
       case 'retirement':  return <RetirementView   state={state} dispatch={guardedDispatch} />;
       case 'yearreview':  return <YearReviewView   state={state} />;
+      case 'reports':     return <ReportsView      state={state} />;
       default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} netWorth={netWorth} totalCost={totalCost} />;
     }
   })();
