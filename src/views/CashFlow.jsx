@@ -6,8 +6,9 @@ import { parseFile, detectColumns, rowsToDrafts, aiCategorize } from '../service
 import { hasEnvKey } from '../ai.js';
 import { parseReceiptImage, fileToImage } from '../services/receiptOcr.js';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
-import { Donut } from '../components/charts.jsx';
+import { Donut, AreaChart } from '../components/charts.jsx';
 import { auditRecurring } from '../engine/insights/recurringAudit.js';
+import { forecastCashflow } from '../engine/forecast.js';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
@@ -1051,6 +1052,12 @@ export default function CashFlowView({ state, dispatch }) {
         </div>
       )}
 
+      {/* 30-day forecast — projects the liquid balance forward from recurring
+          entries + future-dated one-offs (F3). */}
+      {cashflows.length > 0 && (
+        <ForecastSection cashflows={cashflows} accounts={accounts} displayCurrency={profile.displayCurrency} />
+      )}
+
       {/* Month navigator + actions */}
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div className="row" style={{ gap: 8 }}>
@@ -1165,6 +1172,71 @@ export default function CashFlowView({ state, dispatch }) {
         )}
         confirmLabel="Delete entry"
       />
+    </div>
+  );
+}
+
+// 30-day balance forecast. Opening balance = linked accounts (savings + MoMo)
+// in RWF; each forecast day applies recurring entries on their anchored
+// day-of-month plus future-dated one-offs. Cost-of-Absence framing: the crunch
+// day is named before it happens.
+function ForecastSection({ cashflows, accounts, displayCurrency }) {
+  const forecast = useMemo(() => {
+    const openingBalance = accounts.reduce(
+      (s, a) => s + toBase(a.currentValue || 0, a.currency || 'RWF'), 0);
+    return forecastCashflow({ cashflows, openingBalance, now: new Date() });
+  }, [cashflows, accounts]);
+
+  const hasRecurring = cashflows.some(cf => cf.recurring && cf.recurring !== 'once');
+  if (!hasRecurring && forecast.totalIncome === 0 && forecast.totalExpense === 0) return null;
+
+  const shortDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const crunch = forecast.firstShortfallDate;
+
+  return (
+    <div className="card" style={{ padding: '18px 22px', marginBottom: 20 }}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Next 30 days</div>
+        <div className="muted" style={{ fontSize: 10.5 }}>
+          {accounts.length > 0
+            ? 'Projected from your account balances and recurring entries'
+            : 'Projected from your recurring entries (no linked accounts — starts at 0)'}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, margin: '10px 0 14px' }}>
+        {[
+          { label: 'Expected in',  value: `+ ${fmtBase(forecast.totalIncome, displayCurrency, { compact: true })}`, color: 'var(--up)' },
+          { label: 'Expected out', value: `− ${fmtBase(forecast.totalExpense, displayCurrency, { compact: true })}`, color: 'var(--down)' },
+          { label: 'Balance in 30 days', value: fmtBase(forecast.endBalance, displayCurrency, { compact: true }), color: forecast.endBalance >= 0 ? 'var(--ink)' : 'var(--down)' },
+          { label: 'Lowest point', value: fmtBase(forecast.minBalance, displayCurrency, { compact: true }), color: forecast.minBalance >= 0 ? 'var(--ink)' : 'var(--down)' },
+        ].map(c => (
+          <div key={c.label} style={{ padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 8 }}>
+            <div className="muted" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{c.label}</div>
+            <div className="num" style={{ fontSize: 15, fontWeight: 700, color: c.color, marginTop: 2 }}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <AreaChart
+        data={forecast.days.map(d => d.balance)}
+        labels={forecast.days.map(d => shortDate(d.date))}
+        w={640} h={110} responsive
+        stroke={crunch ? 'var(--down)' : 'var(--brand)'}
+        accent={crunch ? 'var(--down)' : 'var(--brand)'}
+        formatValue={(v) => fmtBase(v, displayCurrency, { compact: true })}
+        ariaLabel={`Projected balance over the next 30 days, ending at ${fmtBase(forecast.endBalance, displayCurrency, { compact: true })}.`}
+      />
+
+      {crunch && (
+        <div role="status" style={{
+          marginTop: 12, padding: '9px 12px', borderRadius: 8, fontSize: 11.5, lineHeight: 1.5,
+          background: 'var(--down-soft)', color: 'var(--down)', fontWeight: 600,
+        }}>
+          ▼ Projected to run dry on {shortDate(crunch)} — recurring bills outpace your balance.
+          Move money before then or trim a subscription below.
+        </div>
+      )}
     </div>
   );
 }
