@@ -366,59 +366,17 @@ function MilestoneSection({ profile, dispatch, showToast }) {
   );
 }
 
-// §3 MoMo auto-sync consent · §4 WhatsApp connect (B16) · §10 Diaspora waitlist.
-// All persist to profile. SMS capture (Android companion), WhatsApp Business API
-// provisioning, and billing (Stripe/Flutterwave) are EXTERNAL — flagged inline.
+// §10 Diaspora waitlist. MoMo SMS auto-sync (§3) and WhatsApp quick-entry (§4)
+// are deferred to the mobile app — neither is reachable from a PWA (browsers
+// can't read SMS; WhatsApp Business provisioning is tied to the mobile lifecycle).
 function ConnectionsSection({ profile, dispatch }) {
   const set = (patch) => dispatch({ type: 'setProfile', patch });
-  const momo = profile.momoSync || { enabled: false, mtn: true, airtel: true };
-  const wa = profile.whatsapp || { phone: '', optInNudges: false };
   const onWaitlist = !!profile.diasporaWaitlist;
   const card = { padding: '12px 14px', borderRadius: 10, background: 'var(--bg-2)', border: '0.5px solid var(--line)' };
   const flag = { fontSize: 10.5, color: 'var(--gold-ink, var(--gold))', marginTop: 6 };
 
   return (
-    <Section title="Connections & sync" subtitle="Auto-ingest your money from MoMo and WhatsApp, and the diaspora oversight tier.">
-      {/* §3 MoMo Auto-Sync */}
-      <div style={{ ...card, marginBottom: 12 }}>
-        <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
-          <input type="checkbox" checked={!!momo.enabled} onChange={e => set({ momoSync: { ...momo, enabled: e.target.checked } })} style={{ accentColor: 'var(--brand)' }} />
-          <span style={{ fontSize: 13, fontWeight: 600 }}>MoMo Auto-Sync</span>
-        </label>
-        <div className="muted" style={{ fontSize: 11.5, marginTop: 6, lineHeight: 1.5 }}>
-          Reads only MTN/Airtel confirmation SMS and posts parsed transactions. Raw SMS is never stored — only structured fields.
-        </div>
-        {momo.enabled && (
-          <div className="row" style={{ gap: 14, marginTop: 8 }}>
-            {['mtn', 'airtel'].map(s => (
-              <label key={s} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, cursor: 'pointer' }}>
-                <input type="checkbox" checked={momo[s] !== false} onChange={e => set({ momoSync: { ...momo, [s]: e.target.checked } })} style={{ accentColor: 'var(--brand)' }} />
-                {s === 'mtn' ? 'MTN MoMo' : 'Airtel Money'}
-              </label>
-            ))}
-          </div>
-        )}
-        <div style={flag}>⚠ Requires the Imari Android companion to read SMS — a browser cannot. Manual entry always works.</div>
-      </div>
-
-      {/* §4 WhatsApp + B16 guide */}
-      <div style={{ ...card, marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Connect WhatsApp</div>
-        <div className="muted" style={{ fontSize: 11.5, marginBottom: 8, lineHeight: 1.5 }}>
-          Add expenses by texting — no app needed. 1) Connect your number · 2) text an example like “spent 25k fuel” · 3) see it appear.
-        </div>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <input type="tel" value={wa.phone} onChange={e => set({ whatsapp: { ...wa, phone: e.target.value } })}
-            placeholder="+2507XXXXXXXX" style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, cursor: 'pointer' }}>
-            <input type="checkbox" checked={!!wa.optInNudges} onChange={e => set({ whatsapp: { ...wa, optInNudges: e.target.checked } })} style={{ accentColor: 'var(--brand)' }} />
-            Daily nudge (opt-in)
-          </label>
-        </div>
-        <div className="muted" style={{ fontSize: 10.5, marginTop: 8 }}>Commands: <code>why</code> · <code>balance</code> · <code>networth</code> · <code>help</code> · <code>stop</code>. Max one nudge/day, quiet hours 21:00–07:00.</div>
-        <div style={flag}>⚠ Phone verification + messaging require a WhatsApp Business API number (external provisioning).</div>
-      </div>
-
+    <Section title="Connections & sync" subtitle="Diaspora oversight tier and account-level integrations.">
       {/* §10 Diaspora Oversight waitlist */}
       <div style={card}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Diaspora Oversight (≈ $9.99/mo)</div>

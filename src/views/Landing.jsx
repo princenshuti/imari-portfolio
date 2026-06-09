@@ -51,10 +51,8 @@ const COSTS = [
 const FEATURES = [
   { icon: 'spark', accent: 'var(--brand)', title: 'An insight engine, not a ledger',
     desc: 'Runway, idle cash, concentration, tax exposure, real-vs-nominal drift — computed from your data and ranked by what it costs you to ignore. Deterministic and tested, then phrased by AI.' },
-  { icon: 'sms', accent: 'var(--gold)', title: 'MoMo on autopilot',
-    desc: 'MTN and Airtel confirmation SMS parsed straight into your ledger — amount, who, balance, fee. Stop typing every transaction; your net worth stops being wrong.' },
-  { icon: 'chat', accent: 'var(--sky)', title: 'Add money from WhatsApp',
-    desc: 'Text “spent 25k fuel” and it is logged, categorised, ready to confirm. A once-a-day nudge keeps your money watched — in the app you already live in.' },
+  { icon: 'sheet', accent: 'var(--gold)', title: 'MoMo & bank statements, imported',
+    desc: 'Upload your MTN MoMo or Airtel Money statement — or a bank CSV from BK, Equity, I&M — and Imari parses every line, auto-categorises and lets you confirm in seconds.' },
   { icon: 'umbrella', accent: 'var(--brand)', title: 'Your pension, finally counted',
     desc: 'RSSB and Ejo Heza folded into your net worth, with a readiness score and the share of income you are on track to replace at 60.' },
   { icon: 'forecast', accent: 'var(--plum)', title: 'Fast-forward your net worth',
@@ -99,7 +97,7 @@ const TRUST = [
 
 const STEPS = [
   { n: '01', title: 'Create your account', desc: 'One email, one password, eight seconds. Your private portfolio is provisioned on the spot — free core, always.' },
-  { n: '02', title: 'Add what you own', desc: 'Accounts, assets, debts and goals, in RWF or USD. The first hour gives you the full picture; MoMo and WhatsApp keep it current after that.' },
+  { n: '02', title: 'Add what you own', desc: 'Accounts, assets, debts and goals, in RWF or USD. The first hour gives you the full picture; bank and MoMo statement imports keep it current after that.' },
   { n: '03', title: 'Let Imari watch it', desc: 'Daily snapshots, FX updates, tax estimates and the insight engine run quietly. You check in when you want to know — and Imari taps you when it matters.' },
 ];
 
