@@ -16,6 +16,7 @@ const TAB_KEY = {
   tax:          'nav.tax',
   balancesheet: 'nav.tabs_balance',
   projections:  'nav.tabs_forecast',
+  retirement:   'nav.tabs_pension',
   advisor:      'nav.advisor',
   settings:     'nav.settings',
 };

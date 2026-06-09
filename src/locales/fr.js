@@ -19,6 +19,7 @@ export default {
     tax:         'Rapport fiscal',
     balancesheet:'Bilan',
     projections: 'Avance rapide',
+    retirement:  'Retraite',
     advisor:     'Conseiller IA',
     settings:    'Paramètres',
     home_label:  'Aller au tableau de bord',
@@ -32,6 +33,7 @@ export default {
     tabs_home:     'Accueil',
     tabs_balance:  'Bilan',
     tabs_forecast: 'Prévision',
+    tabs_pension:  'Retraite',
   },
 
   topbar: {

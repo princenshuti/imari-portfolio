@@ -20,6 +20,7 @@ const NAV_KEY = {
   tax:         'nav.tax',
   balancesheet:'nav.balancesheet',
   projections: 'nav.projections',
+  retirement:  'nav.retirement',
   advisor:     'nav.advisor',
   settings:    'nav.settings',
 };

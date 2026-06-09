@@ -27,6 +27,7 @@ export default {
     tax:         'Raporo y\'umusoro',
     balancesheet:'Urutonde rw\'ubutunzi',
     projections: 'Iteganya',
+    retirement:  'Izabukuru',
     advisor:     'Umujyanama wa AI',
     settings:    'Igenamiterere',
     home_label:  'Jya ku Mbonerahamwe',
@@ -40,6 +41,7 @@ export default {
     tabs_home:     'Ahabanza',
     tabs_balance:  'Urutonde',
     tabs_forecast: 'Iteganya',
+    tabs_pension:  'Izabukuru',
   },
 
   topbar: {

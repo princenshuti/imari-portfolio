@@ -30,6 +30,7 @@ const CashFlowView    = lazy(() => import('./views/CashFlow.jsx'));
 const TaxReportView   = lazy(() => import('./views/TaxReport.jsx'));
 const BalanceSheetView = lazy(() => import('./views/BalanceSheet.jsx'));
 const ProjectionsView = lazy(() => import('./views/Projections.jsx'));
+const RetirementView  = lazy(() => import('./views/Retirement.jsx'));
 
 // ─ Shared UI primitives ───────────────────────────────────────
 function FullScreenLoader({ message = 'Loading…' }) {
@@ -128,7 +129,7 @@ export default function App() {
     if (saved && saved.fx) Object.assign(FX, saved.fx);
     return saved || defaultState();
   });
-  const VALID_VIEWS = new Set(['dashboard','accounts','assets','trends','advisor','settings','liabilities','goals','cashflow','tax','balancesheet','projections']);
+  const VALID_VIEWS = new Set(['dashboard','accounts','assets','trends','advisor','settings','liabilities','goals','cashflow','tax','balancesheet','projections','retirement']);
   function hashToNav() {
     const h = window.location.hash.replace('#', '');
     return VALID_VIEWS.has(h) ? h : 'dashboard';
@@ -513,6 +514,7 @@ export default function App() {
     tax:         { title: 'Tax Report', subtitle: `${new Date().getFullYear()} · Rwanda RRA estimate` },
     balancesheet:{ title: 'Balance Sheet', subtitle: 'Assets − liabilities = net worth' },
     projections: { title: 'Fast Forward', subtitle: 'Net-worth projection · modeled' },
+    retirement:  { title: 'Retirement readiness', subtitle: 'RSSB / Ejo Heza pension projection' },
   };
 
   const view = (() => {
@@ -528,6 +530,7 @@ export default function App() {
       case 'tax':         return <TaxReportView   state={state} dispatch={guardedDispatch} />;
       case 'balancesheet':return <BalanceSheetView state={state} dispatch={guardedDispatch} />;
       case 'projections': return <ProjectionsView  state={state} dispatch={guardedDispatch} />;
+      case 'retirement':  return <RetirementView   state={state} dispatch={guardedDispatch} />;
       default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} netWorth={netWorth} totalCost={totalCost} />;
     }
   })();
