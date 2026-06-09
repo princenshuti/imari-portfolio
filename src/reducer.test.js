@@ -81,3 +81,22 @@ describe('categorisation rules (F5)', () => {
     expect(next.catRules.map(r => r.id)).toEqual(['r2']);
   });
 });
+
+describe('budgets (F6)', () => {
+  it('setBudget creates the map and sets a category limit', () => {
+    const next = reducer(baseState(), { type: 'setBudget', category: 'food', amount: 200000 });
+    expect(next.budgets).toEqual({ food: 200000 });
+  });
+
+  it('setBudget overwrites an existing limit', () => {
+    const state = baseState({ budgets: { food: 100000 } });
+    const next = reducer(state, { type: 'setBudget', category: 'food', amount: 250000 });
+    expect(next.budgets.food).toBe(250000);
+  });
+
+  it('setBudget with zero/empty removes the envelope', () => {
+    const state = baseState({ budgets: { food: 100000, transport: 50000 } });
+    const next = reducer(state, { type: 'setBudget', category: 'food', amount: 0 });
+    expect(next.budgets).toEqual({ transport: 50000 });
+  });
+});

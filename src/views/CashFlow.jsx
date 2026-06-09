@@ -10,6 +10,7 @@ import { Donut, AreaChart } from '../components/charts.jsx';
 import { auditRecurring } from '../engine/insights/recurringAudit.js';
 import { forecastCashflow } from '../engine/forecast.js';
 import { applyCatRules } from '../engine/catRules.js';
+import { budgetStatus } from '../engine/budgets.js';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
@@ -1061,6 +1062,10 @@ export default function CashFlowView({ state, dispatch }) {
         <ForecastSection cashflows={cashflows} accounts={accounts} displayCurrency={profile.displayCurrency} />
       )}
 
+      {/* Monthly budget envelopes (F6) — limits per expense category, paced
+          against how far through the month we are. */}
+      <BudgetSection cashflows={cashflows} budgets={state.budgets || {}} dispatch={dispatch} displayCurrency={profile.displayCurrency} />
+
       {/* Month navigator + actions */}
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div className="row" style={{ gap: 8 }}>
@@ -1175,6 +1180,104 @@ export default function CashFlowView({ state, dispatch }) {
         )}
         confirmLabel="Delete entry"
       />
+    </div>
+  );
+}
+
+// Monthly budget envelopes. Each budgeted expense category gets a bar paced
+// against the month itself — "you're 50% through June but 90% through Food" is
+// the honest early warning, not just over/under at month-end.
+function BudgetSection({ cashflows, budgets, dispatch, displayCurrency }) {
+  const status = useMemo(() => budgetStatus(cashflows, budgets), [cashflows, budgets]);
+  const [managing, setManaging] = useState(false);
+  const [draft, setDraft] = useState({});
+  const hasBudgets = status.rows.length > 0;
+  if (!hasBudgets && !managing) {
+    return (
+      <div className="card" style={{ padding: '14px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Monthly budgets</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>No envelopes yet — every category without a limit is a category that can quietly overrun.</div>
+        </div>
+        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setManaging(true)}>Set budgets</button>
+      </div>
+    );
+  }
+
+  const paceColor = (pace) => pace === 'over' ? 'var(--down)' : pace === 'hot' ? 'var(--gold)' : 'var(--up)';
+  const commit = (catId) => {
+    const raw = draft[catId];
+    if (raw === undefined) return;
+    dispatch({ type: 'setBudget', category: catId, amount: Math.max(0, +String(raw).replace(/[, ]/g, '') || 0) });
+    setDraft(d => { const { [catId]: _, ...rest } = d; return rest; });
+  };
+
+  return (
+    <div className="card" style={{ padding: '18px 22px', marginBottom: 20 }}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <div className="row" style={{ gap: 8, alignItems: 'baseline' }}>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>Monthly budgets</div>
+          {hasBudgets && (
+            <span className="muted" style={{ fontSize: 11 }}>
+              {fmtBase(status.totalSpent, displayCurrency, { compact: true })} of {fmtBase(status.totalBudget, displayCurrency, { compact: true })} · {Math.round(status.monthPct)}% through the month
+            </span>
+          )}
+        </div>
+        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setManaging(m => !m)}>
+          {managing ? 'Done' : 'Manage'}
+        </button>
+      </div>
+
+      {!managing && status.rows.map(r => (
+        <div key={r.category} style={{ marginBottom: 10 }}>
+          <div className="row" style={{ justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+            <span style={{ fontWeight: 500 }}>{r.label}</span>
+            <span className="num" style={{ color: paceColor(r.pace), fontWeight: 600 }}>
+              {fmtBase(r.spent, displayCurrency, { compact: true })} / {fmtBase(r.budget, displayCurrency, { compact: true })}
+              {r.over && ` · ${fmtBase(r.spent - r.budget, displayCurrency, { compact: true })} over`}
+            </span>
+          </div>
+          <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden', position: 'relative' }}
+            role="progressbar" aria-valuenow={Math.round(r.pct)} aria-valuemin={0} aria-valuemax={100}
+            aria-label={`${r.label} budget: ${Math.round(r.pct)}% used`}>
+            <div style={{
+              width: `${Math.min(r.pct, 100)}%`, height: '100%', borderRadius: 3,
+              background: paceColor(r.pace), opacity: 0.85, transition: 'width 240ms cubic-bezier(0.23,1,0.32,1)',
+            }} />
+            {/* Month-pace marker — where the bar "should" be today */}
+            <div aria-hidden="true" style={{ position: 'absolute', left: `${status.monthPct}%`, top: -1, bottom: -1, width: 1.5, background: 'var(--ink-3)', opacity: 0.6 }} />
+          </div>
+        </div>
+      ))}
+
+      {!managing && status.overCount > 0 && (
+        <div role="status" style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 11.5, background: 'var(--down-soft)', color: 'var(--down)', fontWeight: 600 }}>
+          {status.overCount} envelope{status.overCount > 1 ? 's' : ''} over plan — {fmtBase(status.totalOver, displayCurrency, { compact: true })} past budget this month.
+        </div>
+      )}
+
+      {managing && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+          {EXPENSE_CATEGORIES.map(c => (
+            <label key={c.id} className="row" style={{ gap: 8, fontSize: 12, justifyContent: 'space-between' }}>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
+              <input
+                inputMode="numeric"
+                placeholder="No limit"
+                value={draft[c.id] !== undefined ? draft[c.id] : (budgets[c.id] || '')}
+                onChange={e => setDraft(d => ({ ...d, [c.id]: e.target.value }))}
+                onBlur={() => commit(c.id)}
+                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                aria-label={`Monthly budget for ${c.label} in RWF`}
+                style={{ ...inputStyle, width: 110, textAlign: 'right', fontSize: 12 }}
+              />
+            </label>
+          ))}
+          <div className="muted" style={{ fontSize: 10.5, gridColumn: '1 / -1' }}>
+            Amounts are RWF per month. Clear a field to remove its envelope.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

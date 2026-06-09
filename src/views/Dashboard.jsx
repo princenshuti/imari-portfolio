@@ -16,6 +16,7 @@ import { SEVERITY_RANK } from '../engine/insights/_shared.js';
 import { staleNetWorthInsight, netWorthAsOf } from '../engine/freshness.js';
 import { REFERENCE } from '../engine/insights/refs.js';
 import { projectPension } from '../engine/retirement/index.js';
+import { budgetStatus } from '../engine/budgets.js';
 import CostOfAbsence from '../components/CostOfAbsence.jsx';
 import MetricWidget from '../components/MetricWidget.jsx';
 
@@ -1109,6 +1110,19 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           asOf={wAsOf} now={today} deepLink="liabilities" onNav={nav}
           severity={debtToAsset > 50 ? 'warning' : 'info'}
           costHook={financialStats.monthlyObligations > 0 ? `${fmtBase(financialStats.monthlyObligations, profile.displayCurrency, { compact: true })}/mo in repayments.` : undefined} />);
+      // F6 — budget envelopes: only renders once the user has set limits.
+      const bs = budgetStatus(cashflows, state.budgets || {}, today);
+      if (bs.totalBudget > 0) widgets.push(
+        <MetricWidget key="budgets" delay={160} title="Budgets"
+          value={`${fmtBase(bs.totalSpent, profile.displayCurrency, { compact: true })} / ${fmtBase(bs.totalBudget, profile.displayCurrency, { compact: true })}`}
+          subtext={`${Math.round(bs.monthPct)}% through the month · ${bs.rows.length} envelope${bs.rows.length > 1 ? 's' : ''}`}
+          deepLink="cashflow" onNav={nav}
+          severity={bs.overCount > 0 ? 'critical' : bs.rows.some(r => r.pace === 'hot') ? 'warning' : 'good'}
+          costHook={bs.overCount > 0
+            ? `${bs.overCount} envelope${bs.overCount > 1 ? 's' : ''} over plan — ${fmtBase(bs.totalOver, profile.displayCurrency, { compact: true })} past budget.`
+            : bs.rows.some(r => r.pace === 'hot')
+              ? `${bs.rows.filter(r => r.pace === 'hot').map(r => r.label).slice(0, 2).join(', ')} burning faster than the month.`
+              : undefined} />);
       widgets.push(
         <MetricWidget key="investable" delay={120} title="Investable"
           value={fmtBase(investable, profile.displayCurrency, { compact: investable > 1e7 })}

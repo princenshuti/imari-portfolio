@@ -99,6 +99,14 @@ export function reducer(state, action) {
     case 'deleteCatRule':
       return { ...state, catRules: (state.catRules || []).filter(r => r.id !== action.id) };
 
+    // ── Budgets (F6) — monthly RWF limit per expense category ───
+    case 'setBudget': {
+      const budgets = { ...(state.budgets || {}) };
+      if ((action.amount || 0) > 0) budgets[action.category] = action.amount;
+      else delete budgets[action.category];
+      return { ...state, budgets };
+    }
+
     // ── Snapshots ────────────────────────────────────────────────
     case 'addSnapshot':
       return { ...state, snapshots: addSnapshot(state.snapshots || [], action.netWorth, action.costBasis) };
