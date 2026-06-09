@@ -29,6 +29,8 @@ const CHROME_FILES = [
   'src/views/NamePrompt.jsx',
   'src/views/Onboarding.jsx',
   'src/components/Sidebar.jsx',
+  'src/components/TopBar.jsx',
+  'src/components/MobileTabBar.jsx',
 ];
 
 function flatten(obj, prefix = '', out = {}) {

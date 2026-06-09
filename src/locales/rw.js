@@ -25,6 +25,8 @@ export default {
     accounts:    'Konti',
     trends:      'Imihindukire',
     tax:         'Raporo y\'umusoro',
+    balancesheet:'Urutonde rw\'ubutunzi',
+    projections: 'Iteganya',
     advisor:     'Umujyanama wa AI',
     settings:    'Igenamiterere',
     home_label:  'Jya ku Mbonerahamwe',
@@ -35,6 +37,22 @@ export default {
     debt:        'Umwenda',
     synced:      'Byabitswe ku cloud',
     saved_local: 'Byabitswe muri muraza',
+    tabs_home:     'Ahabanza',
+    tabs_balance:  'Urutonde',
+    tabs_forecast: 'Iteganya',
+  },
+
+  topbar: {
+    badge_viewer: 'Gusoma gusa',
+    badge_editor: 'Uwanditse',
+    you_fallback: 'Wowe',
+  },
+
+  mobile_nav: {
+    label:      'Igenagaze rya mobile',
+    close_menu: 'Funga menu',
+    more:       'Ibindi',
+    more_open:  'Andi mahitamo y\'igenagaze',
   },
 
   currency: {

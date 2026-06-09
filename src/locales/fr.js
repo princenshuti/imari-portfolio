@@ -17,6 +17,8 @@ export default {
     accounts:    'Comptes',
     trends:      'Tendances',
     tax:         'Rapport fiscal',
+    balancesheet:'Bilan',
+    projections: 'Avance rapide',
     advisor:     'Conseiller IA',
     settings:    'Paramètres',
     home_label:  'Aller au tableau de bord',
@@ -27,6 +29,22 @@ export default {
     debt:        'Dette',
     synced:      'Synchronisé avec le cloud',
     saved_local: 'Enregistré localement',
+    tabs_home:     'Accueil',
+    tabs_balance:  'Bilan',
+    tabs_forecast: 'Prévision',
+  },
+
+  topbar: {
+    badge_viewer: 'Lecture seule',
+    badge_editor: 'Éditeur',
+    you_fallback: 'Vous',
+  },
+
+  mobile_nav: {
+    label:      'Navigation mobile',
+    close_menu: 'Fermer le menu',
+    more:       'Plus',
+    more_open:  "Autres options de navigation",
   },
 
   currency: {

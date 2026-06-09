@@ -18,6 +18,8 @@ const NAV_KEY = {
   accounts:    'nav.accounts',
   trends:      'nav.trends',
   tax:         'nav.tax',
+  balancesheet:'nav.balancesheet',
+  projections: 'nav.projections',
   advisor:     'nav.advisor',
   settings:    'nav.settings',
 };

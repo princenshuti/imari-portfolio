@@ -1,7 +1,10 @@
 import { CURRENCIES } from '../data.js';
+import { useT } from '../contexts/I18nContext.jsx';
 
 export default function TopBar({ title, subtitle, profile, displayCurrency, onCurrency, right, role }) {
-  const initials = (profile.name || 'You').split(' ').slice(0,2).map(s => s[0] || '').join('').toUpperCase().slice(0,2);
+  const { t } = useT();
+  const youFallback = t('topbar.you_fallback');
+  const initials = (profile.name || youFallback).split(' ').slice(0,2).map(s => s[0] || '').join('').toUpperCase().slice(0,2);
 
   return (
     <div className="row topbar-row" style={{
@@ -33,10 +36,10 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
       {/* Right controls */}
       <div className="row" style={{ gap: 8, flexShrink: 0 }}>
         {role === 'viewer' && (
-          <span className="pill pill-gold" style={{ fontSize: 10.5 }}>View-only</span>
+          <span className="pill pill-gold" style={{ fontSize: 10.5 }}>{t('topbar.badge_viewer')}</span>
         )}
         {role === 'editor' && (
-          <span className="pill pill-brand" style={{ fontSize: 10.5 }}>Editor</span>
+          <span className="pill pill-brand" style={{ fontSize: 10.5 }}>{t('topbar.badge_editor')}</span>
         )}
         {right}
 
@@ -45,8 +48,8 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
         <select
           value={displayCurrency}
           onChange={e => onCurrency(e.target.value)}
-          aria-label="Display currency (converts totals for view only)"
-          title="Display only — your stored values stay in their original currency."
+          aria-label={t('currency.label')}
+          title={t('currency.tooltip')}
           style={{
             padding: '7px 10px', borderRadius: 'var(--r-md)',
             border: '0.5px solid var(--line-strong)',
@@ -61,7 +64,7 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
         </select>
 
         {/* Avatar */}
-        <div title={profile.name || 'You'} style={{
+        <div title={profile.name || youFallback} style={{
           width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
           background: profile.avatar
             ? 'transparent'

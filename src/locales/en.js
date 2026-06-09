@@ -24,6 +24,8 @@ export default {
     accounts:    'Accounts',
     trends:      'Trends',
     tax:         'Tax Report',
+    balancesheet:'Balance Sheet',
+    projections: 'Fast Forward',
     advisor:     'AI Advisor',
     settings:    'Settings',
     home_label:  'Go to Dashboard',
@@ -34,6 +36,25 @@ export default {
     debt:        'Debt',
     synced:      'Synced to cloud',
     saved_local: 'Saved locally',
+    // Mobile-tab short labels (the bottom bar is narrow; some labels diverge from desktop)
+    tabs_home:     'Home',
+    tabs_balance:  'Balance',
+    tabs_forecast: 'Forecast',
+  },
+
+  // TopBar — role pill + avatar fallback
+  topbar: {
+    badge_viewer: 'View-only',
+    badge_editor: 'Editor',
+    you_fallback: 'You',
+  },
+
+  // Mobile bottom navigation
+  mobile_nav: {
+    label:      'Mobile navigation',
+    close_menu: 'Close menu',
+    more:       'More',
+    more_open:  'More navigation options',
   },
 
   // Currency selector

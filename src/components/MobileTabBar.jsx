@@ -1,18 +1,39 @@
 import { useState } from 'react';
 import { MAIN_TABS, MORE_ITEMS } from '../nav.js';
+import { useT } from '../contexts/I18nContext.jsx';
+
+// Map nav-item id → i18n key for mobile labels. A few diverge from the desktop
+// labels because the bottom-bar is narrower (Dashboard→Home, Balance Sheet→Balance,
+// Fast Forward→Forecast); everything else reuses the desktop key.
+const TAB_KEY = {
+  dashboard:    'nav.tabs_home',
+  assets:       'nav.assets',
+  cashflow:     'nav.cashflow',
+  goals:        'nav.goals',
+  liabilities:  'nav.liabilities',
+  accounts:     'nav.accounts',
+  trends:       'nav.trends',
+  tax:          'nav.tax',
+  balancesheet: 'nav.tabs_balance',
+  projections:  'nav.tabs_forecast',
+  advisor:      'nav.advisor',
+  settings:     'nav.settings',
+};
 
 export default function MobileTabBar({ active, onNav }) {
+  const { t } = useT();
   const [moreOpen, setMoreOpen] = useState(false);
   const isMoreActive = MORE_ITEMS.some(i => i.id === active);
 
   const navigate = (id) => { onNav(id); setMoreOpen(false); };
+  const labelFor = (it) => (TAB_KEY[it.id] ? t(TAB_KEY[it.id]) : it.label);
 
   return (
     <>
       {moreOpen && (
         <button
           onClick={() => setMoreOpen(false)}
-          aria-label="Close menu"
+          aria-label={t('mobile_nav.close_menu')}
           style={{
             position: 'fixed', inset: 0, zIndex: 49,
             background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(2px)',
@@ -43,14 +64,14 @@ export default function MobileTabBar({ active, onNav }) {
                 }}
               >
                 <span aria-hidden="true" style={{ fontSize: 20 }}>{it.glyph}</span>
-                <span style={{ fontSize: 10, fontWeight: 500 }}>{it.label}</span>
+                <span style={{ fontSize: 10, fontWeight: 500 }}>{labelFor(it)}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <nav className="mobile-tab-bar" aria-label="Mobile navigation">
+      <nav className="mobile-tab-bar" aria-label={t('mobile_nav.label')}>
         {MAIN_TABS.map(it => (
           <button
             key={it.id}
@@ -59,17 +80,17 @@ export default function MobileTabBar({ active, onNav }) {
             aria-current={it.id === active ? 'page' : undefined}
           >
             <span aria-hidden="true" style={{ fontSize: 20 }}>{it.glyph}</span>
-            <span>{it.label}</span>
+            <span>{labelFor(it)}</span>
           </button>
         ))}
         <button
           onClick={() => setMoreOpen(o => !o)}
           aria-expanded={moreOpen}
-          aria-label="More navigation options"
+          aria-label={t('mobile_nav.more_open')}
           className={`tab-btn${isMoreActive || moreOpen ? ' active' : ''}`}
         >
           <span aria-hidden="true" style={{ fontSize: 20 }}>⋯</span>
-          <span>More</span>
+          <span>{t('mobile_nav.more')}</span>
         </button>
       </nav>
     </>
