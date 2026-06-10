@@ -336,9 +336,7 @@ Until all three are done, email-based auth and the invitation flow silently brea
 - **No audit log.** Member edits overwrite silently — there's no per-field history beyond snapshots.
 - **Anthropic rate limits are global to the function**, not per user; abuse mitigation is basic.
 - **Tax report is hard-coded to 2024 RRA bands.** Needs yearly maintenance.
-- **Advisor context is hard-capped at 8000 chars** (client `ai.js` and `ai-proxy` both slice) while the grounded context grows with portfolio size — for larger portfolios the tail of the JSON (market conditions) is silently truncated. Needs a budgeted serializer (top-N insights, compact JSON, indicators before assets). *(Found in 2026-06 code review; open.)*
-- **Insight dismissals are session-local** to the Dashboard; the Advisor badge/Advice Center don't observe them. Dismissals should persist in state and feed every `runInsights` call. *(Open.)*
-- **The insight engine runs per-consumer** (App badge, Dashboard, Advisor, FloatingAdvisor) instead of once via a provider, and the badge's static import folded the engine + Advisor view into the main bundle. *(Open; perf, not correctness.)*
+- ~~Advisor context truncation, session-local dismissals, per-consumer engine runs~~ — *resolved 2026-06*: a budgeted serializer ([advisorContext.js](src/services/advisorContext.js)) guarantees complete JSON inside the 8000-char cap; dismissals persist on `profile.dismissedInsights` with a 7-day TTL; [InsightsContext](src/contexts/InsightsContext.jsx) runs the engine once per state change for all consumers. The engine remains in the main bundle by design (the sidebar badge needs it at startup).
 - **Supabase schema must be at migration 005** (`portfolios.catrules/budgets` columns). The client degrades gracefully when behind, but rules/budgets won't cloud-sync until it's applied.
 
 ### Deferred to the Imari mobile app (2026-06)
