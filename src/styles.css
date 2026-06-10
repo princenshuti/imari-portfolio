@@ -138,7 +138,9 @@ body[data-theme="dark"] {
   body:not([data-theme="light"]) {
     --bg: #0D1117; --bg-2: #161B22; --paper: #1C2128; --paper-2: #222830;
     --line: rgba(240,237,228,0.08); --line-soft: rgba(240,237,228,0.05); --line-strong: rgba(240,237,228,0.13);
-    --ink: #E8E4D8; --ink-2: #BDB8A8; --ink-3: #A8A395; --ink-4: #8A8676;
+    /* Keep in sync with [data-theme="dark"] above — these drifted once and the
+       system-preference dark mode shipped below-AA muted text. */
+    --ink: #E8E4D8; --ink-2: #BDB8A8; --ink-3: #B0AB9E; --ink-4: #9D9888;
     --brand: #3FB889; --brand-2: #56CDAB;
     --brand-soft: rgba(63,184,137,0.18); --brand-softer: rgba(63,184,137,0.09); --brand-ink: #0B1614;
     --gold: #E5BC55; --gold-ink: #F0CE70; --gold-2: #F0CE70;
@@ -657,10 +659,16 @@ input:focus, select:focus, textarea:focus {
    Prevents the 3+2 wrap the auto-fit grid produced at mid widths. */
 .dash-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
-@media (max-width: 960px) { .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+/* Grid items default to min-width:auto, so one long unbreakable numeral
+   (e.g. "RWF 3,508,451") used to push its track wider than the container and
+   clip the right-most card instead of shrinking. Let tiles shrink and let the
+   number wrap inside them. */
+.dash-kpi-grid > * { min-width: 0; }
+.dash-kpi-grid .num { overflow-wrap: anywhere; }
+@media (max-width: 960px) { .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .dash-kpi-grid { grid-template-columns: 1fr; } }
 
 /* 2-column dash grid — collapses to single column on tablets/phones */

@@ -996,7 +996,9 @@ export default function CashFlowView({ state, dispatch }) {
                         <div style={{ flex: 1, background: 'var(--up)',   borderRadius: '3px 3px 0 0', height: `${(b.inc / barMax) * 100}%`, minHeight: b.inc > 0 ? 2 : 0, opacity: 0.78, transition: 'height 240ms cubic-bezier(0.23,1,0.32,1)' }} />
                         <div style={{ flex: 1, background: 'var(--down)', borderRadius: '3px 3px 0 0', height: `${(b.exp / barMax) * 100}%`, minHeight: b.exp > 0 ? 2 : 0, opacity: 0.78, transition: 'height 240ms cubic-bezier(0.23,1,0.32,1)' }} />
                       </div>
-                      <div style={{ position: 'absolute', bottom: 0, fontSize: 9, color: 'var(--ink-4)' }}>{b.label}</div>
+                      {/* bottom:-16 drops the label into the 18px strip the row's
+                          paddingBottom reserves — at bottom:0 it overlapped the bars. */}
+                      <div style={{ position: 'absolute', bottom: -16, fontSize: 9, color: 'var(--ink-4)' }}>{b.label}</div>
                     </div>
                   );
                 })}
@@ -1026,7 +1028,8 @@ export default function CashFlowView({ state, dispatch }) {
             ) : (
               <div className="row" style={{ gap: 12, alignItems: 'center' }}>
                 <Donut size={84} thickness={11}
-                  slices={expenseByCategory.map(c => ({ value: c.value, color: c.color }))} />
+                  slices={expenseByCategory.map(c => ({ value: c.value, color: c.color }))}
+                  ariaLabel={`Expenses by category, ${monthLabel}: ${expenseByCategory.slice(0, 5).map(c => c.label).join(', ')}`} />
                 <div className="col" style={{ gap: 4, fontSize: 11, flex: 1, minWidth: 0 }}>
                   {expenseByCategory.slice(0, 5).map(c => {
                     const total = expenseByCategory.reduce((s, x) => s + x.value, 0);

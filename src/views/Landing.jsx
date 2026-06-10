@@ -3,7 +3,8 @@ import { useT } from '../contexts/I18nContext.jsx';
 
 // Inline SVG icon set — Heroicons-style outline at 24x24
 function Icon({ name }) {
-  const common = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  // Decorative — every icon sits next to its own text label.
+  const common = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true', focusable: 'false' };
   switch (name) {
     case 'wallet': return (<svg {...common}><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2Zm0 0a2 2 0 0 1 2-2h12"/><circle cx="17" cy="13" r="1.2" fill="currentColor"/></svg>);
     case 'cube': return (<svg {...common}><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z"/><path d="m4 7 8 4 8-4"/><path d="M12 21V11"/></svg>);
@@ -11,7 +12,7 @@ function Icon({ name }) {
     case 'flow': return (<svg {...common}><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>);
     case 'spark': return (<svg {...common}><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="2.5"/></svg>);
     case 'doc': return (<svg {...common}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>);
-    case 'arrow': return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>);
+    case 'arrow': return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 5l7 7-7 7"/></svg>);
     case 'shield': return (<svg {...common}><path d="M12 3 4 6v6c0 4.5 3.2 8.5 8 9 4.8-.5 8-4.5 8-9V6l-8-3Z"/><path d="m9 12 2.2 2.2L15 10.5"/></svg>);
     case 'lock': return (<svg {...common}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.1" fill="currentColor"/></svg>);
     case 'key-off': return (<svg {...common}><path d="M3 3l18 18"/><circle cx="8" cy="14" r="3.5"/><path d="m10.5 11.5 7-7M14 8l2 2M16 6l2 2"/></svg>);
@@ -177,7 +178,8 @@ export default function Landing({ onSignIn }) {
               <span className="pill pill-up">↑ 8.4%</span>
               <span className="landing-preview-period">{t('landing.preview.delta_period')}</span>
             </div>
-            <svg className="landing-preview-spark" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <svg className="landing-preview-spark" viewBox="0 0 200 50" preserveAspectRatio="none"
+              role="img" aria-label={t('landing.preview.spark_alt')}>
               <defs>
                 <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.18" />

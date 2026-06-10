@@ -26,11 +26,13 @@ export default function TopBar({ title, subtitle, profile, displayCurrency, onCu
             fontWeight: 600, marginBottom: 2,
           }}>{subtitle}</div>
         )}
-        <div className="font-serif topbar-title" style={{
-          fontSize: 24, lineHeight: 1.1,
+        {/* The page title is the document's one <h1> — screen-reader landmark
+            for "which view am I on". Inline styles keep the visual identical. */}
+        <h1 className="font-serif topbar-title" style={{
+          fontSize: 24, lineHeight: 1.1, margin: 0,
           letterSpacing: '-0.02em',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>{title}</div>
+        }}>{title}</h1>
       </div>
 
       {/* Right controls */}

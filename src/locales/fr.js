@@ -98,6 +98,7 @@ export default {
       delta_period: 'ce trimestre',
       savings_rate: "Taux d'épargne",
       goal_house:   'Objectif · Maison',
+      spark_alt:    'Illustration : une courbe de patrimoine net en hausse',
     },
     problem: {
       eyebrow: 'Le problème',

@@ -111,6 +111,7 @@ export default {
       delta_period: 'this quarter',
       savings_rate: 'Savings rate',
       goal_house:   'Goal · House',
+      spark_alt:    'Illustration: a rising net-worth sparkline',
     },
     problem: {
       eyebrow: 'The problem',

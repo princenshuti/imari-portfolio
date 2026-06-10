@@ -106,6 +106,7 @@ export default {
       delta_period: 'iki gihembwe',
       savings_rate: 'Igipimo cyo kuzigama',
       goal_house:   'Intego · Inzu',
+      spark_alt:    'Igishushanyo: umurongo werekana ubutunzi buzamuka',
     },
     problem: {
       eyebrow: 'Ikibazo',
