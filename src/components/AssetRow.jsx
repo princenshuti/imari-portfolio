@@ -72,7 +72,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
                 className="pill"
                 title="No value entered — this asset isn't counted in your net worth. Edit to set a value."
                 style={{
-                  marginLeft: 8, fontSize: 9.5, padding: '1px 7px',
+                  marginLeft: 8, fontSize: 10, padding: '1px 7px',
                   background: 'var(--gold-soft)', color: 'var(--gold-ink, var(--gold))',
                   cursor: 'help', verticalAlign: 'middle',
                 }}

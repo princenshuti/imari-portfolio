@@ -51,7 +51,7 @@ export default function PortfolioChat({ portfolioId, session }) {
                 background: mine ? 'var(--brand)' : 'var(--bg-2)',
                 color: mine ? 'var(--brand-ink)' : 'var(--ink)',
               }}>{m.body}</div>
-              <div className="muted" style={{ fontSize: 9.5, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
+              <div className="muted" style={{ fontSize: 10, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
                 {new Date(m.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>

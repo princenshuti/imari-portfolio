@@ -8,6 +8,7 @@ export default {
     group_overview: 'Aperçu',
     group_wealth:   'Patrimoine',
     group_money:    'Argent & Marchés',
+    group_reports:  'Rapports',
     group_tools:    'Outils',
     dashboard:   'Tableau de bord',
     assets:      'Actifs',

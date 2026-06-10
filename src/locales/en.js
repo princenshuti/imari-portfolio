@@ -15,6 +15,7 @@ export default {
     group_overview: 'Overview',
     group_wealth:   'Wealth',
     group_money:    'Money & Markets',
+    group_reports:  'Reports',
     group_tools:    'Tools',
     dashboard:   'Dashboard',
     assets:      'Assets',

@@ -20,7 +20,7 @@ export default function ReportsView({ state }) {
   const show = (rwf) => fmtBase(rwf, ccy, { compact: false });
   const showC = (rwf) => fmtBase(rwf, ccy, { compact: true });
 
-  const downloadCSV = () => {
+  const exportCSV = () => {
     const conv = (rwf) => Math.round(fromBase(rwf, ccy));
     const rows = [
       ['Imari monthly report', monthLabel, `valued in ${ccy}`],
@@ -53,7 +53,7 @@ export default function ReportsView({ state }) {
           <button onClick={() => setMonthOffset(m => m + 1)} className="btn btn-ghost" style={{ padding: '7px 14px' }}>‹ Prev</button>
           <div style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', background: 'var(--paper)', border: '1px solid var(--line)', fontSize: 13, fontWeight: 600 }}>{monthLabel}</div>
           <button onClick={() => setMonthOffset(m => Math.max(0, m - 1))} disabled={monthOffset === 0} className="btn btn-ghost" style={{ padding: '7px 14px' }}>Next ›</button>
-          <button onClick={downloadCSV} className="btn btn-ghost">↓ CSV</button>
+          <button onClick={exportCSV} className="btn btn-ghost">↓ CSV</button>
           <button onClick={() => window.print()} className="btn btn-primary">⎙ Print / Save PDF</button>
         </div>
       </div>
@@ -83,7 +83,7 @@ export default function ReportsView({ state }) {
                 { label: 'Savings rate', value: report.savingsRate != null ? `${report.savingsRate.toFixed(1)}%` : '—', color: (report.savingsRate || 0) >= 20 ? 'var(--up)' : 'var(--gold)' },
               ].map(c => (
                 <div key={c.label} style={{ padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 8 }}>
-                  <div className="muted" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{c.label}</div>
+                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{c.label}</div>
                   <div className="num" style={{ fontSize: 17, fontWeight: 700, color: c.color, marginTop: 2 }}>{c.value}</div>
                   {c.delta != null && c.delta !== 0 && (
                     <div className="num" style={{ fontSize: 10, marginTop: 2, color: (c.delta > 0) === !!c.deltaBadIfUp ? 'var(--down)' : 'var(--up)' }}>

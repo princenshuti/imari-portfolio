@@ -90,7 +90,11 @@ export default function YearReviewView({ state }) {
       {/* Month-by-month change bars */}
       <div className="card" style={{ padding: '18px 22px', marginBottom: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Month by month</div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 130 }}>
+        <div
+          role="img"
+          aria-label={`Month-by-month net worth change: ${review.months.map(m => `${m.label} ${m.change >= 0 ? 'up' : 'down'} ${fmtBase(Math.abs(m.change), ccy, { compact: true })}`).join(', ')}`}
+          style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 130 }}
+        >
           {review.months.map(m => {
             const positive = m.change >= 0;
             const h = (Math.abs(m.change) / barMax) * 96;
@@ -102,7 +106,7 @@ export default function YearReviewView({ state }) {
                   background: positive ? 'var(--up)' : 'var(--down)', opacity: 0.78,
                   transition: 'height 240ms cubic-bezier(0.23,1,0.32,1)',
                 }} />
-                <div style={{ fontSize: 9, color: 'var(--ink-4)' }}>{m.label}</div>
+                <div style={{ fontSize: 10, color: 'var(--ink-4)' }}>{m.label}</div>
               </div>
             );
           })}

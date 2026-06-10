@@ -630,7 +630,7 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                       <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: 'var(--ink-3)', fontSize: 11 }}>{d.date}</td>
                       <td style={{ padding: '8px 10px', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--ink-2)' }} title={d._desc}>
                         {d._desc || '—'}
-                        {d._isFee && <span style={{ marginLeft: 6, fontSize: 9, padding: '1px 6px', borderRadius: 999, background: 'var(--bg-2)', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>fee</span>}
+                        {d._isFee && <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'var(--bg-2)', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>fee</span>}
                       </td>
                       <td style={{ padding: '8px 10px' }}>
                         <select
@@ -737,7 +737,7 @@ function Stat({ label, value, accent }) {
       padding: '8px 14px', borderRadius: 8, background: 'var(--paper)',
       border: '1px solid var(--line)', minWidth: 92,
     }}>
-      <div className="muted" style={{ fontSize: 9.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>{label}</div>
+      <div className="muted" style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>{label}</div>
       <div className="num" style={{ fontSize: 17, fontWeight: 700, color: accent, letterSpacing: '-0.01em' }}>{value}</div>
     </div>
   );
@@ -963,11 +963,15 @@ export default function CashFlowView({ state, dispatch }) {
             )}
 
             {/* Chart proper — Y-axis + bars side by side */}
-            <div style={{ display: 'flex', gap: 8, height: 120 }}>
+            <div
+              role="img"
+              aria-label={`${chartMonths}-month cash flow bar chart: ${barData.map(b => `${b.label} income ${fmtBase(b.inc, profile.displayCurrency, { compact: true })}, expenses ${fmtBase(b.exp, profile.displayCurrency, { compact: true })}`).join('; ')}`}
+              style={{ display: 'flex', gap: 8, height: 120 }}
+            >
               {/* Y-axis ticks: max / 50% / 0 */}
               <div className="num" style={{
                 display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                fontSize: 9, color: 'var(--ink-4)', textAlign: 'right', minWidth: 38,
+                fontSize: 10, color: 'var(--ink-4)', textAlign: 'right', minWidth: 38,
                 paddingBottom: 18,
               }}>
                 <span>{fmtBase(barMax, profile.displayCurrency, { compact: true })}</span>
@@ -998,7 +1002,7 @@ export default function CashFlowView({ state, dispatch }) {
                       </div>
                       {/* bottom:-16 drops the label into the 18px strip the row's
                           paddingBottom reserves — at bottom:0 it overlapped the bars. */}
-                      <div style={{ position: 'absolute', bottom: -16, fontSize: 9, color: 'var(--ink-4)' }}>{b.label}</div>
+                      <div style={{ position: 'absolute', bottom: -16, fontSize: 10, color: 'var(--ink-4)' }}>{b.label}</div>
                     </div>
                   );
                 })}
@@ -1013,7 +1017,7 @@ export default function CashFlowView({ state, dispatch }) {
                   <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{l.label}</span>
                 </div>
               ))}
-              <span className="muted" style={{ fontSize: 9, marginLeft: 'auto' }}>Hover a bar for exact values</span>
+              <span className="muted" style={{ fontSize: 10, marginLeft: 'auto' }}>Hover a bar for exact values</span>
             </div>
           </div>
 
@@ -1045,7 +1049,7 @@ export default function CashFlowView({ state, dispatch }) {
                     );
                   })}
                   {expenseByCategory.length > 5 && (
-                    <span className="muted" style={{ fontSize: 9 }}>+{expenseByCategory.length - 5} more</span>
+                    <span className="muted" style={{ fontSize: 10 }}>+{expenseByCategory.length - 5} more</span>
                   )}
                 </div>
               </div>
@@ -1316,7 +1320,7 @@ function ForecastSection({ cashflows, accounts, displayCurrency }) {
           { label: 'Lowest point', value: fmtBase(forecast.minBalance, displayCurrency, { compact: true }), color: forecast.minBalance >= 0 ? 'var(--ink)' : 'var(--down)' },
         ].map(c => (
           <div key={c.label} style={{ padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 8 }}>
-            <div className="muted" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{c.label}</div>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{c.label}</div>
             <div className="num" style={{ fontSize: 15, fontWeight: 700, color: c.color, marginTop: 2 }}>{c.value}</div>
           </div>
         ))}

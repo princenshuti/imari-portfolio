@@ -135,7 +135,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
           padding: '2px 7px', borderRadius: 20,
-          background: badge.bg, fontSize: 9, fontWeight: 700, color: badge.color,
+          background: badge.bg, fontSize: 10, fontWeight: 700, color: badge.color,
         }}>
           {kind === 'live' && (
             <span aria-hidden="true" style={{
@@ -152,12 +152,12 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
         // No "mid" rate shown — Buy is what the app uses for foreign→RWF totals,
         // Sell is what it uses for RWF→foreign payouts (see toBase/fromBase in data.js).
         <div
-          style={{ display: 'flex', gap: big ? 28 : 20, alignItems: 'flex-end' }}
+          style={{ display: 'flex', gap: big ? 28 : 20, alignItems: 'flex-end', flexWrap: 'wrap', minWidth: 0 }}
           title="Buy = bank buys foreign currency from you. Sell = bank sells foreign currency to you. Imari uses Buy for foreign→RWF totals and Sell for RWF→foreign payouts."
         >
           <div>
             <div className="muted" style={{
-              fontSize: 9.5, fontWeight: 600, letterSpacing: '0.08em',
+              fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
               textTransform: 'uppercase', marginBottom: 3, color: 'var(--ink-3)',
             }}>Buy</div>
             <div className="font-serif num" style={{
@@ -168,7 +168,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
           </div>
           <div>
             <div className="muted" style={{
-              fontSize: 9.5, fontWeight: 600, letterSpacing: '0.08em',
+              fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
               textTransform: 'uppercase', marginBottom: 3, color: 'var(--ink-3)',
             }}>Sell</div>
             <div className="font-serif num" style={{
@@ -206,7 +206,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
       <div style={{ marginTop: 8, color: d.color }} aria-hidden="true">
         <Sparkline data={d.series} w={big ? 240 : 160} h={big ? 40 : 30} stroke={d.color} fill />
       </div>
-      <div className="muted" style={{ fontSize: 9.5, marginTop: 4, lineHeight: 1.4 }}>
+      <div className="muted" style={{ fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>
         {source}
         {/* Per-indicator timestamp.
             - Live data → relative "Xm ago" from the fetch
@@ -222,10 +222,10 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
             without extra JS and keyboard-navigable for free. */}
         {d.methodology && (
           <details style={{ marginTop: 4 }}>
-            <summary style={{ cursor: 'pointer', color: 'var(--brand)', fontSize: 9.5, fontWeight: 600 }}>
+            <summary style={{ cursor: 'pointer', color: 'var(--brand)', fontSize: 10, fontWeight: 600 }}>
               How is this computed?
             </summary>
-            <div style={{ marginTop: 4, padding: '6px 8px', background: 'var(--bg-2)', borderRadius: 4, whiteSpace: 'pre-line', fontSize: 9.5, lineHeight: 1.5, color: 'var(--ink-3)' }}>
+            <div style={{ marginTop: 4, padding: '6px 8px', background: 'var(--bg-2)', borderRadius: 4, whiteSpace: 'pre-line', fontSize: 10, lineHeight: 1.5, color: 'var(--ink-3)' }}>
               {d.methodology}
             </div>
           </details>

@@ -181,6 +181,18 @@ describe('goalPaceGap', () => {
     expect(ins.headline).toMatch(/past its deadline/i);
   });
 
+  it('caps absurd slippage at honest "out of reach" copy (no 2406-year claims)', () => {
+    // Income 1M vs expense 999,990 → net saving 10 RWF/mo against a 10M goal:
+    // raw slippage is ~80,000 years. The insight must not quote it.
+    const expense = cf({ type: 'expense', recurring: 'monthly', amount: 999_990 });
+    const g = goal({ fundingType: 'liquid', targetAmount: 10_000_000, deadline: inFuture(304) });
+    const ins = goalPaceGap(mkState({ assets: [liquid], goals: [g], cashflows: [income, expense] }), ctx);
+    expectWellFormed(ins);
+    expect(ins.headline).toMatch(/out of reach/i);
+    expect(ins.headline).not.toMatch(/years/i);
+    expect(ins.costOfAbsence.costStatement).not.toMatch(/\d{3,} (months|years)/);
+  });
+
   it('boundary: on-pace goal (available >= required) is not flagged', () => {
     const expense = cf({ type: 'expense', recurring: 'monthly', amount: 0 }); // available 1M/mo
     const g = goal({ fundingType: 'liquid', targetAmount: 4_000_000, deadline: inFuture(304) }); // needs ~300k/mo

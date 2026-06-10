@@ -423,6 +423,9 @@ body {
 
 /* ── Page transition ──────────────────────────────────────────── */
 .page-view { animation: page-fade 0.18s ease; }
+/* Room for the floating advisor button — without this it parks on top of the
+   last row of content (it covered Balance Sheet values in the UI/UX audit). */
+.page-view > div:first-child { padding-bottom: 96px !important; }
 
 /* ── Toast ────────────────────────────────────────────────────── */
 .toast-item { animation: toast-in 0.2s ease; }
@@ -550,7 +553,7 @@ body {
 .dash-chart-axis {
   display: flex;
   justify-content: space-between;
-  font-size: 9px;
+  font-size: 10px; /* legibility floor — nothing under 10px (UI/UX audit) */
   color: var(--ink-4);
   letter-spacing: 0.02em;
   padding: 4px 12px 0;
@@ -745,7 +748,7 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 480px) {
   .topbar-row { padding: 10px 12px; }
   .topbar-title { font-size: 18px !important; }
-  .topbar-subtitle { font-size: 9px !important; }
+  .topbar-subtitle { font-size: 10px !important; }
   /* Force subtitle to single line with ellipsis on narrow screens so
      "Today · Monday 25 May" never stacks awkwardly under the title.
      (UX review issue #55.) */

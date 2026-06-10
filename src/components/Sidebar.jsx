@@ -31,6 +31,7 @@ const GROUP_KEY = {
   'Overview':        'nav.group_overview',
   'Wealth':          'nav.group_wealth',
   'Money & Markets': 'nav.group_money',
+  'Reports':         'nav.group_reports',
   'Tools':           'nav.group_tools',
 };
 
@@ -84,7 +85,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           {!collapsed && (
             <div>
               <div className="font-serif" style={{ fontSize: 21, lineHeight: 1, letterSpacing: '-0.02em' }}>Imari</div>
-              <div className="muted" style={{ fontSize: 9.5, marginTop: 2, letterSpacing: '0.03em' }}>by Maxventures</div>
+              <div className="muted" style={{ fontSize: 10, marginTop: 2, letterSpacing: '0.03em' }}>by Maxventures</div>
             </div>
           )}
         </button>
@@ -122,7 +123,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
         onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-1)'; e.currentTarget.style.transform = 'translateY(0)'; }}
       >
         <div className="col" style={{ gap: 1 }}>
-          <div className="muted" style={{ fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.net_worth')}</div>
+          <div className="muted" style={{ fontSize: 10, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.net_worth')}</div>
           <div className="font-serif" style={{ fontSize: 24, letterSpacing: '-0.025em', lineHeight: 1.1, marginTop: 2, color: 'var(--ink)' }}>
             {fmtBase(trueNetWorth, displayCurrency, { compact: true })}
           </div>
@@ -132,14 +133,14 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div className="col" style={{ gap: 1 }}>
-            <div className="muted" style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.assets_short')}</div>
+            <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.assets_short')}</div>
             <div className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--up-ink)' }}>
               {fmtBase(netWorth + totalDebt, displayCurrency, { compact: true })}
             </div>
           </div>
           {totalDebt > 0 && (
             <div className="col" style={{ gap: 1 }}>
-              <div className="muted" style={{ fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.debt')}</div>
+              <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700 }}>{t('nav.debt')}</div>
               <div className="num" style={{ fontSize: 12, fontWeight: 600, color: 'var(--down-ink)' }}>
                 <span aria-hidden="true">−</span>{fmtBase(totalDebt, displayCurrency, { compact: true })}
               </div>
@@ -170,7 +171,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           <div key={grp.label}>
             {!collapsed && (
               <div className="muted" style={{
-                fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700,
+                fontSize: 10, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700,
                 padding: '0 12px', marginBottom: 3,
               }}>{GROUP_KEY[grp.label] ? t(GROUP_KEY[grp.label]) : grp.label}</div>
             )}

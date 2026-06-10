@@ -47,7 +47,7 @@ export default function BalanceSheetView({ state }) {
 
   const show = (rwf) => fmtBase(rwf, ccy, { compact: false });
 
-  const downloadCSV = () => {
+  const exportCSV = () => {
     const conv = (rwf) => Math.round(fromBase(rwf, ccy));
     const rows = [['Section', 'Group', 'Item', `Cost basis (${ccy})`, `Current value (${ccy})`, 'Basis']];
     data.assetGroups.forEach(g => g.items.forEach(it =>
@@ -71,7 +71,7 @@ export default function BalanceSheetView({ state }) {
           <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Assets − liabilities = net worth · as of {dateStr}</div>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <button onClick={downloadCSV} className="btn btn-ghost">↓ CSV</button>
+          <button onClick={exportCSV} className="btn btn-ghost">↓ CSV</button>
           <button onClick={() => window.print()} className="btn btn-primary">⎙ Print / Save PDF</button>
         </div>
       </div>

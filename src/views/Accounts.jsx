@@ -161,7 +161,7 @@ function AccountCard({ acc, displayCurrency, cfCount, lastActivity, onEdit, onDe
               accounts at a glance. (UX review #25.) */}
           <span
             className="pill pill-soft"
-            style={{ fontSize: 9, padding: '1px 6px', flexShrink: 0 }}
+            style={{ fontSize: 10, padding: '1px 6px', flexShrink: 0 }}
             title={`Stored in ${acc.currency}`}
           >{acc.currency}</span>
         </div>

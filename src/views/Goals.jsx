@@ -251,7 +251,7 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
           <div>
             <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 15, fontWeight: 700 }}>{goal.title}</span>
-              <span className="pill" style={{ background: statusMeta.bg, color: statusMeta.color, fontSize: 9.5 }}>
+              <span className="pill" style={{ background: statusMeta.bg, color: statusMeta.color, fontSize: 10 }}>
                 {statusMeta.label}
               </span>
             </div>

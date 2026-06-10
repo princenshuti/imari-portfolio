@@ -16,6 +16,7 @@ export default {
     group_overview: 'Incamake',
     group_wealth:   'Ubutunzi',
     group_money:    'Amafaranga & Isoko',
+    group_reports:  'Raporo',
     group_tools:    'Ibikoresho',
     dashboard:   'Imbonerahamwe',
     assets:      'Ibyo utunze',

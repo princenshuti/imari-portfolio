@@ -206,7 +206,7 @@ function IdleCashCard({ insight, displayCurrency, now }) {
           <div className="font-serif" style={{ fontSize: 19 }}>Idle cash is costing you</div>
           <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{insight.body}</div>
         </div>
-        <span className="muted" style={{ fontSize: 9, padding: '3px 8px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', alignSelf: 'flex-start' }}>Reference yield</span>
+        <span className="muted" style={{ fontSize: 10, padding: '3px 8px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', alignSelf: 'flex-start' }}>Reference yield</span>
       </div>
       <div className="row" style={{ gap: 22, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div>
@@ -301,7 +301,7 @@ function RatioBar({ label, value, color, hint, thresholds }) {
         ))}
       </div>
       {thresholds && (
-        <div className="muted" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, marginTop: 3 }}>
+        <div className="muted" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3 }}>
           {thresholds.map(t => (
             <span key={t.at} style={{ flex: `0 0 ${t.at}%`, textAlign: 'right', paddingRight: 2 }}>{t.label} {t.at}%</span>
           ))}
@@ -332,7 +332,7 @@ function IncomeTrendBars({ months, displayCurrency }) {
               <div title={`Expenses: ${fmtBase(m.exp, displayCurrency, { compact: true })}`}
                 style={{ flex: 1, background: 'var(--down)', borderRadius: '3px 3px 0 0', height: `${(m.exp / maxVal) * 100}%`, minHeight: m.exp > 0 ? 3 : 0, opacity: 0.75 }} />
             </div>
-            <div style={{ fontSize: 9, color: 'var(--ink-4)', letterSpacing: '0.02em' }}>{m.label}</div>
+            <div style={{ fontSize: 10, color: 'var(--ink-4)', letterSpacing: '0.02em' }}>{m.label}</div>
           </div>
         ))}
       </div>
@@ -1093,7 +1093,11 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       const widgets = [
         <MetricWidget key="cash" delay={0} title="Cash in Hand"
           value={fmtBase(liquid, profile.displayCurrency, { compact: liquid > 1e7 })}
-          subtext={months != null ? `${months.toFixed(1)} months of expenses` : 'cash + mobile money + bank'}
+          subtext={months != null && months <= 120
+            ? `${months.toFixed(1)} months of expenses`
+            : months != null
+              ? '10+ years at recorded spending — add expenses for a real figure'
+              : 'cash + mobile money + bank'}
           asOf={wAsOf} now={today} deepLink="accounts" onNav={nav}
           severity={months != null && months < 3 ? 'warning' : 'good'}
           costHook={months != null && months < 3 ? 'Below the 3-month safety floor — thin cover if income pauses.' : undefined} />,
@@ -1188,7 +1192,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               textAlign: 'center', pointerEvents: 'none',
             }}>
               <div className="num" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{stats.groups.length}</div>
-              <div className="muted" style={{ fontSize: 9, marginTop: 2 }}>groups</div>
+              <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>groups</div>
             </div>
           </div>
           <div className="col" style={{ gap: 8 }}>
@@ -1254,6 +1258,17 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                   return s + monthlyPayment(p, l.interestRate || 0, remaining);
                 }, 0);
                 const dti = (monthlyDebt / financialStats.totalMonthlyIncome) * 100;
+                // A DTI in the thousands isn't leverage — it's thin data (a loan
+                // with a near-term end date against a barely-recorded income).
+                // Never print an impossible number in a money app.
+                if (!Number.isFinite(dti) || dti > 300) {
+                  return (
+                    <div className="muted" style={{ fontSize: 11, lineHeight: 1.5 }}>
+                      Debt-to-income — not enough data yet. Add your regular income and check loan
+                      start/end dates, and this ratio becomes meaningful.
+                    </div>
+                  );
+                }
                 return (
                   <RatioBar
                     label="Debt-to-income"
@@ -1642,7 +1657,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     macro: (() => {
       const m = macroOverlay;
       const Pill = ({ kind, asOf }) => (
-        <span className="muted" style={{ fontSize: 9, padding: '2px 6px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>
+        <span className="muted" style={{ fontSize: 10, padding: '2px 6px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>
           {kind}{asOf ? ` · ${asOf}` : ''}
         </span>
       );
@@ -1815,7 +1830,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           {benchmarks.map(b => (
             <BenchmarkBar key={b.label} label={b.label} portfolioReturn={portfolioReturn} benchmarkReturn={b.ret} />
           ))}
-          <div className="muted" style={{ fontSize: 9.5, marginTop: 12, lineHeight: 1.5 }}>
+          <div className="muted" style={{ fontSize: 10, marginTop: 12, lineHeight: 1.5 }}>
             All bars compare the same <strong>{chartRange}</strong> window. Benchmark figures
             (USD/RWF, CPI, RSE ASI, T-bond) are illustrative and scaled to the selected range.
           </div>

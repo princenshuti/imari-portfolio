@@ -116,7 +116,7 @@ export default function LoanAnalysis({ liability, displayCurrency }) {
         {/* Schedule preview */}
         <table style={{ width: '100%', fontSize: 11.5, borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ color: 'var(--ink-4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 9.5 }}>
+            <tr style={{ color: 'var(--ink-4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 10 }}>
               <th style={{ textAlign: 'left',  padding: '4px 0' }}>Month</th>
               <th style={{ textAlign: 'right', padding: '4px 0' }}>Payment</th>
               <th style={{ textAlign: 'right', padding: '4px 0' }}>Interest</th>

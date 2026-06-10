@@ -113,7 +113,7 @@ export function AreaChart({
           color: 'var(--ink)',
         }}>
           {labels && labels[hover.idx] && (
-            <div className="muted" style={{ fontSize: 9, fontWeight: 500, marginBottom: 1 }}>{labels[hover.idx]}</div>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 500, marginBottom: 1 }}>{labels[hover.idx]}</div>
           )}
           {fmtV(data[hover.idx])}
         </div>
@@ -367,7 +367,7 @@ export function BenchmarkBar({ label, portfolioReturn, benchmarkReturn }) {
       </div>
       {/* Portfolio bar — solid brand */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 9.5, color: 'var(--ink-3)', width: 60, flexShrink: 0, fontWeight: 600 }}>You</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-3)', width: 60, flexShrink: 0, fontWeight: 600 }}>You</span>
         <div style={{ position: 'relative', height: 7, flex: 1, background: 'var(--bg-2)', borderRadius: 4 }}>
           <div style={{
             position: 'absolute', left: 0, top: 0,
@@ -383,7 +383,7 @@ export function BenchmarkBar({ label, portfolioReturn, benchmarkReturn }) {
       </div>
       {/* Benchmark bar — outlined gold */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 9.5, color: 'var(--ink-3)', width: 60, flexShrink: 0 }}>Benchmark</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-3)', width: 60, flexShrink: 0 }}>Benchmark</span>
         <div style={{ position: 'relative', height: 7, flex: 1, background: 'var(--bg-2)', borderRadius: 4 }}>
           <div style={{
             position: 'absolute', left: 0, top: 0,

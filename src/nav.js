@@ -11,17 +11,17 @@ export const NAV_ITEMS = {
   goals:       { id: 'goals',       labelDesktop: 'Goals',       labelMobile: 'Goals',     glyph: '◎', group: 'Wealth'   },
   accounts:    { id: 'accounts',    labelDesktop: 'Accounts',    labelMobile: 'Accounts',  glyph: '⌬', group: 'Money & Markets'  },
   trends:      { id: 'trends',      labelDesktop: 'Trends',      labelMobile: 'Trends',    glyph: '↗', group: 'Money & Markets'  },
-  yearreview:  { id: 'yearreview',  labelDesktop: 'Year in Review', labelMobile: 'Review', glyph: '✺', group: 'Money & Markets'  },
-  tax:         { id: 'tax',         labelDesktop: 'Tax Report',  labelMobile: 'Tax Report', glyph: '§', group: 'Money & Markets'  },
-  balancesheet:{ id: 'balancesheet',labelDesktop: 'Balance Sheet', labelMobile: 'Balance',  glyph: '▦', group: 'Money & Markets'  },
-  reports:     { id: 'reports',     labelDesktop: 'Monthly Report', labelMobile: 'Report',  glyph: '▤', group: 'Money & Markets'  },
+  reports:     { id: 'reports',     labelDesktop: 'Monthly Report', labelMobile: 'Report',  glyph: '▤', group: 'Reports'  },
+  balancesheet:{ id: 'balancesheet',labelDesktop: 'Balance Sheet', labelMobile: 'Balance',  glyph: '▦', group: 'Reports'  },
+  tax:         { id: 'tax',         labelDesktop: 'Tax Report',  labelMobile: 'Tax Report', glyph: '§', group: 'Reports'  },
+  yearreview:  { id: 'yearreview',  labelDesktop: 'Year in Review', labelMobile: 'Review', glyph: '✺', group: 'Reports'  },
   projections: { id: 'projections', labelDesktop: 'Fast Forward', labelMobile: 'Forecast', glyph: '⤴', group: 'Tools'    },
   retirement:  { id: 'retirement',  labelDesktop: 'Retirement',   labelMobile: 'Pension',  glyph: '☂', group: 'Tools'    },
   advisor:     { id: 'advisor',     labelDesktop: 'AI Advisor',  labelMobile: 'AI Advisor', glyph: '✦', group: 'Tools'    },
   settings:    { id: 'settings',    labelDesktop: 'Settings',    labelMobile: 'Settings',  glyph: '⚙', group: 'Tools'    },
 };
 
-export const NAV_GROUPS = ['Overview', 'Wealth', 'Money & Markets', 'Tools'];
+export const NAV_GROUPS = ['Overview', 'Wealth', 'Money & Markets', 'Reports', 'Tools'];
 
 export function navItemsByGroup() {
   return NAV_GROUPS.map(label => ({

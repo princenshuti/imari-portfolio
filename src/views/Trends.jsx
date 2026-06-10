@@ -93,7 +93,7 @@ export default function TrendsView({ state, dispatch }) {
               { label: 'Modeled',   bg: 'var(--bg-2)',                                        color: 'var(--ink-4)'},
             ].map(b => (
               <div key={b.label} style={{
-                padding: '2px 8px', borderRadius: 20, fontSize: 9, fontWeight: 700,
+                padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700,
                 background: b.bg, color: b.color,
               }}>{b.label}</div>
             ))}
@@ -167,7 +167,7 @@ export default function TrendsView({ state, dispatch }) {
             </div>
           </div>
           <div style={{
-            padding: '3px 9px', borderRadius: 20, fontSize: 9, fontWeight: 700,
+            padding: '3px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700,
             background: 'var(--bg-2)', color: 'var(--ink-4)',
           }}>Modeled</div>
         </div>

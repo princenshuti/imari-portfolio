@@ -42,7 +42,7 @@ function KpiCard({ label, value, sub, color = 'var(--ink)', highlight }) {
 function LawBadge({ law, url }) {
   return (
     <span style={{
-      fontSize: 9.5, padding: '2px 8px', borderRadius: 10, display: 'inline-flex', alignItems: 'center',
+      fontSize: 10, padding: '2px 8px', borderRadius: 10, display: 'inline-flex', alignItems: 'center',
       background: 'color-mix(in oklab, var(--gold) 12%, var(--bg-2))',
       color: 'var(--gold)', fontWeight: 700, letterSpacing: '0.02em',
     }}>{law}</span>
@@ -439,7 +439,7 @@ export default function TaxReportView({ state, dispatch }) {
                 <div className="num" style={{ fontWeight: 600, color: 'var(--down)' }}>
                   + {fmt(Math.round(totalPropertyTax * b.rate), 'RWF', { compact: true })}
                 </div>
-                <div className="muted" style={{ fontSize: 9.5, marginTop: 2 }}>{(b.rate * 100).toFixed(0)}% surcharge</div>
+                <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{(b.rate * 100).toFixed(0)}% surcharge</div>
               </div>
             ))}
           </div>
@@ -478,7 +478,7 @@ export default function TaxReportView({ state, dispatch }) {
               <div className="num" style={{ fontSize: 15, fontWeight: 700, marginTop: 2, color: 'var(--clay)' }}>
                 {fmt(cat.levy, 'RWF', { compact: false })}
               </div>
-              <div className="muted" style={{ fontSize: 9.5 }}>per year</div>
+              <div className="muted" style={{ fontSize: 10 }}>per year</div>
             </div>
           ))}
         </div>

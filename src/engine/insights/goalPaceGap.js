@@ -74,6 +74,28 @@ export default function goalPaceGap(state, { now = new Date() } = {}) {
     });
   }
 
+  // A slip beyond ~50 years (or infinite, when net saving is ~0) is not a
+  // forecast — it's a divide-by-near-zero. Quoting "slipping ~2406.1 years"
+  // reads as broken math and destroys trust; say what it actually means.
+  if (!Number.isFinite(slippage) || slippage > 600) {
+    return makeInsight({
+      id: 'goal-pace-gap',
+      type: 'foresight',
+      category: 'goal',
+      headline: `"${g.title}" is out of reach at the current pace`,
+      body: `Hitting it on time needs ${rwf(required)}/month; your recent net saving is ~${rwf(available)}/month — effectively no progress toward it.`,
+      costOfAbsence: {
+        severity: 'warning',
+        amount: required,
+        costStatement: `"${g.title}" never arrives at your current saving rate. It needs ${rwf(required)}/month — start anywhere above zero.`,
+        action: { label: 'Review goals', to: 'goals' },
+      },
+      sourceRefs,
+      dataAsOf: inputsAsOf(state, backingIds, now),
+      now,
+    });
+  }
+
   const slipStr = slippage >= 12 ? `${(slippage / 12).toFixed(1)} years` : `${Math.ceil(slippage)} months`;
   return makeInsight({
     id: 'goal-pace-gap',
