@@ -1,5 +1,7 @@
-// concentrationRisk — any single asset or asset-group above 25% of net worth.
-// Reuses the existing dashboard alert threshold.
+// concentrationRisk — any single asset or asset-group above 25% of total assets.
+// Denominator is gross asset value (NOT net worth) — the same basis the
+// dashboard's allocation chart and concentration alerts use, so the percentage
+// reads identically everywhere it appears.
 
 import { REFERENCE } from './refs.js';
 import { classOf, makeInsight, inputsAsOf } from './_shared.js';
@@ -46,10 +48,10 @@ export default function concentrationRisk(state, { now = new Date(), refs = REFE
     id: 'concentration-risk',
     type: 'surprise',
     category: 'allocation',
-    headline: `${pctStr}% of wealth in ${kind === 'group' ? label : 'one asset'}`,
+    headline: `${pctStr}% of your assets in ${kind === 'group' ? label : 'one asset'}`,
     body: kind === 'group'
-      ? `Your ${label} holdings are ${pctStr}% of net worth — above the 25% concentration guide.`
-      : `"${label}" alone is ${pctStr}% of net worth — above the 25% concentration guide.`,
+      ? `Your ${label} holdings are ${pctStr}% of total assets — above the 25% concentration guide.`
+      : `"${label}" alone is ${pctStr}% of total assets — above the 25% concentration guide.`,
     costOfAbsence: {
       severity,
       amount: pct,

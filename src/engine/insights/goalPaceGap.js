@@ -3,8 +3,8 @@
 // goal. "Achievable" is the user's recent net monthly savings (a portfolio-wide
 // proxy — stated honestly in the copy, since per-goal funding isn't tracked).
 
-import { LIQUID_KINDS, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
-import { goalCurrentRWF, goalTargetRWF } from '../goals.js';
+import { LIQUID_KINDS, liquidValueRWF, netWorthRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
+import { valueRWF, toBase } from '../../data.js';
 
 export default function goalPaceGap(state, { now = new Date() } = {}) {
   const goals = (state.goals || []).filter(g => !g.achieved && g.deadline);
