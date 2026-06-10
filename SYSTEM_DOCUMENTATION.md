@@ -114,7 +114,7 @@ RLS policy `user_has_portfolio_access()` gates all reads/writes by membership. F
 
 All features below are implemented end-to-end (CRUD + persistence + UI) and live on the deployed site. The code has no `TODO`/`coming soon` placeholders in user-facing paths.
 
-> **Testing status:** there is no automated test suite (no Jest/Vitest). "Tested" here means manually verified in production and protected by the CI build (a Vite build failure blocks deploy). See [§5 Testing](#5-testing).
+> **Testing status:** calculation logic (reducer, `src/engine/*`, import/search services) is covered by a Vitest suite (`npm test`); UI paths are manually verified and protected by the CI build (a Vite build failure blocks deploy). See [§5 Testing](#5-testing).
 
 ### Authentication & onboarding
 - Email/password sign-up and sign-in — [Login.jsx](src/views/Login.jsx)
@@ -153,9 +153,33 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 
 ### Cash flow
 - Income & expense entries
-- Recurring (daily / weekly / monthly / annually) or one-time
+- Recurring (monthly / quarterly / annually) or one-time
 - One-time entries linked to an account adjust that account's `currentValue`
 - Savings-rate computation, filters by date & category
+- Bank/MoMo statement import (CSV/Excel) with keyword + user-rule + batched-AI categorisation — [bankImport.js](src/services/bankImport.js)
+- Receipt photo → pre-filled expense draft (vision OCR via `ai-proxy`, B13)
+- Recurring-subscription audit: per-line monthly equivalents with annual cost framing — [recurringAudit.js](src/engine/insights/recurringAudit.js)
+- 30-day balance forecast from recurring entries + future one-offs, with named crunch day — [forecast.js](src/engine/forecast.js)
+- Monthly budget envelopes per expense category, paced against month progress; Dashboard widget — [budgets.js](src/engine/budgets.js)
+
+### Categorisation rules
+- User-defined "description contains X → category Y" rules, managed in Settings
+- Applied to import drafts before the AI pass (user's word wins; AI only sees the rest) — [catRules.js](src/engine/catRules.js)
+
+### Retirement readiness
+- RSSB / Ejo Heza pension projection on the statutory contribution schedule, replacement-ratio readiness with Cost-of-Absence framing — [retirement/](src/engine/retirement/), [Retirement.jsx](src/views/Retirement.jsx)
+
+### Year in Review
+- Trailing-12-month reflection over daily snapshots: start→end change, high/low watermarks, month-by-month closes, best/toughest month; synthetic seed history flagged — [yearReview.js](src/engine/yearReview.js)
+
+### Monthly Report
+- Auto-generated, printable month report: totals with prior-month deltas, category breakdown, largest one-offs, budget outcomes, net-worth motion; CSV export — [monthlyReport.js](src/engine/monthlyReport.js)
+
+### Global search
+- TopBar search (⌘K / Ctrl-K) across assets, liabilities, goals, cash-flow entries, and app views — [search.js](src/services/search.js)
+
+### Education layer
+- Plain-language glossary (real vs nominal, CGT, concentration risk, runway, …) surfaced as click-to-open explainer chips under insight cards and in Settings — [glossary.js](src/glossary.js)
 
 ### AI advisor
 - Multi-turn chat grounded in the user's portfolio snapshot (system prompt)
@@ -231,15 +255,16 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 
 | Layer | Status |
 |---|---|
-| Unit tests | None configured. |
+| Unit tests | ✅ Vitest (`npm test`) — reducer money math, every `src/engine/*` module (insights, forecast, budgets, year review, monthly report, categorisation rules, retirement, projection, freshness), formatting helpers, statement import, search, glossary integrity. |
 | Integration tests | None configured. |
 | Type checking | None (project is plain JS, not TS). |
 | Linting | Not enforced in CI. |
+| i18n audit | ✅ `npm run i18n:audit` — locale completeness (en/fr/rw) + hardcoded-string gate on chrome files. |
 | Build verification | ✅ `vite build` runs on every push to `main`; a failure blocks the deploy. |
 | Runtime checks | React `StrictMode` is enabled in dev. |
 | Manual QA | Each feature has been exercised against the deployed site. |
 
-This is the honest state of the project. Adding Vitest + a smoke test for the reducer in [App.jsx](src/App.jsx) and a contract test for `ai-proxy` would be the highest-leverage next step.
+Convention: calculation logic lives in `src/engine/` with colocated `*.test.js`; no money math ships untested (R1). A contract test for `ai-proxy` remains the highest-leverage gap.
 
 ---
 

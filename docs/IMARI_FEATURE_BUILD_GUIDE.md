@@ -647,7 +647,7 @@ All four reuse the Insight Engine (§2) for their numbers and the `<CostOfAbsenc
 **User value & Cost-of-Absence hook.** This *is* the daily-engagement engine. Hook example: *"Your vehicle dropped ~RWF X in value this quarter; Road Maintenance Levy due in Z days."*
 **Build steps**
 1. This is the surfacing layer for §1 (Cost-of-Absence) + §2 (Insight Engine) + §4 (WhatsApp/PWA push). Do not invent new alert logic — alerts are Insight Engine outputs above a severity threshold.
-2. Channels: in-app banner (top, FR-DASH-6 alert slot), WhatsApp nudge (§4), PWA push (later).
+2. Channels: in-app banner (top, FR-DASH-6 alert slot), ~~WhatsApp nudge (§4)~~ *(deferred to mobile with §4 — web v1 is in-app only)*, PWA push (later).
 3. Alert types in v1: low liquid balance (< buffer), un-added expenses (gap since last entry / detected MoMo not categorized), vehicle depreciation, bond < 90 days to maturity, overdue receivable, asset stale > 30 days. (Reuse existing alert thresholds from FR-DASH-6.)
 4. Per-alert mute + global quiet hours; max one proactive push/day (§4 rate limit).
 **Acceptance**
@@ -668,6 +668,8 @@ All four reuse the Insight Engine (§2) for their numbers and the `<CostOfAbsenc
 ---
 
 ## B16. "How to use the WhatsApp Quick-Entry Bot"  [P1 · Docs/UX]
+
+> **🚫 DEFERRED with §4 (2026-06).** This item is onboarding for the WhatsApp bot; the bot itself moved to the Imari mobile app, so there is nothing to onboard on the web. Spec preserved for the mobile rebuild — when §4 ships there, build this in the same sprint.
 
 **Objective.** Onboarding + in-app guidance for the WhatsApp bot (§4). A powerful feature is worthless if users don't know it exists or how to start.
 **User value & Cost-of-Absence hook.** Activation. Hook: *"Add expenses by texting — no app needed. Connect WhatsApp in 30 seconds."*
