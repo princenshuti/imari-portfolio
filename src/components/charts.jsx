@@ -126,7 +126,7 @@ export function AreaChart({
  * PortfolioChart — dual-series area chart (net worth + cost basis).
  * Pure SVG, no external library. Hover tooltip via onMouseMove.
  */
-export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height = 200 }) {
+export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height = 200, annotate = false }) {
   const [hover, setHover] = useState(null); // { idx, x, y }
   const svgRef = useRef(null);
 
@@ -212,6 +212,27 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
   const snap = hover !== null ? snapshots[hover.idx] : null;
   const gain = snap ? snap.netWorth - snap.costBasis : 0;
 
+  // Automated annotations — the chart explains its own extremes (design
+  // review Phase 2). Peak and trough of the visible range, skipped when they
+  // sit at the edges (the latest point already has the hero number) or when
+  // the window is too small to mean anything.
+  const annotations = [];
+  if (annotate && snapshots.length >= 10) {
+    let pi = 0, ti = 0;
+    nwArr.forEach((v, i) => { if (v > nwArr[pi]) pi = i; if (v < nwArr[ti]) ti = i; });
+    const lbl = (v) => {
+      const x = fromBase(v, displayCurrency);
+      return x >= 1e9 ? `${(x / 1e9).toFixed(1)}B` : x >= 1e6 ? `${(x / 1e6).toFixed(1)}M` : `${(x / 1e3).toFixed(0)}k`;
+    };
+    const dateOf = (i) => new Date(snapshots[i].date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    if (pi > 1 && pi < snapshots.length - 2) {
+      annotations.push({ x: xOf(pi), y: yOf(nwArr[pi]), text: `Peak ${lbl(nwArr[pi])} · ${dateOf(pi)}`, above: true, color: 'var(--up)' });
+    }
+    if (ti > 1 && ti < snapshots.length - 2 && ti !== pi) {
+      annotations.push({ x: xOf(ti), y: yOf(nwArr[ti]), text: `Low ${lbl(nwArr[ti])} · ${dateOf(ti)}`, above: false, color: 'var(--down)' });
+    }
+  }
+
   return (
     <div style={{ position: 'relative', userSelect: 'none' }}>
       <svg
@@ -263,6 +284,20 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
               ? `${(fromBase(v, displayCurrency) / 1e6).toFixed(1)}M`
               : `${(fromBase(v, displayCurrency) / 1e3).toFixed(0)}k`}
           </text>
+        ))}
+
+        {/* Automated peak/trough annotations */}
+        {annotations.map((a, i) => (
+          <g key={i} aria-hidden="true" style={{ pointerEvents: 'none' }}>
+            <circle cx={a.x} cy={a.y} r="3.5" fill={a.color} stroke="var(--paper)" strokeWidth="1.5" />
+            <text
+              x={Math.min(Math.max(a.x, 60), W - 80)}
+              y={a.above ? Math.max(a.y - 10, 12) : Math.min(a.y + 18, H - PAD.b - 4)}
+              textAnchor="middle" fontSize="9.5" fontWeight="600"
+              fill={a.color} fontFamily="inherit"
+              stroke="var(--paper)" strokeWidth="3" paintOrder="stroke"
+            >{a.text}</text>
+          </g>
         ))}
 
         {/* Hover crosshair */}

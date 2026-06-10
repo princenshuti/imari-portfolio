@@ -4,8 +4,7 @@ import {
   toBase, fmtBase, fmt, GOAL_CATEGORIES,
   fixedAssetTax, VEHICLE_CATEGORIES, EXPENSE_CATEGORIES,
 } from '../data.js';
-import { getApiKey, completeText } from '../ai.js';
-import { AreaChart, PortfolioChart, BenchmarkBar, Donut } from '../components/charts.jsx';
+import { PortfolioChart, BenchmarkBar, Donut } from '../components/charts.jsx';
 import { TrendCard } from '../components/Field.jsx';
 import AssetIcon from '../components/AssetIcon.jsx';
 import { filterByRange, calcReturn } from '../services/snapshots.js';
@@ -19,6 +18,7 @@ import { REFERENCE } from '../engine/insights/refs.js';
 import { projectPension } from '../engine/retirement/index.js';
 import { budgetStatus } from '../engine/budgets.js';
 import { glossaryFor, GLOSSARY } from '../glossary.js';
+import { severityColor } from '../severity.js';
 import CostOfAbsence from '../components/CostOfAbsence.jsx';
 import MetricWidget from '../components/MetricWidget.jsx';
 
@@ -57,137 +57,6 @@ function renderMD(s) {
   return esc
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>');
-}
-
-// ─── AI Insight card ──────────────────────────────────────────────────────
-// The Insight Engine decides WHAT to surface (deterministic, testable); the AI
-// only PHRASES it (§2 step 4). If the AI proxy is unreachable, the raw engine
-// headlines still render — graceful degrade, never a blank card (NFR-REL-1).
-function DashboardInsight({ state, dispatch, insights = [] }) {
-  const { profile, insight } = state;
-  const [pending, setPending] = useState(false);
-  const [aiError, setAiError] = useState(false);
-
-  // Cache key: re-narrate only when the engine's output actually changes.
-  const insightsKey = useMemo(() => JSON.stringify(
-    insights.map(i => [i.id, i.dataAsOf, i.costOfAbsence?.amount ?? null])
-  ), [insights]);
-
-  const INSIGHT_TTL_MS = 24 * 60 * 60 * 1000; // 24h hard refresh ceiling
-
-  const generate = async () => {
-    if (pending) return;
-    const apiKey = getApiKey();
-    if (!apiKey || insights.length === 0) return; // no key → fallback bullets render
-    setPending(true); setAiError(false);
-    const lines = insights.map((i, idx) =>
-      `${idx + 1}. ${i.headline} — ${i.body}${i.costOfAbsence ? ` (cost if ignored: ${i.costOfAbsence.costStatement})` : ''}`
-    ).join('\n');
-    const prompt = `You are Imari Advisor for ${profile.name || 'the user'} in Rwanda. Below are factual insights ALREADY computed from their portfolio. The numbers are correct — do NOT change them and do NOT invent new ones.
-
-Rewrite each insight as ONE short, warm, plain-English bullet (max one sentence, ~20 words). Keep the exact figures. Start each line with "• ". Bold the key number or name with **...**. No greeting, no preamble, no disclaimer.
-
-INSIGHTS:
-${lines}`;
-    try {
-      const reply = await completeText(apiKey, prompt);
-      dispatch({ type: 'setInsight', insight: { content: reply.trim(), generatedAt: Date.now(), key: insightsKey } });
-    } catch {
-      setAiError(true); // fall back to raw engine bullets below
-    } finally {
-      setPending(false);
-    }
-  };
-
-  useEffect(() => {
-    if (insights.length === 0 || !getApiKey()) return;
-    const expired = insight?.generatedAt && (Date.now() - insight.generatedAt > INSIGHT_TTL_MS);
-    if (!insight || insight.key !== insightsKey || expired) {
-      const t = setTimeout(() => generate(), 600);
-      return () => clearTimeout(t);
-    }
-  }, [insightsKey, insights.length]);
-
-  if (insights.length === 0) return null;
-
-  const expired = insight?.generatedAt && (Date.now() - insight.generatedAt > INSIGHT_TTL_MS);
-  const aiFresh = insight?.content && insight.key === insightsKey && !expired;
-  const aiBullets = aiFresh ? insight.content.split(/\n+/).filter(l => l.trim()) : null;
-  const hasKey = !!getApiKey();
-
-  // Raw engine bullets — the deterministic fallback that always works.
-  const engineBullets = insights.map(i => `${i.headline} — ${i.body}`);
-  const bullets = aiBullets || engineBullets;
-  const usingAI = !!aiBullets;
-
-  let footnote;
-  if (pending && !aiBullets) footnote = ' · personalizing…';
-  else if (usingAI && insight?.generatedAt) footnote = ` · ${timeAgo(insight.generatedAt)}`;
-  else if (aiError) footnote = ' · showing computed insights (AI unavailable)';
-  else if (!hasKey) footnote = ' · connect AI in Settings to personalize';
-
-  return (
-    <div className="dash-insight-card" style={{
-      marginBottom: 16, borderRadius: 'var(--r-xl)',
-      background: 'linear-gradient(135deg, var(--paper) 0%, var(--brand-softer) 120%)',
-      border: '0.5px solid var(--brand-soft)', boxShadow: 'var(--shadow-2)',
-    }}>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <div className="row" style={{ gap: 12 }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-            background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
-            color: 'var(--brand-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Instrument Serif, serif', fontSize: 22, boxShadow: 'var(--shadow-brand)',
-          }}>✦</div>
-          <div>
-            <div className="font-serif" style={{ fontSize: 19, lineHeight: 1.1 }}>What I'm seeing in your portfolio</div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 3 }}>
-              Imari Advisor · {insights.length} insight{insights.length === 1 ? '' : 's'} from your data{footnote}
-            </div>
-          </div>
-        </div>
-        <div className="row" style={{ gap: 6, flexShrink: 0 }}>
-          {hasKey && (
-            <button onClick={generate} disabled={pending} title="Regenerate" aria-label="Regenerate insight" style={{
-              padding: '7px 12px', borderRadius: 'var(--r-pill)',
-              border: '0.5px solid var(--line-strong)', background: 'var(--paper)',
-              cursor: pending ? 'default' : 'pointer', fontSize: 11, color: 'var(--ink-3)',
-              fontFamily: 'inherit', opacity: pending ? 0.7 : 1,
-              transition: 'background 140ms ease-out, opacity 140ms ease-out',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}>
-              <span className={`dash-refresh-icon${pending ? ' is-spinning' : ''}`} aria-hidden="true">↻</span>
-              {pending ? 'Refreshing' : 'Refresh'}
-            </button>
-          )}
-          <button onClick={() => dispatch({ type: 'nav', to: 'advisor' })} style={{
-            padding: '7px 14px', borderRadius: 'var(--r-pill)',
-            border: 0, background: 'var(--brand)', color: 'var(--brand-ink)',
-            cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', boxShadow: 'var(--shadow-brand)',
-          }}>Open chat →</button>
-        </div>
-      </div>
-      <div className="col" style={{ gap: 10 }}>
-        {bullets.map((line, i) => {
-          const text = line.replace(/^[•\-\*]\s*/, '');
-          return (
-            <div key={i} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
-              <span style={{
-                flexShrink: 0, marginTop: 2,
-                width: 22, height: 22, borderRadius: '50%',
-                background: 'var(--brand-soft)', color: 'var(--brand)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Geist Mono', fontSize: 11, fontWeight: 700,
-              }}>{i + 1}</span>
-              <div style={{ flex: 1, fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)' }}
-                dangerouslySetInnerHTML={{ __html: renderMD(text) }} />
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -242,29 +111,6 @@ function IdleCashCard({ insight, displayCurrency, now }) {
 }
 
 /** Single KPI tile in the executive strip — semantic <button> when clickable */
-function KpiTile({ label, value, sub, accent, delay, onClick }) {
-  const Tag = onClick ? 'button' : 'div';
-  return (
-    <Tag
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      aria-label={onClick ? `${label}: ${value}. ${sub || ''}` : undefined}
-      className={`dash-kpi-tile${onClick ? ' is-interactive' : ''}`}
-      style={{
-        padding: '16px 20px', borderRadius: 'var(--r-md)',
-        background: 'var(--paper)', border: '0.5px solid var(--line)',
-        boxShadow: 'var(--shadow-1)',
-        animation: 'imari-slideUp 240ms cubic-bezier(0.23,1,0.32,1) both',
-        animationDelay: `${delay}ms`,
-        textAlign: 'left', fontFamily: 'inherit', width: '100%', display: 'block',
-      }}
-    >
-      <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
-      <div className="num" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: accent || 'var(--ink)', lineHeight: 1.1 }}>{value}</div>
-      {sub && <div className="muted" style={{ fontSize: 10.5, marginTop: 5, lineHeight: 1.4 }}>{sub}</div>}
-    </Tag>
-  );
-}
 
 /** Horizontal ratio progress bar with label */
 /**
@@ -474,27 +320,31 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
 }
 
 // ─── Dashboard layout: drag-to-reorder + hideable sections ────────────────
+// Phase-2 design edit: the dashboard tells its story in two screens.
+// Screen 1 — STATE: hero (real net-worth chart, range pills, annotations,
+// real-vs-CPI context) → advisor strip (fixed) → four key metrics → position
+// (allocation + the ONE ratios card + cash-flow mini).
+// Screen 2 — MOVEMENT: where money goes, income/liquidity/returns, macro,
+// benchmarks, markets. Removed outright (they said the same thing twice):
+// the KPI strip (folded into the hero sub-row), the synthetic 24-month chart,
+// the duplicate Net-worth timeline (its real data IS the hero now), Top
+// movers (Return by asset class covers it), and the AI digest (the Advice
+// Center is the canonical surface; the strip links to it).
 const SECTION_META = {
-  kpi:        { label: 'KPI Strip',              canHide: false },
+  hero:       { label: 'Net worth',               canHide: false },
   widgets:    { label: 'Key Metrics',             canHide: true  },
-  hero:       { label: 'Portfolio Overview',      canHide: false },
-  insight:    { label: 'AI Insight',              canHide: true  },
+  position:   { label: 'Allocation & Ratios',     canHide: true  },
+  cashflow:   { label: 'Cash Flow by Category',    canHide: true  },
+  financials: { label: 'Income & Returns',        canHide: true  },
   retirement: { label: 'Retirement Readiness',     canHide: true  },
   idlecash:   { label: 'Idle Cash / T-Bill',       canHide: true  },
-  financials: { label: 'Financial Monitoring',    canHide: true  },
-  cashflow:   { label: 'Cash Flow by Category',    canHide: true  },
   macro:      { label: 'Personal Macro Overlay',   canHide: true  },
-  chart:      { label: 'Net Worth Timeline',      canHide: true  },
   category:   { label: 'Category Performance',    canHide: true  },
-  movers:     { label: 'Top Movers',              canHide: true  },
   alerts:     { label: 'Alerts',                  canHide: true  },
   benchmarks: { label: 'Benchmarks & Goals',      canHide: true  },
   markets:    { label: 'Markets Watchlist',       canHide: true  },
 };
-// "Am I OK?" (kpi+widgets+hero) → "What needs attention?" (alerts+insight) → "What
-// changed?" (movers+chart) → "How am I positioned?" (financials+cashflow+macro+
-// category+benchmarks) → "Markets".
-const DEFAULT_SECTION_ORDER = ['kpi','widgets','hero','alerts','insight','retirement','idlecash','movers','chart','cashflow','financials','macro','category','benchmarks','markets'];
+const DEFAULT_SECTION_ORDER = ['hero','widgets','position','cashflow','financials','retirement','idlecash','macro','category','alerts','benchmarks','markets'];
 
 function useDashboardLayout() {
   const [order, setOrder] = useState(() => {
@@ -827,14 +677,12 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     };
   }, [assets, cashflows, liabilities, stats.totalValue, totExp6M]);
 
-  // ── Gainers & losers ──────────────────────────────────────────
+  // Per-asset valuation snapshot — used by the alert signals below.
   const moversAll = useMemo(() => assets.map(a => {
     const cur = a.currentValue !== '' && a.currentValue != null ? a.currentValue : suggestValue(a, today);
     const pct  = a.purchasePrice ? (cur - a.purchasePrice) / a.purchasePrice * 100 : 0;
     return { ...a, _current: cur, _pct: pct, _gain: cur - (a.purchasePrice || 0) };
   }), [assets]);
-  const gainers = useMemo(() => [...moversAll].filter(a => a._pct > 0).sort((a, b) => b._pct - a._pct).slice(0, 4), [moversAll]);
-  const losers  = useMemo(() => [...moversAll].filter(a => a._pct < 0).sort((a, b) => a._pct - b._pct).slice(0, 4), [moversAll]);
 
   // ── Alert signals ─────────────────────────────────────────────
   const concentrationAlerts = useMemo(() => {
@@ -878,21 +726,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       })
       .slice(0, 5),
   [assets]);
-
-  // ── Portfolio trend (24-month synthetic) ──────────────────────
-  const trend = useMemo(() => {
-    const arr = [];
-    for (let m = 24; m >= 0; m--) {
-      const t = new Date(); t.setMonth(t.getMonth() - m);
-      let v = 0;
-      assets.forEach(a => {
-        if (new Date(a.purchaseDate) > t) return;
-        v += toBase(suggestValue({ ...a, currentValue: '' }, t), a.currency || 'RWF');
-      });
-      arr.push(Math.round(v));
-    }
-    return arr;
-  }, [assets]);
 
   // ── Snapshot chart ────────────────────────────────────────────
   const [chartRange, setChartRange] = useState('3M');
@@ -1003,68 +836,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     // KPI strip. When debt exists, show Net worth / Gross portfolio / P/L / Savings.
     // When debt is zero, Net worth == Gross portfolio (same number) — collapse the
     // duplicate and promote "Liquid balance" so the strip carries 4 unique signals.
-    kpi: (() => {
-      const hasDebt = liabilities.length > 0;
-      const tiles = [];
-      tiles.push(
-        <KpiTile
-          key="nw"
-          delay={0}
-          label={hasDebt ? 'Net worth' : 'Portfolio value'}
-          value={fmtBase(trueNetWorth, profile.displayCurrency, { compact: trueNetWorth > 1e8 })}
-          sub={hasDebt ? `After ${fmtBase(totalDebt, profile.displayCurrency, { compact: true })} debt` : `${assets.length} asset${assets.length === 1 ? '' : 's'} · cost basis ${fmtBase(stats.totalCost, profile.displayCurrency, { compact: true })}`}
-          accent="var(--ink)"
-        />
-      );
-      if (hasDebt) {
-        tiles.push(
-          <KpiTile
-            key="gross"
-            delay={40}
-            label="Gross portfolio"
-            value={fmtBase(stats.totalValue, profile.displayCurrency, { compact: stats.totalValue > 1e8 })}
-            sub={`Cost basis: ${fmtBase(stats.totalCost, profile.displayCurrency, { compact: true })}`}
-            accent="var(--brand)"
-          />
-        );
-      } else {
-        // Replacement tile: liquid balance — clickable, takes user to cash + savings
-        tiles.push(
-          <KpiTile
-            key="liquid"
-            delay={40}
-            label="Liquid balance"
-            value={fmtBase(stats.liquidValue || 0, profile.displayCurrency, { compact: (stats.liquidValue || 0) > 1e7 })}
-            sub={`${stats.liquidityRatio.toFixed(1)}% of portfolio — cash + mobile money + savings`}
-            accent="var(--brand)"
-            onClick={() => dispatch({ type: 'nav', to: 'accounts' })}
-          />
-        );
-      }
-      tiles.push(
-        <KpiTile
-          key="pl"
-          delay={80}
-          label="Unrealised P/L"
-          value={`${stats.gain >= 0 ? '▲ ' : '▼ '}${stats.gain >= 0 ? '+' : ''}${fmtBase(stats.gain, profile.displayCurrency, { compact: true })}`}
-          sub={`${stats.gainPct >= 0 ? '+' : ''}${stats.gainPct.toFixed(1)}% all-time vs cost`}
-          accent={stats.gain >= 0 ? 'var(--up)' : 'var(--down)'}
-        />
-      );
-      tiles.push(
-        <KpiTile
-          key="sr"
-          delay={120}
-          label="Savings rate"
-          value={savingsRate !== null ? `${savingsRate.toFixed(1)}%` : '—'}
-          sub={savingsRate !== null ? '6-month average of income saved' : 'Add cashflows to track'}
-          accent={savingsRate === null ? 'var(--ink-3)' : savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)'}
-          onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}
-        />
-      );
-      return <div className="dash-kpi-grid">{tiles}</div>;
-    })(),
-
     // ── B6–B9 Key-metric widgets (shared MetricWidget on engine numbers) ──
     widgets: (() => {
       const wAsOf = netWorthAsOf(state);
@@ -1132,49 +903,88 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           deepLink="trends" onNav={nav}
           severity={investable > REFERENCE.idleCashFloorRWF ? 'warning' : 'good'}
           costHook={investable > REFERENCE.idleCashFloorRWF ? `Idle — at ~${REFERENCE.tBillYieldPct}% T-bill that's ~${fmtBase(forgoneYr, profile.displayCurrency, { compact: true })}/yr forgone.` : undefined} />);
-      return <div className="dash-kpi-grid">{widgets}</div>;
+      // One calm row of four — the rest of the story lives in its own views.
+      return <div className="dash-kpi-grid">{widgets.slice(0, 4)}</div>;
     })(),
 
-    hero: (
-      <div className="dash-grid-3">
-
-        {/* Net Worth Hero */}
-        <div className="card-hero dash-hero-card">
+    // ── HERO — the one chart that matters: REAL snapshot history, range
+    // pills, automated peak/trough annotations, and the inflation-honest
+    // contextual comparison. (Design review #7/#8: number first, breathe.)
+    hero: (() => {
+      const rangeReturn = calcReturn(chartSnaps);
+      const rangeDelta = chartSnaps.length >= 2
+        ? chartSnaps[chartSnaps.length - 1].netWorth - chartSnaps[0].netWorth : 0;
+      const realYoY = yearAgo ? yearAgo.pct - REFERENCE.cpiYoYPct : null;
+      const subStats = [
+        { label: 'Gross assets', value: fmtBase(stats.totalValue, profile.displayCurrency, { compact: true }), to: 'assets' },
+        liabilities.length > 0 && { label: 'Debt', value: `−${fmtBase(totalDebt, profile.displayCurrency, { compact: true })}`, color: 'var(--down-ink)', to: 'liabilities' },
+        { label: 'Unrealised P/L', value: `${stats.gain >= 0 ? '+' : ''}${fmtBase(stats.gain, profile.displayCurrency, { compact: true })}`, color: stats.gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)', to: 'assets' },
+        savingsRate !== null && { label: 'Savings rate', value: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up-ink)' : 'var(--gold-ink)', to: 'cashflow' },
+      ].filter(Boolean);
+      return (
+        <div className="card-hero dash-hero-card" style={{ position: 'relative' }}>
           <div style={{
             position: 'absolute', top: -40, right: -40,
             width: 160, height: 160, borderRadius: '50%',
             background: 'radial-gradient(circle, var(--brand-softer) 0%, transparent 70%)',
             pointerEvents: 'none',
           }} />
-          <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Net worth</div>
-          <div className="font-serif dash-hero-amount" style={{ lineHeight: 1, letterSpacing: '-0.025em' }}>
-            {fmtBase(trueNetWorth, profile.displayCurrency, { compact: trueNetWorth > 1e8 })}
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Net worth</div>
+              <div className="font-serif dash-hero-amount" style={{ lineHeight: 1, letterSpacing: '-0.025em' }}>
+                {fmtBase(trueNetWorth, profile.displayCurrency, { compact: trueNetWorth > 1e8 })}
+              </div>
+              <div className="row" style={{ gap: 10, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                {chartSnaps.length >= 2 && (
+                  <span className={`pill ${rangeDelta >= 0 ? 'pill-up' : 'pill-down'}`}>
+                    {rangeDelta >= 0 ? '▲' : '▼'} {rangeDelta >= 0 ? '+' : ''}{fmtBase(rangeDelta, profile.displayCurrency, { compact: true })}
+                    {Number.isFinite(rangeReturn) && rangeReturn !== 0 ? ` (${rangeReturn >= 0 ? '+' : ''}${rangeReturn.toFixed(1)}%)` : ''} {chartRange === 'ALL' ? 'all time' : `past ${chartRange}`}
+                  </span>
+                )}
+                {realYoY != null && (
+                  <span className="muted num" style={{ fontSize: 11.5 }} title={`Nominal ${yearAgo.pct >= 0 ? '+' : ''}${yearAgo.pct.toFixed(1)}% YoY minus ${REFERENCE.cpiYoYPct}% CPI (NISR reference)`}>
+                    real {realYoY >= 0 ? '+' : ''}{realYoY.toFixed(1)}%/yr after {REFERENCE.cpiYoYPct}% inflation
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="row" style={{ gap: 6 }}>
+              {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
+                <button key={r} onClick={() => setChartRange(r)} className="dash-btn-range" style={{
+                  padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
+                  background: chartRange === r ? 'var(--brand)' : 'var(--bg-2)',
+                  color: chartRange === r ? 'var(--brand-ink)' : 'var(--ink-2)',
+                  border: 0, fontFamily: 'inherit', fontWeight: chartRange === r ? 600 : 400,
+                }}>{r}</button>
+              ))}
+            </div>
           </div>
-          <div className="row" style={{ gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-            <span className={`pill ${stats.gain >= 0 ? 'pill-up' : 'pill-down'}`}>
-              {stats.gain >= 0 ? '▲' : '▼'} {Math.abs(stats.gainPct).toFixed(1)}% all-time
-            </span>
-            <span className="num muted" style={{ fontSize: 12 }}>
-              {stats.gain >= 0 ? '+' : ''}{fmtBase(stats.gain, profile.displayCurrency, { compact: true })} vs cost
-            </span>
+          <div style={{ marginTop: 16 }}>
+            <PortfolioChart snapshots={chartSnaps} displayCurrency={profile.displayCurrency} height={210} annotate />
           </div>
-          <div style={{ marginTop: 18, color: 'var(--brand)' }}>
-            <AreaChart
-              data={trend}
-              labels={Array.from({ length: trend.length }, (_, i) => {
-                const d = new Date(); d.setMonth(d.getMonth() - (trend.length - 1 - i));
-                return d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
-              })}
-              w={680} h={140}
-              stroke="var(--brand)" accent="var(--brand)" responsive
-              formatValue={(v) => fmtBase(v, profile.displayCurrency, { compact: true })}
-              ariaLabel={`24-month net worth chart. Latest: ${fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })}.`}
-            />
-          </div>
-          <div className="dash-chart-axis" aria-hidden="true">
-            <span>24m ago</span><span>18m</span><span>12m</span><span>6m</span><span>Today</span>
+          {chartHasSynthetic && (
+            <div className="muted" style={{ fontSize: 10.5, marginTop: 6, fontStyle: 'italic' }}>
+              Early history is a synthetic seed for illustration — real daily snapshots accrue from when you started using Imari.
+            </div>
+          )}
+          {/* Drill-down sub-stats — each is a real number from the same engine the views use */}
+          <div className="row" style={{ gap: 20, marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--line-soft)', flexWrap: 'wrap' }}>
+            {subStats.map(st => (
+              <button key={st.label} type="button" className="dash-link" onClick={() => dispatch({ type: 'nav', to: st.to })}
+                style={{ all: 'unset', cursor: 'pointer' }} aria-label={`${st.label}: ${st.value} — open`}>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{st.label}</div>
+                <div className="num" style={{ fontSize: 15, fontWeight: 700, marginTop: 2, color: st.color || 'var(--ink)' }}>{st.value}</div>
+              </button>
+            ))}
           </div>
         </div>
+      );
+    })(),
+
+    // ── POSITION — allocation + the single canonical ratios card + cash-flow mini ──
+    position: (
+      <div className="dash-grid-3" style={{ gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr)' }}>
 
         {/* Asset Allocation donut */}
         <div className="card" style={{ padding: 22 }}>
@@ -1234,6 +1044,20 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 color={stats.incomeGenRatio > 50 ? 'var(--up)' : stats.incomeGenRatio > 25 ? 'var(--gold)' : 'var(--down)'}
                 hint="% of portfolio actively yielding returns"
               />
+              <RatioBar
+                label="Passive income"
+                value={financialStats.passiveIncomeRatio}
+                color={financialStats.passiveIncomeRatio > 50 ? 'var(--up)' : financialStats.passiveIncomeRatio > 25 ? 'var(--gold)' : 'var(--down)'}
+                hint="Share of monthly income not from salary"
+              />
+              {savingsRate !== null && (
+                <RatioBar
+                  label="Savings rate (6M)"
+                  value={savingsRate}
+                  color={savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)'}
+                  hint="Income saved after all expenses"
+                />
+              )}
               {liabilities.length > 0 && (
                 <RatioBar
                   label="Debt-to-asset"
@@ -1302,7 +1126,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       </div>
     ),
 
-    insight: <DashboardInsight state={state} dispatch={dispatch} insights={engine.insights} />,
 
     // ── §9: idle-cash card (forgone-yield counter + broker introduction) ──
     idlecash: (() => {
@@ -1448,40 +1271,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             )}
           </div>
 
-          {/* Key financial ratios */}
-          <div className="card" style={{ padding: '20px 22px' }}>
-            <div className="font-serif" style={{ fontSize: 17, marginBottom: 14 }}>Financial ratios</div>
-            <div className="col" style={{ gap: 15 }}>
-
-              <RatioBar
-                label="Passive income ratio"
-                value={fs.passiveIncomeRatio}
-                color={fs.passiveIncomeRatio > 50 ? 'var(--up)' : fs.passiveIncomeRatio > 25 ? 'var(--gold)' : 'var(--down)'}
-                hint={fs.passiveIncomeRatio > 50 ? 'Majority of income is passive' : 'Grow passive income to build financial freedom'}
-              />
-              <RatioBar
-                label="Asset utilization rate"
-                value={fs.assetUtilizationRate}
-                color={fs.assetUtilizationRate > 60 ? 'var(--up)' : fs.assetUtilizationRate > 30 ? 'var(--gold)' : 'var(--down)'}
-                hint="Share of total assets actively generating returns"
-              />
-              <RatioBar
-                label="Debt-to-asset ratio"
-                value={debtToAsset}
-                color={debtToAsset < 30 ? 'var(--up)' : debtToAsset < 60 ? 'var(--gold)' : 'var(--down)'}
-                hint={liabilities.length === 0 ? 'No liabilities recorded' : `${fmtBase(totalDebt, profile.displayCurrency, { compact: true })} total debt`}
-              />
-              {totInc6M > 0 && savingsRate !== null && (
-                <RatioBar
-                  label="Savings rate (6M avg)"
-                  value={savingsRate}
-                  color={savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)'}
-                  hint="Income saved after all expenses"
-                />
-              )}
-            </div>
-          </div>
-
           {/* Liquidity & obligations */}
           <div className="card" style={{ padding: '20px 22px' }}>
             <div className="font-serif" style={{ fontSize: 17, marginBottom: 14 }}>Liquidity position</div>
@@ -1570,43 +1359,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         </div>
       );
     })() : null,
-
-    chart: (
-      <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-          <div>
-            <div className="font-serif" style={{ fontSize: 19 }}>Net worth timeline</div>
-            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-              Net worth vs cost basis · {portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(1)}% this period
-            </div>
-            {yearAgo && (
-              <div style={{ fontSize: 11, marginTop: 4, color: 'var(--ink-2)' }}>
-                <span aria-hidden="true" style={{ color: yearAgo.delta >= 0 ? 'var(--up)' : 'var(--down)' }}>{yearAgo.delta >= 0 ? '▲' : '▼'}</span>{' '}
-                vs 1 year ago: <strong style={{ color: yearAgo.delta >= 0 ? 'var(--up)' : 'var(--down)' }}>
-                  {yearAgo.delta >= 0 ? '+' : ''}{fmtBase(yearAgo.delta, profile.displayCurrency, { compact: true })} ({yearAgo.pct >= 0 ? '+' : ''}{yearAgo.pct.toFixed(1)}%)
-                </strong>
-              </div>
-            )}
-          </div>
-          <div className="row" style={{ gap: 6 }}>
-            {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
-              <button key={r} onClick={() => setChartRange(r)} className="dash-btn-range" style={{
-                padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
-                background: chartRange === r ? 'var(--brand)' : 'var(--bg-2)',
-                color: chartRange === r ? 'var(--brand-ink)' : 'var(--ink-2)',
-                border: 0, fontFamily: 'inherit', fontWeight: chartRange === r ? 600 : 400,
-              }}>{r}</button>
-            ))}
-          </div>
-        </div>
-        <PortfolioChart snapshots={chartSnaps} displayCurrency={profile.displayCurrency} height={200} />
-        {chartHasSynthetic && (
-          <div className="muted" style={{ fontSize: 10.5, marginTop: 8, fontStyle: 'italic' }}>
-            Early history is a synthetic seed for illustration — real daily snapshots accrue from when you started using Imari.
-          </div>
-        )}
-      </div>
-    ),
 
     // ── B10: cash-flow by category (matches the Cash Flow module) ──
     cashflow: expenseByCategory.rows.length > 0 ? (
@@ -1732,45 +1484,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       </div>
     ) : null,
 
-    movers: (gainers.length > 0 || losers.length > 0) ? (
-      <div className="dash-grid-2">
-        <div className="card" style={{ padding: '20px 22px' }}>
-          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, alignItems: 'center' }}>
-            <div>
-              <div className="font-serif" style={{ fontSize: 17 }}>Top appreciating</div>
-              <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Highest unrealised gains since purchase</div>
-            </div>
-            <span style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'var(--up-soft)', color: 'var(--up)', fontSize: 10, fontWeight: 700 }}>▲ {gainers.length}</span>
-          </div>
-          {gainers.length === 0 ? (
-            <div className="muted" style={{ fontSize: 12 }}>No assets in profit yet</div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
-              {gainers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} onClick={() => dispatch({ type: 'nav', to: 'assets' })} />)}
-            </div>
-          )}
-        </div>
-        <div className="card" style={{ padding: '20px 22px' }}>
-          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, alignItems: 'center' }}>
-            <div>
-              <div className="font-serif" style={{ fontSize: 17 }}>Highest depreciation</div>
-              <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>Assets with unrealised losses</div>
-            </div>
-            <span style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'var(--down-soft)', color: 'var(--down)', fontSize: 10, fontWeight: 700 }}>▼ {losers.length}</span>
-          </div>
-          {losers.length === 0 ? (
-            <div className="muted" style={{ fontSize: 12 }}>No assets in the red — great!</div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
-              {losers.map((a, i) => <MoverCard key={a.id} asset={a} delay={i * 45} onClick={() => dispatch({ type: 'nav', to: 'assets' })} />)}
-            </div>
-          )}
-        </div>
-      </div>
-    ) : null,
-
-    // Alerts: render only the columns that have items. If all three are empty,
-    // surface a compact "everything healthy" banner instead of three filler cards.
     alerts: (() => {
       const cards = [
         { title: 'Asset concentration', accent: 'var(--gold)', items: concentrationAlerts, label: 'Rebalance →' },
@@ -1930,8 +1643,39 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         .dash-arrange-btn:active { transform: scale(0.97); }
       `}</style>
 
-      {/* ── Pinned Cost-of-Absence (§1) — exactly one highest-severity item ── */}
-      {pinnedCost ? (
+      {/* ── Advisor strip (§1, demoted per design review #9) ──
+          A permanent red alarm trains users to ignore it. The full-width
+          CostOfAbsence treatment is reserved for CRITICAL findings; everything
+          else is a calm one-line strip that deep-links to the Advice Center —
+          the single canonical surface for recommendations. */}
+      {pinnedCost && pinnedCost.costOfAbsence?.severity !== 'critical' ? (
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'nav', to: 'advisor' })}
+          className="dash-advisor-strip"
+          style={{
+            all: 'unset', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 10,
+            width: '100%', padding: '11px 16px', marginBottom: 16, cursor: 'pointer',
+            borderRadius: 'var(--r-lg)', background: 'var(--paper)',
+            border: '0.5px solid var(--line)', boxShadow: 'var(--shadow-1)',
+          }}
+          aria-label={`${engine.recommendations.length} recommendations — open the Advice Center`}
+        >
+          <span aria-hidden="true" style={{
+            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+            background: severityColor(pinnedCost.costOfAbsence.severity),
+          }} />
+          <span style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {pinnedCost.headline}
+          </span>
+          <span className="muted" style={{ fontSize: 11.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+            {pinnedCost.costOfAbsence.costStatement}
+          </span>
+          <span className="pill pill-brand" style={{ fontSize: 10, flexShrink: 0 }}>
+            ✦ {engine.recommendations.length} advice →
+          </span>
+        </button>
+      ) : pinnedCost ? (
         <CostOfAbsence
           severity={pinnedCost.costOfAbsence.severity}
           headline={pinnedCost.headline}
