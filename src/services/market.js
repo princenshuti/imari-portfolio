@@ -82,6 +82,38 @@ async function fetchBnrRates() {
   }
 }
 
+// ── Self-healing refresh ─────────────────────────────────────────────────────
+// The daily pg_cron job is the primary refresh path, but a cron failure is
+// silent (the app falls back to open.er-api and the UI still looks alive — a
+// misconfigured schedule once went unnoticed for days). If the freshest BNR
+// row is older than this, any client visit re-triggers the Edge Function
+// itself. It upserts a 10-day window, so concurrent/duplicate triggers are
+// harmless; the sessionStorage guard just avoids re-firing every navigation.
+const BNR_STALE_DAYS = 2;
+const HEAL_GUARD_KEY = 'imari:bnrHeal:askedAt';
+
+function bnrIsStale(bnr) {
+  if (!bnr) return true;
+  const newest = Object.values(bnr).map(r => r.date).sort().pop();
+  if (!newest) return true;
+  return (Date.now() - new Date(`${newest}T00:00:00Z`).getTime()) > BNR_STALE_DAYS * 86400000;
+}
+
+async function healBnrRates(bnr) {
+  if (!supabaseConfigured || !supabase || !bnrIsStale(bnr)) return null;
+  try {
+    if (sessionStorage.getItem(HEAL_GUARD_KEY)) return null;
+    sessionStorage.setItem(HEAL_GUARD_KEY, new Date().toISOString());
+  } catch { /* storage unavailable → still attempt once */ }
+  try {
+    const { error } = await supabase.functions.invoke('bnr-rates', { body: { source: 'client-heal' } });
+    if (error) return null;
+    return await fetchBnrRates(); // re-read the now-backfilled table
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Fetch all available live market data.
  * Returns a result object — any field may be missing if its API failed.
@@ -103,8 +135,11 @@ export async function fetchMarket(forceRefresh = false) {
 
   // ── 1a. BNR official rates (preferred FX source) ────────────────────────
   // Refreshed daily by the bnr-rates Edge Function. Includes asymmetric
-  // buying / selling spread that the converters use directly.
-  const bnr = await fetchBnrRates();
+  // buying / selling spread that the converters use directly. If the table
+  // looks stale (cron failure), trigger the function and re-read.
+  let bnr = await fetchBnrRates();
+  const healed = await healBnrRates(bnr);
+  if (healed) bnr = healed;
   if (bnr) {
     setLiveFX(bnr);
     result.bnrRates = bnr;

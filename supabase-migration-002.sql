@@ -62,6 +62,26 @@ select cron.schedule(
   $$
 );
 
+-- ───── Verify the schedule actually works ─────────────────────
+-- A job created with the placeholders above unreplaced fails SILENTLY every
+-- day (the app falls back to open.er-api so the UI looks alive — this
+-- happened in production, 2026-06). After scheduling, ALWAYS verify:
+--
+-- 1. The command has no placeholders left:
+--      select jobname, command from cron.job where jobname = 'bnr-rates-daily';
+-- 2. After the next 06:15 UTC run, it succeeded:
+--      select status, return_message, start_time
+--      from cron.job_run_details
+--      where jobid = (select jobid from cron.job where jobname = 'bnr-rates-daily')
+--      order by start_time desc limit 3;
+-- 3. Rates are landing:
+--      select currency, max(rate_date) from public.exchange_rates group by currency;
+--
+-- Defense in depth: the client also self-heals — if the newest BNR row is
+-- older than 2 days, the app invokes the bnr-rates function itself on load
+-- (src/services/market.js healBnrRates). So even a dead cron only delays
+-- rates until the next user visit, never indefinitely.
+
 -- ───── Manual test (uncomment to run on demand) ───────────────
 -- select net.http_post(
 --   url     := 'https://<PROJECT_REF>.supabase.co/functions/v1/bnr-rates',
