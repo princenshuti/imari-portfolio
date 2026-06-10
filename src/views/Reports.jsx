@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { fmtBase, fromBase } from '../data.js';
 import { buildMonthlyReport } from '../engine/monthlyReport.js';
+import { downloadCSV } from '../services/download.js';
 
 // F7 — auto-generated monthly report, same printable shape as BalanceSheet.
 // Every number is derived from entered data; the month picker walks history.
@@ -35,11 +36,7 @@ export default function ReportsView({ state }) {
     if (report.netWorth) {
       rows.push([], ['Net worth start', conv(report.netWorth.start)], ['Net worth end', conv(report.netWorth.end)], ['Net worth change', conv(report.netWorth.change)]);
     }
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    const a = document.createElement('a');
-    a.href = url; a.download = `imari-report-${report.year}-${String(report.monthIdx + 1).padStart(2, '0')}.csv`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    downloadCSV(rows, `imari-report-${report.year}-${String(report.monthIdx + 1).padStart(2, '0')}.csv`);
   };
 
   const sectionLabel = { fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 8px' };

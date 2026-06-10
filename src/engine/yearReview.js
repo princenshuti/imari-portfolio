@@ -5,8 +5,15 @@
 
 /** Trailing-12-month window of snapshots (sorted ascending by date). */
 function windowSnapshots(snapshots, now) {
-  const cut = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-  const cutStr = `${cut.getFullYear()}-${String(cut.getMonth() + 1).padStart(2, '0')}-${String(cut.getDate()).padStart(2, '0')}`;
+  // Snapshot dates are UTC day-strings (snapshots.js todayStr uses
+  // toISOString), so the cutoff must live in the same domain — building it
+  // from local components would mis-window boundary days for non-UTC users.
+  // Same convention as snapshots.js filterByRange.
+  const cut = new Date(now);
+  cut.setFullYear(cut.getFullYear() - 1);
+  // Feb 29 → "Feb 29" of a non-leap year rolls to Mar 1; pull back to Feb 28.
+  if (cut.getDate() !== now.getDate()) cut.setDate(0);
+  const cutStr = cut.toISOString().slice(0, 10);
   return [...snapshots]
     .filter(s => s.date >= cutStr)
     .sort((a, b) => a.date.localeCompare(b.date));

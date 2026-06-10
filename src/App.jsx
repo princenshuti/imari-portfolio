@@ -7,6 +7,7 @@ import { reducer } from './reducer.js';
 import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
+import { NAV_ITEMS } from './nav.js';
 import MobileTabBar from './components/MobileTabBar.jsx';
 import { useToast, ToastContainer } from './components/Toast.jsx';
 import FloatingAdvisor from './components/FloatingAdvisor.jsx';
@@ -132,7 +133,10 @@ export default function App() {
     if (saved && saved.fx) Object.assign(FX, saved.fx);
     return saved || defaultState();
   });
-  const VALID_VIEWS = new Set(['dashboard','accounts','assets','trends','advisor','settings','liabilities','goals','cashflow','tax','balancesheet','projections','retirement']);
+  // Derived from NAV_ITEMS so adding a view to nav.js can never silently leave
+  // it unroutable (a hand-maintained copy of this list once shipped two dead
+  // nav entries — yearreview/reports redirected to dashboard).
+  const VALID_VIEWS = new Set(Object.keys(NAV_ITEMS));
   function hashToNav() {
     const h = window.location.hash.replace('#', '');
     return VALID_VIEWS.has(h) ? h : 'dashboard';
@@ -305,6 +309,8 @@ export default function App() {
         cashflows:         newRow.cashflows         || [],
         snapshots:         newRow.snapshots         || [],
         reachedMilestones: newRow.reachedmilestones || [],
+        catRules:          newRow.catrules          || [],
+        budgets:           newRow.budgets           || {},
         fx:                newRow.fx,
         chat:              newRow.chat,
         insight:           newRow.insight,

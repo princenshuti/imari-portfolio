@@ -2,18 +2,7 @@
 // into a per-line monthly equivalent so the user can see what they're paying
 // every month without looking at it. Income flows are excluded — the audit is
 // about "money going out on autopilot."
-import { toBase } from '../../data.js';
-
-/** RWF monthly equivalent of a single recurring entry. */
-function monthlyOf(entry) {
-  const a = toBase(entry.amount || 0, entry.currency || 'RWF');
-  switch (entry.recurring) {
-    case 'monthly':   return a;
-    case 'quarterly': return a / 3;
-    case 'annually':  return a / 12;
-    default:          return 0; // 'once' is not a subscription
-  }
-}
+import { monthlyEquivalentRWF } from '../recurrence.js';
 
 /**
  * @param {Array} cashflows  state.cashflows
@@ -35,7 +24,7 @@ export function auditRecurring(cashflows = []) {
       recurring: cf.recurring,
       amount: cf.amount,
       currency: cf.currency || 'RWF',
-      monthly: monthlyOf(cf),
+      monthly: monthlyEquivalentRWF(cf),
     }))
     .sort((a, b) => b.monthly - a.monthly);
 

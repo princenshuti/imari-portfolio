@@ -11,6 +11,7 @@ import { auditRecurring } from '../engine/insights/recurringAudit.js';
 import { forecastCashflow } from '../engine/forecast.js';
 import { applyCatRules } from '../engine/catRules.js';
 import { budgetStatus } from '../engine/budgets.js';
+import { monthlyEquivalentRWF, parseLocalDate } from '../engine/recurrence.js';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
@@ -796,16 +797,8 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
   );
 }
 
-/** Expand recurring entries into monthly amounts for a given month. */
-function monthlyAmount(entry) {
-  const a = toBase(entry.amount, entry.currency || 'RWF');
-  switch (entry.recurring) {
-    case 'monthly':   return a;
-    case 'quarterly': return a / 3;
-    case 'annually':  return a / 12;
-    default:          return a;
-  }
-}
+/** Expand recurring entries into monthly RWF amounts (shared engine math). */
+const monthlyAmount = monthlyEquivalentRWF;
 
 // ─── Main view ────────────────────────────────────────────────────────────────
 export default function CashFlowView({ state, dispatch }) {
@@ -825,7 +818,7 @@ export default function CashFlowView({ state, dispatch }) {
     const incomes = [], expenses = [];
     let totInc = 0, totExp = 0;
     cashflows.forEach(cf => {
-      const entryDate = new Date(cf.date);
+      const entryDate = parseLocalDate(cf.date);
       const inMonth = cf.recurring !== 'once'
         ? entryDate <= new Date(refYear, refMonth + 1, 0)
         : entryDate.getFullYear() === refYear && entryDate.getMonth() === refMonth;
@@ -856,7 +849,7 @@ export default function CashFlowView({ state, dispatch }) {
     const y = d.getFullYear(), m = d.getMonth();
     let inc = 0, exp = 0;
     cashflows.forEach(cf => {
-      const ed = new Date(cf.date);
+      const ed = parseLocalDate(cf.date);
       const applies = cf.recurring !== 'once'
         ? ed <= new Date(y, m + 1, 0)
         : ed.getFullYear() === y && ed.getMonth() === m;
@@ -879,7 +872,9 @@ export default function CashFlowView({ state, dispatch }) {
     const map = {};
     expenses.forEach(cf => {
       const c = ALL_CATS.find(x => x.id === cf.category) || ALL_CATS[ALL_CATS.length - 1];
-      const inDisplay = toBase(monthlyAmount(cf), cf.currency || 'RWF');
+      // monthlyAmount already returns RWF — wrapping it in toBase again was
+      // double-converting non-RWF entries in this breakdown.
+      const inDisplay = monthlyAmount(cf);
       map[c.id] = map[c.id] || { id: c.id, label: c.label, color: c.color, value: 0 };
       map[c.id].value += inDisplay;
     });

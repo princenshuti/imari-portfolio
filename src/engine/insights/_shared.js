@@ -4,6 +4,7 @@
 // engine unit-testable (R1).
 
 import { CLASSES, valueRWF, costRWF, toBase } from '../../data.js';
+import { monthlyEquivalentRWF, parseLocalDate } from '../recurrence.js';
 
 export const LIQUID_KINDS = new Set(['savings', 'momo-cash']);
 export const MAINT_KINDS = new Set(['realestate-house', 'realestate-land', 'vehicle', 'livestock']);
@@ -45,13 +46,7 @@ export function netWorthRWF(state, now) {
 }
 
 /** Normalize a recurring cashflow amount to a per-month RWF figure. */
-function monthlyAmountRWF(cf) {
-  const base = toBase(cf.amount || 0, cf.currency || 'RWF');
-  if (cf.recurring === 'monthly') return base;
-  if (cf.recurring === 'quarterly') return base / 3;
-  if (cf.recurring === 'annually') return base / 12;
-  return 0; // 'once' handled separately
-}
+const monthlyAmountRWF = monthlyEquivalentRWF; // single source of truth (engine/recurrence.js)
 
 /**
  * Average monthly income & expense in RWF, consistent with the dashboard's
@@ -63,7 +58,7 @@ export function monthlyFlowsRWF(cashflows = [], now = new Date(), months = 6) {
   start.setMonth(start.getMonth() - months);
   let recurInc = 0, recurExp = 0, onceInc = 0, onceExp = 0;
   for (const cf of cashflows) {
-    const d = new Date(cf.date);
+    const d = parseLocalDate(cf.date);
     if (cf.recurring && cf.recurring !== 'once') {
       if (d <= now) {
         if (cf.type === 'income') recurInc += monthlyAmountRWF(cf);

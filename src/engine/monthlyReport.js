@@ -3,32 +3,18 @@
 // nothing here invents a number. Month counting matches the CashFlow view and
 // budgets.js: recurring entries at monthly equivalent once anchored, one-offs
 // dated inside the month.
-import { toBase, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../data.js';
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../data.js';
 import { budgetStatus } from './budgets.js';
+import { monthlyEquivalentRWF, countsInMonth } from './recurrence.js';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
-
-function monthlyEquivalentRWF(cf) {
-  const a = toBase(cf.amount || 0, cf.currency || 'RWF');
-  switch (cf.recurring) {
-    case 'monthly':   return a;
-    case 'quarterly': return a / 3;
-    case 'annually':  return a / 12;
-    default:          return a;
-  }
-}
+const catLabel = (id) => ALL_CATS.find(c => c.id === id)?.label;
 
 /** Entries that count toward the calendar month (y, mIdx), with RWF monthly value. */
 function entriesForMonth(cashflows, y, mIdx) {
-  const endOfMonth = new Date(y, mIdx + 1, 0);
   const out = [];
   for (const cf of cashflows) {
-    const d = new Date(cf.date);
-    if (Number.isNaN(d.getTime())) continue;
-    const counts = cf.recurring && cf.recurring !== 'once'
-      ? d <= endOfMonth
-      : d.getFullYear() === y && d.getMonth() === mIdx;
-    if (counts) out.push({ ...cf, _rwf: monthlyEquivalentRWF(cf) });
+    if (countsInMonth(cf, y, mIdx)) out.push({ ...cf, _rwf: monthlyEquivalentRWF(cf) });
   }
   return out;
 }
@@ -73,7 +59,7 @@ export function buildMonthlyReport({ cashflows = [], snapshots = [], budgets = {
   const expenseCategories = Object.entries(expenseByCat)
     .map(([category, amount]) => ({
       category,
-      label: ALL_CATS.find(c => c.id === category)?.label || category,
+      label: catLabel(category) || category,
       amount,
       share: expense > 0 ? (amount / expense) * 100 : 0,
     }))
@@ -84,9 +70,9 @@ export function buildMonthlyReport({ cashflows = [], snapshots = [], budgets = {
     .sort((a, b) => b._rwf - a._rwf)
     .slice(0, 5)
     .map(e => ({
-      description: e.notes || e.description || ALL_CATS.find(c => c.id === e.category)?.label || 'Expense',
+      description: e.notes || e.description || catLabel(e.category) || 'Expense',
       category: e.category || 'other-exp',
-      label: ALL_CATS.find(c => c.id === e.category)?.label || 'Other',
+      label: catLabel(e.category) || 'Other',
       amount: e._rwf,
       date: e.date,
     }));

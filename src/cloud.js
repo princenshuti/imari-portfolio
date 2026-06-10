@@ -135,6 +135,8 @@ export async function loadOrCreatePortfolio(user) {
       cashflows:         Array.isArray(data.cashflows)   ? data.cashflows   : [],
       snapshots:         Array.isArray(data.snapshots)   ? data.snapshots   : [],
       reachedMilestones: Array.isArray(data.reachedmilestones) ? data.reachedmilestones : [],
+      catRules:          Array.isArray(data.catrules) ? data.catrules : [],
+      budgets:           data.budgets && typeof data.budgets === 'object' && !Array.isArray(data.budgets) ? data.budgets : {},
       fx:                data.fx   || { ...FX },
       chat:              Array.isArray(data.chat) ? data.chat : [],
       insight:           data.insight ?? null,
@@ -144,22 +146,29 @@ export async function loadOrCreatePortfolio(user) {
 
 export async function savePortfolio(portfolioId, state) {
   if (!supabase || !portfolioId) return;
-  const { error } = await supabase
-    .from('portfolios')
-    .update({
-      profile:     state.profile,
-      assets:      state.assets,
-      liabilities: state.liabilities || [],
-      goals:       state.goals       || [],
-      cashflows:         state.cashflows         || [],
-      snapshots:         state.snapshots         || [],
-      reachedmilestones: state.reachedMilestones || [],
-      fx:                state.fx,
-      chat:        state.chat,
-      insight:     state.insight,
-      updated_at:  new Date().toISOString(),
-    })
-    .eq('id', portfolioId);
+  const payload = {
+    profile:     state.profile,
+    assets:      state.assets,
+    liabilities: state.liabilities || [],
+    goals:       state.goals       || [],
+    cashflows:         state.cashflows         || [],
+    snapshots:         state.snapshots         || [],
+    reachedmilestones: state.reachedMilestones || [],
+    catrules:          state.catRules || [],
+    budgets:           state.budgets  || {},
+    fx:                state.fx,
+    chat:        state.chat,
+    insight:     state.insight,
+    updated_at:  new Date().toISOString(),
+  };
+  let { error } = await supabase.from('portfolios').update(payload).eq('id', portfolioId);
+  // Graceful degrade until supabase-migration-005.sql is applied: an unknown
+  // column (PGRST204) must not take the whole auto-save down with it.
+  if (error && (error.code === 'PGRST204' || /catrules|budgets/i.test(error.message || ''))) {
+    console.warn('portfolios.catrules/budgets columns missing — run supabase-migration-005.sql; saving without them.');
+    const { catrules, budgets, ...legacy } = payload;
+    ({ error } = await supabase.from('portfolios').update(legacy).eq('id', portfolioId));
+  }
   if (error) throw error;
 }
 

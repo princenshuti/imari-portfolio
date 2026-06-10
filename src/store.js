@@ -32,6 +32,8 @@ export function defaultState() {
     cashflows:   [],
     snapshots:       [],
     reachedMilestones: [],   // milestone values (numbers) already celebrated
+    catRules:    [],         // F5 — user categorisation rules
+    budgets:     {},         // F6 — { [expenseCategoryId]: monthlyLimitRWF }
     fx:          { ...FX },
     chat:        [],
     seeded:      true,
@@ -127,6 +129,27 @@ export function importJSONFile(file) {
         if (Array.isArray(obj.goals))       obj.goals       = obj.goals.slice(0, MAX_ITEMS);
         if (Array.isArray(obj.cashflows))   obj.cashflows   = obj.cashflows.slice(0, MAX_ITEMS);
         if (Array.isArray(obj.snapshots))   obj.snapshots   = obj.snapshots.slice(0, MAX_ITEMS);
+
+        // 4b. Categorisation rules + budgets (F5/F6) — same rigor as the rest:
+        // bounded size, known shape, nothing else passes through.
+        obj.catRules = Array.isArray(obj.catRules)
+          ? obj.catRules.slice(0, MAX_ITEMS)
+              .filter(r => r && typeof r === 'object' && !Array.isArray(r))
+              .map(r => ({
+                id:       sanitizeStr(r.id, 36),
+                pattern:  sanitizeStr(r.pattern, 100),
+                category: sanitizeStr(r.category, 40),
+              }))
+              .filter(r => r.pattern && r.category)
+          : [];
+        const budgets = {};
+        if (obj.budgets && typeof obj.budgets === 'object' && !Array.isArray(obj.budgets)) {
+          for (const [k, v] of Object.entries(obj.budgets).slice(0, 100)) {
+            const n = sanitizeNum(v, 0);
+            if (n > 0) budgets[sanitizeStr(k, 40)] = n;
+          }
+        }
+        obj.budgets = budgets;
 
         // 5. Never import chat or AI insight — could contain injected instructions
         //    that would be loaded into the AI context on next session open

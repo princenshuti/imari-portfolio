@@ -15,7 +15,13 @@ export default function GlobalSearch({ state, onNav }) {
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
 
-  const results = useMemo(() => searchPortfolio(state, q), [state, q]);
+  // Memo on the slices the search actually reads — keying on `state` itself
+  // would re-scan the whole portfolio on every unrelated dispatch.
+  const { assets, liabilities, goals, cashflows } = state;
+  const results = useMemo(
+    () => searchPortfolio({ assets, liabilities, goals, cashflows }, q),
+    [assets, liabilities, goals, cashflows, q]
+  );
 
   useEffect(() => {
     const onKey = (e) => {

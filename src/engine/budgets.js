@@ -2,31 +2,16 @@
 // is a monthly RWF limit; spend is what the current calendar month's entries
 // say (recurring entries at their monthly equivalent, one-offs dated in the
 // month) — consistent with how the CashFlow view counts a month.
-import { toBase, EXPENSE_CATEGORIES } from '../data.js';
-
-function monthlyEquivalentRWF(cf) {
-  const a = toBase(cf.amount || 0, cf.currency || 'RWF');
-  switch (cf.recurring) {
-    case 'monthly':   return a;
-    case 'quarterly': return a / 3;
-    case 'annually':  return a / 12;
-    default:          return a; // 'once'
-  }
-}
+import { EXPENSE_CATEGORIES } from '../data.js';
+import { monthlyEquivalentRWF, countsInMonth } from './recurrence.js';
 
 /** Expense spend in RWF per category for the calendar month containing `now`. */
 export function monthSpendByCategory(cashflows = [], now = new Date()) {
   const y = now.getFullYear(), m = now.getMonth();
-  const endOfMonth = new Date(y, m + 1, 0);
   const spend = {};
   for (const cf of cashflows) {
     if (cf.type !== 'expense') continue;
-    const d = new Date(cf.date);
-    if (Number.isNaN(d.getTime())) continue;
-    const counts = cf.recurring && cf.recurring !== 'once'
-      ? d <= endOfMonth
-      : d.getFullYear() === y && d.getMonth() === m;
-    if (!counts) continue;
+    if (!countsInMonth(cf, y, m)) continue;
     const cat = cf.category || 'other-exp';
     spend[cat] = (spend[cat] || 0) + monthlyEquivalentRWF(cf);
   }

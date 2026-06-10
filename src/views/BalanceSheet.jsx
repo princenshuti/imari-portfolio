@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import {
   CLASSES, LIABILITY_TYPES, valueRWF, costRWF, toBase, fromBase, fmtBase,
 } from '../data.js';
+import { downloadCSV } from '../services/download.js';
 
 // B18 — Personal balance sheet. The net-worth total here MUST equal the
 // dashboard figure (single source of truth): same valueRWF/costRWF/toBase math.
@@ -57,11 +58,7 @@ export default function BalanceSheetView({ state }) {
     rows.push(['Total assets', '', '', conv(data.totalCost), conv(data.totalAssets), '']);
     rows.push(['Total liabilities', '', '', '', conv(data.totalDebt), '']);
     rows.push(['Net worth', '', '', '', conv(data.netWorth), '']);
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    const a = document.createElement('a');
-    a.href = url; a.download = `imari-balance-sheet-${today.toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    downloadCSV(rows, `imari-balance-sheet-${today.toISOString().slice(0, 10)}.csv`);
   };
 
   const sectionLabel = { fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 8px' };

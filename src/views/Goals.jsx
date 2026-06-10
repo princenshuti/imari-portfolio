@@ -3,6 +3,8 @@ import { GOAL_CATEGORIES, CURRENCIES, toBase, fmtBase, fmt, id, valueRWF, costRW
 import { Field, inputStyle } from '../components/Field.jsx';
 import Modal from '../components/Modal.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
+import { goalCurrentRWF } from '../engine/goals.js';
+import { netWorthRWF } from '../engine/insights/_shared.js';
 
 const EMPTY_GOAL = {
   category: 'investment', title: '', targetAmount: '', currency: 'RWF',
@@ -29,9 +31,6 @@ const GOAL_TEMPLATES = [
   { id: 'retirement',     icon: '🌅', title: 'Retirement nest egg',        category: 'retirement', targetAmount: 100_000_000, fundingType: 'net-worth' },
   { id: 'business',       icon: '💼', title: 'Start a business',           category: 'business',   targetAmount: 10_000_000, fundingType: 'liquid' },
 ];
-
-// Which asset kinds count as "liquid" for fundingType='liquid' goals.
-const LIQUID_KINDS = new Set(['savings', 'momo-cash']);
 
 function GoalEditor({ goal, onSave, onCancel, assets = [] }) {
   const isNew = !goal.id;
@@ -351,31 +350,14 @@ export default function GoalsView({ state, dispatch }) {
   const [editing, setEditing] = useState(null);
   const today = new Date();
 
-  const netWorth = useMemo(() => {
-    return state.assets.reduce((s, a) => s + valueRWF(a, today), 0) -
-      (state.liabilities || []).reduce((s, l) => s + toBase(l.remainingAmount || 0, l.currency || 'RWF'), 0);
-  }, [state.assets, state.liabilities]);
-
-  const liquidValue = useMemo(() =>
-    state.assets.filter(a => LIQUID_KINDS.has(a.kind))
-      .reduce((s, a) => s + valueRWF(a, today), 0),
-    [state.assets]);
+  const netWorth = useMemo(() => netWorthRWF(state, today), [state.assets, state.liabilities]);
 
   // Resolve the right "current value" for a goal based on its fundingType.
-  // Memoised so re-rendering goal cards doesn't recompute per-goal sums.
+  // Delegates to engine/goals.js — the single source of truth shared with the
+  // dashboard widget and insight rules, so progress never disagrees across views.
   const currentValueFor = useMemo(() => {
-    const assetById = new Map(state.assets.map(a => [a.id, a]));
-    return (goal) => {
-      if (goal.fundingType === 'liquid') return liquidValue;
-      if (goal.fundingType === 'linked') {
-        return (goal.linkedAssetIds || []).reduce((s, id) => {
-          const a = assetById.get(id);
-          return a ? s + valueRWF(a, today) : s;
-        }, 0);
-      }
-      return netWorth; // default 'net-worth'
-    };
-  }, [state.assets, liquidValue, netWorth]);
+    return (goal) => goalCurrentRWF(goal, state, today);
+  }, [state.assets, state.liabilities]);
 
   const active   = goals.filter(g => !g.achieved);
   const achieved = goals.filter(g => g.achieved);

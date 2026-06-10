@@ -3,6 +3,7 @@
 // day by day from their recurring entries plus any future-dated one-offs, so
 // "can I cover the next 30 days?" is answered from data they already entered.
 import { toBase } from '../data.js';
+import { parseLocalDate } from './recurrence.js';
 
 function daysInMonth(year, monthIdx) {
   return new Date(year, monthIdx + 1, 0).getDate();
@@ -24,7 +25,10 @@ function clampedDay(anchorDay, year, monthIdx) {
 
 /** Does this cashflow entry produce an occurrence on `date` (a local Date at midnight)? */
 function occursOn(cf, date) {
-  const anchor = new Date(cf.date);
+  // parseLocalDate, not new Date(): a date-only string parses as UTC midnight,
+  // which lands on the previous local day for users west of UTC — recurring
+  // anchors would fire a day early and one-offs would miss their day entirely.
+  const anchor = parseLocalDate(cf.date);
   if (Number.isNaN(anchor.getTime())) return false;
   const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
 

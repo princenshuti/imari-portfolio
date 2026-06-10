@@ -13,6 +13,7 @@ import { useMarket } from '../contexts/MarketContext.jsx';
 import { monthlyPayment } from '../services/finance.js';
 import { runInsights } from '../engine/insights/index.js';
 import { SEVERITY_RANK } from '../engine/insights/_shared.js';
+import { goalCurrentRWF, goalProgressPct } from '../engine/goals.js';
 import { staleNetWorthInsight, netWorthAsOf } from '../engine/freshness.js';
 import { REFERENCE } from '../engine/insights/refs.js';
 import { projectPension } from '../engine/retirement/index.js';
@@ -1831,7 +1832,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               {activeGoals.map(g => {
                 const cat = GOAL_CATEGORIES.find(c => c.id === g.category) || GOAL_CATEGORIES[0];
                 const targetRWF = toBase(g.targetAmount || 0, g.currency || 'RWF');
-                const pct = targetRWF > 0 ? Math.min((trueNetWorth / targetRWF) * 100, 100) : 0;
+                // Engine-derived progress (respects the goal's fundingType) so this
+                // widget always matches the Goals page exactly.
+                const currentRWF = goalCurrentRWF(g, state, today);
+                const pct = goalProgressPct(g, state, today);
                 const daysLeft = g.deadline ? Math.ceil((new Date(g.deadline) - today) / 86400000) : null;
                 return (
                   <div key={g.id}>
@@ -1851,7 +1855,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                       <div style={{ height: '100%', width: pct + '%', background: 'var(--brand)', borderRadius: 3, transition: 'width 0.8s cubic-bezier(0.23,1,0.32,1)' }} />
                     </div>
                     <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>
-                      {fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })} of {fmtBase(targetRWF, profile.displayCurrency, { compact: true })} target
+                      {fmtBase(currentRWF, profile.displayCurrency, { compact: true })} of {fmtBase(targetRWF, profile.displayCurrency, { compact: true })} target
                     </div>
                   </div>
                 );
