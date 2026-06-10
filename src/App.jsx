@@ -589,7 +589,8 @@ export default function App() {
     }
   })();
 
-  const showTopBar = nav !== 'advisor';
+  // The Advice Center is a normal content page — it keeps the chrome (search, currency).
+  const showTopBar = true;
 
   return i18nWrap(
     <ErrorBoundary>
