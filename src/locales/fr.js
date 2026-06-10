@@ -40,6 +40,11 @@ export default {
     tabs_report:   'Rapport',
   },
 
+  search: {
+    label:       'Rechercher dans votre portefeuille',
+    placeholder: 'Rechercher…  ⌘K',
+    no_results:  'Aucun résultat — essayez un actif, une dette, un objectif ou une entrée.',
+  },
   topbar: {
     badge_viewer: 'Lecture seule',
     badge_editor: 'Éditeur',

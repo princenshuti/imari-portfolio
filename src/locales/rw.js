@@ -48,6 +48,11 @@ export default {
     tabs_report:   'Raporo',
   },
 
+  search: {
+    label:       'Shakisha mu butunzi bwawe',
+    placeholder: 'Shakisha…  ⌘K',
+    no_results:  'Nta gisubizo — gerageza izina ry\'umutungo, umwenda, intego cyangwa icyanditswe.',
+  },
   topbar: {
     badge_viewer: 'Gusoma gusa',
     badge_editor: 'Uwanditse',

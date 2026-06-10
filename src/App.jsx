@@ -6,6 +6,7 @@ import { seedHistory } from './services/snapshots.js';
 import { reducer } from './reducer.js';
 import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
+import GlobalSearch from './components/GlobalSearch.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
 import { useToast, ToastContainer } from './components/Toast.jsx';
 import FloatingAdvisor from './components/FloatingAdvisor.jsx';
@@ -562,6 +563,7 @@ export default function App() {
                 displayCurrency={state.profile.displayCurrency}
                 onCurrency={c => guardedDispatch({ type:'setProfile', patch: { displayCurrency: c } })}
                 role={role}
+                right={<GlobalSearch state={state} onNav={navigateTo} />}
               />
             </div>
           )}

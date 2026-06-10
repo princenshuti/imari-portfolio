@@ -49,6 +49,11 @@ export default {
   },
 
   // TopBar — role pill + avatar fallback
+  search: {
+    label:       'Search your portfolio',
+    placeholder: 'Search…  ⌘K',
+    no_results:  'Nothing matches — try an asset, debt, goal, or entry name.',
+  },
   topbar: {
     badge_viewer: 'View-only',
     badge_editor: 'Editor',

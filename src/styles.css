@@ -728,6 +728,11 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 768px) {
   .topbar-row { padding: 12px 16px; min-height: 56px; gap: 8px; }
   .topbar-title { font-size: 20px !important; }
+  /* Search shrinks before it crowds the title; the results panel stays full width. */
+  .global-search input { width: 110px !important; }
+}
+@media (max-width: 480px) {
+  .global-search { display: none; }
 }
 @media (max-width: 480px) {
   .topbar-row { padding: 10px 12px; }
