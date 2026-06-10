@@ -19,18 +19,30 @@ import goalPaceGap from './goalPaceGap.js';
 import incomeGeneratingShare from './incomeGeneratingShare.js';
 import topMoverAttribution from './topMoverAttribution.js';
 import landRevaluationStale from './landRevaluationStale.js';
+import maturityReinvestment from './maturityReinvestment.js';
+import obligationSmoothing from './obligationSmoothing.js';
+import fxExposureMismatch from './fxExposureMismatch.js';
+import rentalYieldGap from './rentalYieldGap.js';
+import receivableOverdue from './receivableOverdue.js';
+import pensionContributionGap from './pensionContributionGap.js';
 
 // Registration order = stable tiebreak for equal-severity, equal-magnitude items.
 export const RULES = [
   runwayMonths,
   debtVsIdleCash,
   idleCashYieldGap,
+  obligationSmoothing,
+  receivableOverdue,
+  maturityReinvestment,
   taxDeadlineExposure,
   concentrationRisk,
+  fxExposureMismatch,
   goalPaceGap,
   realVsNominalNetWorth,
   incomeGeneratingShare,
+  rentalYieldGap,
   landRevaluationStale,
+  pensionContributionGap,
   topMoverAttribution,
 ];
 

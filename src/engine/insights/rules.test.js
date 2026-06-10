@@ -12,6 +12,12 @@ import topMoverAttribution from './topMoverAttribution.js';
 import landRevaluationStale from './landRevaluationStale.js';
 import debtVsIdleCash from './debtVsIdleCash.js';
 import { runInsights } from './index.js';
+import maturityReinvestment from './maturityReinvestment.js';
+import obligationSmoothing from './obligationSmoothing.js';
+import fxExposureMismatch from './fxExposureMismatch.js';
+import rentalYieldGap from './rentalYieldGap.js';
+import receivableOverdue from './receivableOverdue.js';
+import pensionContributionGap from './pensionContributionGap.js';
 
 const ctx = { now: NOW };
 
@@ -321,5 +327,141 @@ describe('debtVsIdleCash', () => {
     const ids = insights.map(i => i.id);
     expect(ids).toContain('debt-vs-idle-cash');
     expect(ids).not.toContain('idle-cash-yield-gap');
+  });
+});
+
+// NOW = 2025-06-01 (from _testutils).
+describe('maturityReinvestment', () => {
+  it('flags a bond maturing inside the 60-day window', () => {
+    const bond = asset({ kind: 'bond', name: 'T-bond', currentValue: 2_000_000, maturity: '2025-07-01' });
+    const ins = maturityReinvestment(mkState({ assets: [bond] }), ctx);
+    expectWellFormed(ins);
+    expect(ins.headline).toMatch(/matures in 30 days/);
+    expect(ins.costOfAbsence.severity).toBe('warning'); // ≤30 days out
+  });
+
+  it('flags an already-matured position as needing a home', () => {
+    const bond = asset({ kind: 'bond', name: 'Old bill', currentValue: 1_000_000, maturity: '2025-05-01' });
+    const ins = maturityReinvestment(mkState({ assets: [bond] }), ctx);
+    expect(ins.headline).toMatch(/has matured/);
+  });
+
+  it('stays silent for far-off maturities', () => {
+    const bond = asset({ kind: 'bond', currentValue: 1_000_000, maturity: '2029-05-20' });
+    expect(maturityReinvestment(mkState({ assets: [bond] }), ctx)).toBeNull();
+  });
+});
+
+describe('obligationSmoothing', () => {
+  const cash = asset({ kind: 'savings', currentValue: 2_000_000 });
+  const monthly = cf({ type: 'expense', recurring: 'monthly', amount: 400_000 }); // buffer 1.2M → spare 800k
+
+  it('plans a monthly set-aside for an uncovered lump', () => {
+    // School fees 2.4M annually, anchored Sep 1 → next due 2025-09-01 (~3mo).
+    const fees = cf({ id: 'fees', type: 'expense', recurring: 'annually', amount: 2_400_000, date: '2024-09-01', notes: 'School fees' });
+    const ins = obligationSmoothing(mkState({ assets: [cash], cashflows: [monthly, fees] }), ctx);
+    expectWellFormed(ins);
+    expect(ins.sourceRefs).toContain('fees');
+    expect(ins.costOfAbsence.severity).toBe('warning');
+    // monthlyExpense includes the lump's own monthly equivalent (400k + 200k),
+    // so buffer = 1.8M, spare = 200k, shortfall = 2.4M − 200k = 2.2M.
+    expect(ins.costOfAbsence.amount).toBeCloseTo(2_200_000, -3);
+  });
+
+  it('stays silent when the surplus already covers the lump', () => {
+    const rich = asset({ kind: 'savings', currentValue: 10_000_000 });
+    const fees = cf({ type: 'expense', recurring: 'annually', amount: 2_400_000, date: '2024-09-01' });
+    expect(obligationSmoothing(mkState({ assets: [rich], cashflows: [monthly, fees] }), ctx)).toBeNull();
+  });
+
+  it('ignores small lumps below the floor', () => {
+    const minor = cf({ type: 'expense', recurring: 'quarterly', amount: 90_000, date: '2024-09-01' });
+    expect(obligationSmoothing(mkState({ assets: [cash], cashflows: [monthly, minor] }), ctx)).toBeNull();
+  });
+});
+
+describe('fxExposureMismatch', () => {
+  const rwfSalary = cf({ id: 'sal', type: 'income', recurring: 'monthly', amount: 1_000_000, currency: 'RWF' });
+  const usdLoan = { id: 'usd-loan', name: 'USD loan', kind: 'bank-loan', currency: 'USD', remainingAmount: 5_000, interestRate: 9 };
+
+  it('flags foreign debt against RWF income with a modeled scenario', () => {
+    const ins = fxExposureMismatch(mkState({ liabilities: [usdLoan], cashflows: [rwfSalary] }), ctx);
+    expectWellFormed(ins);
+    expect(ins.id).toBe('fx-debt-exposure');
+    expect(ins.sourceRefs).toContain('usd-loan');
+    expect(ins.body).toMatch(/modeled scenario/);
+  });
+
+  it('stays silent when income is mostly foreign too (matched exposure)', () => {
+    const usdSalary = cf({ type: 'income', recurring: 'monthly', amount: 2_000, currency: 'USD' });
+    expect(fxExposureMismatch(mkState({ liabilities: [usdLoan], cashflows: [usdSalary] }), ctx)).toBeNull();
+  });
+
+  it('stays silent with no income data — cannot claim a mismatch', () => {
+    expect(fxExposureMismatch(mkState({ liabilities: [usdLoan] }), ctx)).toBeNull();
+  });
+});
+
+describe('rentalYieldGap', () => {
+  const house = asset({ id: 'house', kind: 'realestate-house', name: 'Kacyiru house', currentValue: 60_000_000 });
+
+  it('flags a yield far below the risk-free reference', () => {
+    // 150k/mo on 60M = 3% gross < 5% (half of 10% T-bill)
+    const rent = cf({ id: 'rent', type: 'income', category: 'rental', recurring: 'monthly', amount: 150_000 });
+    const ins = rentalYieldGap(mkState({ assets: [house], cashflows: [rent] }), ctx);
+    expectWellFormed(ins);
+    expect(ins.headline).toMatch(/3.0% vs 10%/);
+    expect(ins.sourceRefs).toContain('house');
+  });
+
+  it('stays silent at a healthy yield', () => {
+    const rent = cf({ type: 'income', category: 'rental', recurring: 'monthly', amount: 400_000 }); // 8%
+    expect(rentalYieldGap(mkState({ assets: [house], cashflows: [rent] }), ctx)).toBeNull();
+  });
+
+  it('stays silent with no recorded rental income (owner-occupied)', () => {
+    expect(rentalYieldGap(mkState({ assets: [house] }), ctx)).toBeNull();
+  });
+});
+
+describe('receivableOverdue', () => {
+  it('flags a receivable past due beyond the grace period', () => {
+    const r = asset({ id: 'rcv', kind: 'receivable', name: 'Loan to Jean', debtor: 'Jean', currentValue: 800_000, dueDate: '2025-03-01' });
+    const ins = receivableOverdue(mkState({ assets: [r] }), ctx);
+    expectWellFormed(ins);
+    expect(ins.headline).toMatch(/Jean/);
+    expect(ins.costOfAbsence.severity).toBe('warning');
+  });
+
+  it('escalates to critical at 180+ days', () => {
+    const r = asset({ kind: 'receivable', currentValue: 800_000, dueDate: '2024-10-01' });
+    const ins = receivableOverdue(mkState({ assets: [r] }), ctx);
+    expect(ins.costOfAbsence.severity).toBe('critical');
+  });
+
+  it('gives recent due dates grace', () => {
+    const r = asset({ kind: 'receivable', currentValue: 800_000, dueDate: '2025-05-20' }); // 12 days
+    expect(receivableOverdue(mkState({ assets: [r] }), ctx)).toBeNull();
+  });
+});
+
+describe('pensionContributionGap', () => {
+  const salary = cf({ id: 'sal2', type: 'income', category: 'salary', recurring: 'monthly', amount: 1_000_000 });
+
+  it('nudges setup when salary is recorded but retirement is empty', () => {
+    const ins = pensionContributionGap(mkState({ cashflows: [salary] }), ctx);
+    expectWellFormed(ins);
+    expect(ins.sourceRefs).toContain('sal2');
+    expect(ins.costOfAbsence.amount).toBeGreaterThan(0);
+  });
+
+  it('stays silent once retirement tracking exists', () => {
+    const st = mkState({ cashflows: [salary] });
+    st.profile.retirement = { currentAge: 30, monthlyContribution: 50_000 };
+    expect(pensionContributionGap(st, ctx)).toBeNull();
+  });
+
+  it('stays silent without salary income', () => {
+    expect(pensionContributionGap(mkState({}), ctx)).toBeNull();
   });
 });
