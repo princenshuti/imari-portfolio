@@ -11,7 +11,7 @@ import AssetIcon from '../components/AssetIcon.jsx';
 import { filterByRange, calcReturn } from '../services/snapshots.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { monthlyPayment } from '../services/finance.js';
-import { runInsights } from '../engine/insights/index.js';
+import { useInsights } from '../contexts/InsightsContext.jsx';
 import { SEVERITY_RANK } from '../engine/insights/_shared.js';
 import { goalCurrentRWF, goalProgressPct } from '../engine/goals.js';
 import { staleNetWorthInsight, netWorthAsOf } from '../engine/freshness.js';
@@ -635,27 +635,23 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
   const today = new Date();
 
   // ── Insight Engine + Cost-of-Absence (Phase 0 foundations) ────
-  // The engine decides WHAT matters (deterministic, tested); the dashboard pins
-  // the single highest-severity cost above the KPI strip and lets the AI card
-  // narrate the rest. Dismissals are session-local — a cost re-surfaces on reload
-  // or when the underlying data changes.
-  const [dismissedCosts, setDismissedCosts] = useState(() => new Set());
-  const engine = useMemo(
-    () => runInsights(state, { now: today, dismissed: dismissedCosts }),
-    [state, dismissedCosts],
+  // One shared engine run via InsightsContext; dismissals persist on the
+  // profile (7-day TTL) so the badge, Advice Center, and this pin all agree.
+  const engine = useInsights();
+  const dismissedSet = useMemo(
+    () => new Set(engine.insights.filter(i => i.dismissed).map(i => i.id)),
+    [engine]
   );
   const pinnedCost = useMemo(() => {
     const rank = c => SEVERITY_RANK[c?.costOfAbsence?.severity] || 0;
     const candidates = [engine.topCost, staleNetWorthInsight(state, { now: today })]
       .filter(Boolean)
-      .filter(c => !dismissedCosts.has(c.id));
+      .filter(c => !dismissedSet.has(c.id) && !c.dismissed);
     if (candidates.length === 0) return null;
     candidates.sort((a, b) => rank(b) - rank(a) || (b.costOfAbsence?.amount || 0) - (a.costOfAbsence?.amount || 0));
     return candidates[0];
-  }, [engine, state, dismissedCosts]);
-  const dismissCost = useCallback((id) => {
-    setDismissedCosts(prev => new Set(prev).add(id));
-  }, []);
+  }, [engine, state, dismissedSet]);
+  const dismissCost = engine.dismiss;
 
   // Live market overrides for the "Markets you watch" watchlist. Reads from the
   // same context Trends uses, so USD/RWF (and crypto, gold, S&P) shows the same

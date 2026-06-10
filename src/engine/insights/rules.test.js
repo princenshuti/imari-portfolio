@@ -465,3 +465,21 @@ describe('pensionContributionGap', () => {
     expect(pensionContributionGap(mkState({}), ctx)).toBeNull();
   });
 });
+
+describe('activeDismissals', () => {
+  it('returns recent dismissals and expires old ones', async () => {
+    const { activeDismissals } = await import('./_shared.js');
+    const now = new Date('2026-06-10T12:00:00Z');
+    const profile = { dismissedInsights: {
+      'fresh-rule':   '2026-06-08T00:00:00Z',  // 2.5 days old → active
+      'stale-rule':   '2026-05-01T00:00:00Z',  // 40 days old → expired
+      'corrupt-rule': 'not-a-date',            // ignored
+    } };
+    const set = activeDismissals(profile, now);
+    expect(set.has('fresh-rule')).toBe(true);
+    expect(set.has('stale-rule')).toBe(false);
+    expect(set.has('corrupt-rule')).toBe(false);
+    expect(activeDismissals({}, now).size).toBe(0);
+    expect(activeDismissals(null, now).size).toBe(0);
+  });
+});

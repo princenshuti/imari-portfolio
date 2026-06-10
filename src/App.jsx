@@ -9,7 +9,7 @@ import TopBar from './components/TopBar.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import { NAV_ITEMS } from './nav.js';
 import { visibleNavIds } from './features.js';
-import { runInsights } from './engine/insights/index.js';
+import { InsightsProvider } from './contexts/InsightsContext.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
 import { useToast, ToastContainer } from './components/Toast.jsx';
 import FloatingAdvisor from './components/FloatingAdvisor.jsx';
@@ -194,15 +194,17 @@ export default function App() {
   // ─ Toast ──────────────────────────────────────────────────────
   const { toasts, showToast, dismiss } = useToast();
 
-  // ─ Progressive nav + advice badge ─────────────────────────────
+  // ─ Progressive nav ────────────────────────────────────────────
   // MUST live here, above every conditional return: hooks after an early
   // return crash React with a hooks-order violation the moment the loading/
   // auth branches flip (this exact bug blanked staging once).
-  const visibleIds = useMemo(() => visibleNavIds(state), [state]);
-  const adviceCount = useMemo(() => {
-    try { return runInsights(state).insights.filter(i => i.costOfAbsence).length; }
-    catch { return 0; }
-  }, [state]);
+  // The current view is always included so a hidden-but-visited feature
+  // (deep link, search result) still shows an oriented, active menu item.
+  const visibleIds = useMemo(() => {
+    const ids = visibleNavIds(state);
+    ids.add(nav);
+    return ids;
+  }, [state, nav]);
 
   // ─ Hash-based navigation (survives reload & enables back/fwd)
   function navigateTo(view) {
@@ -591,13 +593,14 @@ export default function App() {
 
   return i18nWrap(
     <ErrorBoundary>
+      <InsightsProvider state={state} dispatch={guardedDispatch}>
       <a href="#main-content" className="skip-to-main">Skip to main content</a>
       <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
         <Sidebar
           active={nav} onNav={navigateTo}
           profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
           session={session} role={role} liabilities={state.liabilities || []}
-          visibleIds={visibleIds} adviceCount={adviceCount}
+          visibleIds={visibleIds}
         />
         <div className="col main-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
           {showTopBar && (
@@ -623,6 +626,7 @@ export default function App() {
         <div data-noprint><ToastContainer toasts={toasts} dismiss={dismiss} /></div>
         <div data-noprint><FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} /></div>
       </div>
+      </InsightsProvider>
     </ErrorBoundary>
   );
 }

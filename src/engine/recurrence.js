@@ -42,6 +42,37 @@ export function monthlyEquivalentRWF(cf) {
 }
 
 /**
+ * Next occurrence of a recurring entry on or after `from`, with end-of-month
+ * anchors clamped to shorter months (a bill anchored on the 31st lands on
+ * Feb 28, not Mar 3). Single owner of occurrence-stepping — forecast.js and
+ * obligationSmoothing previously each derived their own and could disagree
+ * about when the same bill lands.
+ * Returns null for invalid dates or 'once' entries already in the past.
+ */
+export function nextOccurrence(cf, from = new Date()) {
+  const anchor = parseLocalDate(cf.date);
+  if (Number.isNaN(anchor.getTime())) return null;
+  const start = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+
+  if (!cf.recurring || cf.recurring === 'once') {
+    return anchor >= start ? anchor : null;
+  }
+
+  const stepMonths = cf.recurring === 'quarterly' ? 3 : cf.recurring === 'monthly' ? 1 : 12;
+  const anchorDay = anchor.getDate();
+  let y = anchor.getFullYear(), m = anchor.getMonth();
+  // Walk in whole steps from the anchor so the day-of-month never drifts.
+  for (let guard = 0; guard < 1200; guard++) {
+    const day = Math.min(anchorDay, new Date(y, m + 1, 0).getDate());
+    const candidate = new Date(y, m, day);
+    if (candidate >= start) return candidate;
+    m += stepMonths;
+    if (m > 11) { y += Math.floor(m / 12); m %= 12; }
+  }
+  return null; // unreachable for sane dates; guards a corrupt far-past anchor
+}
+
+/**
  * Does this entry count toward the calendar month (year, monthIdx)?
  * Recurring entries count from their anchor month onward (at their monthly
  * equivalent); one-offs count only in the month they're dated.

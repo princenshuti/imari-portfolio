@@ -4,21 +4,11 @@
 // remaining and set that aside monthly, starting now.
 
 import { REFERENCE } from './refs.js';
-import { LIQUID_KINDS, liquidValueRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
+import { liquidIds, liquidValueRWF, safetyBufferRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { toBase } from '../../data.js';
-import { parseLocalDate } from '../recurrence.js';
+import { nextOccurrence } from '../recurrence.js';
 
 const HORIZON_DAYS = 120;
-
-/** Next occurrence of a quarterly/annual entry on or after `now`. */
-function nextOccurrence(cf, now) {
-  const anchor = parseLocalDate(cf.date);
-  if (Number.isNaN(anchor.getTime())) return null;
-  const stepMonths = cf.recurring === 'quarterly' ? 3 : 12;
-  const next = new Date(anchor);
-  while (next < now) next.setMonth(next.getMonth() + stepMonths);
-  return next;
-}
 
 export default function obligationSmoothing(state, { now = new Date(), refs = REFERENCE } = {}) {
   const horizon = new Date(now.getTime() + HORIZON_DAYS * 86400000);
@@ -33,8 +23,7 @@ export default function obligationSmoothing(state, { now = new Date(), refs = RE
   const assets = state.assets || [];
   const liquid = liquidValueRWF(assets, now);
   const { monthlyExpense } = monthlyFlowsRWF(state.cashflows || [], now);
-  const buffer = monthlyExpense > 0 ? monthlyExpense * refs.runwayWarnMonths : refs.idleCashFloorRWF;
-  const spare = liquid - buffer;
+  const spare = liquid - safetyBufferRWF(monthlyExpense, refs);
 
   const hit = lumps.find(x => x.amountRWF > spare);
   if (!hit) return null; // every upcoming lump is already covered
@@ -45,8 +34,8 @@ export default function obligationSmoothing(state, { now = new Date(), refs = RE
   const setAside = shortfall / monthsUntil;
   const label = hit.cf.notes || hit.cf.category || 'this obligation';
   const dateStr = hit.due.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
-  const liquidIds = assets.filter(a => LIQUID_KINDS.has(a.kind)).map(a => a.id);
-  const sourceRefs = [hit.cf.id, ...liquidIds];
+  const cashIds = liquidIds(assets);
+  const sourceRefs = [hit.cf.id, ...cashIds];
 
   return makeInsight({
     id: 'obligation-smoothing',
@@ -61,7 +50,7 @@ export default function obligationSmoothing(state, { now = new Date(), refs = RE
       action: { label: 'See the 30-day forecast', to: 'cashflow' },
     },
     sourceRefs,
-    dataAsOf: inputsAsOf(state, liquidIds, now),
+    dataAsOf: inputsAsOf(state, cashIds, now),
     now,
   });
 }

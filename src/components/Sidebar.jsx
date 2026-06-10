@@ -4,6 +4,7 @@ import { signOut } from '../cloud.js';
 import { MaxventuresIcon } from './MaxventuresLogo.jsx';
 import { navItemsByGroup } from '../nav.js';
 import { useT } from '../contexts/I18nContext.jsx';
+import { useInsights } from '../contexts/InsightsContext.jsx';
 
 const ALL_NAV_GROUPS = navItemsByGroup();
 const COLLAPSE_KEY = 'imari:sidebar:collapsed';
@@ -35,8 +36,9 @@ const GROUP_KEY = {
   'Tools':           'nav.group_tools',
 };
 
-export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [], visibleIds = null, adviceCount = 0 }) {
+export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [], visibleIds = null }) {
   const { t } = useT();
+  const { count: adviceCount } = useInsights();
   // Progressive nav: only features the user enabled or has data for.
   // null = show everything (back-compat).
   const NAV_GROUPS = visibleIds

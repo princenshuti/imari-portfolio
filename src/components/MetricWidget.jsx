@@ -5,11 +5,7 @@
  * dashboard stats; the hook answers "what does ignoring this cost me?".
  */
 import FreshnessChip from './FreshnessChip.jsx';
-
-const SEV_COLOR = {
-  critical: 'var(--down)', warning: 'var(--gold)', info: 'var(--sky)', good: 'var(--up)',
-};
-const SEV_GLYPH = { critical: '⚠', warning: '!', info: 'i', good: '✓' };
+import { SEVERITY_COLOR as SEV_COLOR, SEVERITY_GLYPH as SEV_GLYPH } from '../severity.js';
 
 export default function MetricWidget({
   title, value, subtext, severity, costHook, deepLink, asOf, now, onNav, delay = 0,

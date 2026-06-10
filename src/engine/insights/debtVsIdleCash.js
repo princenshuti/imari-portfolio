@@ -14,7 +14,7 @@
 //    copy reminds the user to check prepayment terms.
 
 import { REFERENCE } from './refs.js';
-import { LIQUID_KINDS, liquidValueRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
+import { liquidIds, liquidValueRWF, safetyBufferRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { toBase } from '../../data.js';
 
 const MIN_ANNUAL_SAVING_RWF = 50_000; // below this the advice is noise
@@ -31,10 +31,7 @@ export default function debtVsIdleCash(state, { now = new Date(), refs = REFEREN
 
   const liquid = liquidValueRWF(assets, now);
   const { monthlyExpense } = monthlyFlowsRWF(state.cashflows || [], now);
-  const buffer = monthlyExpense > 0
-    ? monthlyExpense * refs.runwayWarnMonths
-    : refs.idleCashFloorRWF;
-  const surplus = liquid - buffer;
+  const surplus = liquid - safetyBufferRWF(monthlyExpense, refs);
   if (surplus <= 0) return null;
 
   const top = loans[0];
@@ -45,8 +42,8 @@ export default function debtVsIdleCash(state, { now = new Date(), refs = REFEREN
   if (annualSave < MIN_ANNUAL_SAVING_RWF) return null;
 
   const loanName = top.l.name || top.l.lender || 'your loan';
-  const liquidIds = assets.filter(a => LIQUID_KINDS.has(a.kind)).map(a => a.id);
-  const sourceRefs = [top.l.id, ...liquidIds];
+  const cashIds = liquidIds(assets);
+  const sourceRefs = [top.l.id, ...cashIds];
   const fullRepay = applicable >= top.remainingRWF;
 
   return makeInsight({
@@ -62,7 +59,7 @@ export default function debtVsIdleCash(state, { now = new Date(), refs = REFEREN
       action: { label: 'Review your loans', to: 'liabilities' },
     },
     sourceRefs,
-    dataAsOf: inputsAsOf(state, liquidIds, now),
+    dataAsOf: inputsAsOf(state, cashIds, now),
     now,
   });
 }

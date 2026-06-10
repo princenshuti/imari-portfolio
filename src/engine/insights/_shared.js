@@ -28,6 +28,41 @@ export function liquidValueRWF(assets = [], now) {
     .reduce((s, a) => s + valueRWF(a, now), 0);
 }
 
+/** Ids of liquid assets — the standard sourceRefs for cash-based insights. */
+export function liquidIds(assets = []) {
+  return assets.filter(a => LIQUID_KINDS.has(a.kind)).map(a => a.id);
+}
+
+/**
+ * The emergency buffer no insight may recommend spending: 3 months of
+ * recorded spend, or the idle-cash floor when no expense data exists.
+ * Every rule that reasons about "spare" cash must use this — two rules once
+ * carried their own copies and could have recommended different surpluses.
+ */
+export function safetyBufferRWF(monthlyExpense, refs) {
+  return monthlyExpense > 0 ? monthlyExpense * refs.runwayWarnMonths : refs.idleCashFloorRWF;
+}
+
+/**
+ * Active insight dismissals from the profile, as the Set runInsights expects.
+ * Dismissals are stored as { [insightId]: dismissedAtISO } on
+ * profile.dismissedInsights (syncs via the existing profile column) and
+ * expire after `ttlDays` — "stop nagging me" must never become permanent
+ * blindness in a loss-aversion product.
+ */
+export const DISMISSAL_TTL_DAYS = 7;
+export function activeDismissals(profile, now = new Date(), ttlDays = DISMISSAL_TTL_DAYS) {
+  const raw = profile?.dismissedInsights;
+  if (!raw || typeof raw !== 'object') return new Set();
+  const cutoff = now.getTime() - ttlDays * 86400000;
+  return new Set(Object.entries(raw)
+    .filter(([, at]) => {
+      const t = new Date(at).getTime();
+      return Number.isFinite(t) && t >= cutoff;
+    })
+    .map(([id]) => id));
+}
+
 /** Gross asset value and cost basis in RWF. */
 export function grossValueRWF(assets = [], now) {
   return assets.reduce((s, a) => s + valueRWF(a, now), 0);

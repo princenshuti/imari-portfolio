@@ -93,14 +93,26 @@ async function fetchBnrRates() {
 // simply find nothing newer — one cheap idempotent call, by design: it also
 // means a fresh rate is picked up the moment BNR publishes, even if the
 // 06:15 UTC cron hasn't run yet.
-const BNR_STALE_DAYS = 1;
 const HEAL_GUARD_KEY = 'imari:bnrHeal:askedAt';
 
-function bnrIsStale(bnr) {
+// BNR publishes Mon–Fri only, so the staleness allowance follows the calendar:
+// 1 day normally, stretched over weekends (Sat sees Friday's rate at ~1 day,
+// Sun at ~2, Mon morning at ~3 — none of those are failures, and healing on
+// those days would fire a pointless function invocation per user per weekend).
+function staleAllowanceDays(now = new Date()) {
+  switch (now.getDay()) {
+    case 0: return 2; // Sunday  — Friday's rate is expected
+    case 1: return 3; // Monday  — Friday's rate until the 06:15 UTC cron runs
+    case 6: return 1.5; // Saturday
+    default: return 1;
+  }
+}
+
+function bnrIsStale(bnr, now = new Date()) {
   if (!bnr) return true;
   const newest = Object.values(bnr).map(r => r.date).sort().pop();
   if (!newest) return true;
-  return (Date.now() - new Date(`${newest}T00:00:00Z`).getTime()) > BNR_STALE_DAYS * 86400000;
+  return (now.getTime() - new Date(`${newest}T00:00:00Z`).getTime()) > staleAllowanceDays(now) * 86400000;
 }
 
 async function healBnrRates(bnr) {

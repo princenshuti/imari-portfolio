@@ -2,7 +2,7 @@
 // Cost hook when runway < 3 months (warning) or < 1 month (critical).
 
 import { REFERENCE } from './refs.js';
-import { LIQUID_KINDS, liquidValueRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
+import { liquidIds as liquidIdsOf, liquidValueRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
 
 export default function runwayMonths(state, { now = new Date(), refs = REFERENCE } = {}) {
   const assets = state.assets || [];
@@ -13,7 +13,7 @@ export default function runwayMonths(state, { now = new Date(), refs = REFERENCE
   const months = liquid / monthlyExpense;
   if (months >= refs.runwayWarnMonths) return null; // healthy — no cost
 
-  const liquidIds = assets.filter(a => LIQUID_KINDS.has(a.kind)).map(a => a.id);
+  const liquidIds = liquidIdsOf(assets);
   const severity = months < refs.runwayCriticalMonths ? 'critical' : 'warning';
   const monthsStr = months.toFixed(1);
 

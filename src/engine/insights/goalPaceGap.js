@@ -3,7 +3,7 @@
 // goal. "Achievable" is the user's recent net monthly savings (a portfolio-wide
 // proxy — stated honestly in the copy, since per-goal funding isn't tracked).
 
-import { LIQUID_KINDS, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
+import { liquidIds as liquidIdsOf, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { goalCurrentRWF, goalTargetRWF } from '../goals.js';
 
 export default function goalPaceGap(state, { now = new Date() } = {}) {
@@ -11,7 +11,7 @@ export default function goalPaceGap(state, { now = new Date() } = {}) {
   if (goals.length === 0) return null;
 
   const assets = state.assets || [];
-  const liquidIds = assets.filter(a => LIQUID_KINDS.has(a.kind)).map(a => a.id);
+  const liquidIds = liquidIdsOf(assets);
 
   const { monthlyIncome, monthlyExpense } = monthlyFlowsRWF(state.cashflows || [], now);
   const available = Math.max(0, monthlyIncome - monthlyExpense);

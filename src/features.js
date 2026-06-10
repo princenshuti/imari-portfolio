@@ -8,6 +8,8 @@
 // insight actions all work) — only the menus are filtered. Visiting a feature
 // is intent, not an error.
 
+import { LIQUID_KINDS } from './engine/insights/_shared.js';
+
 export const CORE_NAV_IDS = ['dashboard', 'assets', 'advisor', 'settings'];
 
 export const FEATURE_MODULES = [
@@ -37,7 +39,9 @@ export const FEATURE_MODULES = [
     label: 'Bank & MoMo accounts',
     hint: 'Balances that update from your linked cash-flow entries.',
     navIds: ['accounts'],
-    auto: (s) => (s.assets || []).some(a => a.kind === 'savings' || a.kind === 'momo-cash'),
+    // Same definition of "cash-like" the insight engine uses — a new liquid
+    // kind added there must also surface the Accounts menu.
+    auto: (s) => (s.assets || []).some(a => LIQUID_KINDS.has(a.kind)),
   },
   {
     key: 'trends',

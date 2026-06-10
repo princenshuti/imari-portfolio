@@ -16,12 +16,10 @@
  */
 import FreshnessChip from './FreshnessChip.jsx';
 import Explain from './Explain.jsx';
+import { SEVERITY_COLOR, SEVERITY_GLYPH, SEVERITY_LABEL } from '../severity.js';
 
-const SEVERITY = {
-  critical: { color: 'var(--down)', glyph: '⚠', label: 'Critical' },
-  warning:  { color: 'var(--gold)', glyph: '!', label: 'Warning' },
-  info:     { color: 'var(--sky)',  glyph: 'i', label: 'Heads up' },
-};
+const SEVERITY = Object.fromEntries(Object.keys(SEVERITY_COLOR).map(k =>
+  [k, { color: SEVERITY_COLOR[k], glyph: SEVERITY_GLYPH[k], label: SEVERITY_LABEL[k] }]));
 
 export default function CostOfAbsence({
   severity = 'info', headline, costStatement, action, asOf,
