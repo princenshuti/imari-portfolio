@@ -5,6 +5,7 @@ import Modal from '../components/Modal.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { goalCurrentRWF } from '../engine/goals.js';
 import { netWorthRWF } from '../engine/insights/_shared.js';
+import { useMarket } from '../contexts/MarketContext.jsx';
 
 const EMPTY_GOAL = {
   category: 'investment', title: '', targetAmount: '', currency: 'RWF',
@@ -350,17 +351,24 @@ export default function GoalsView({ state, dispatch }) {
   const [editing, setEditing] = useState(null);
   const today = new Date();
 
-  const netWorth = useMemo(() => netWorthRWF(state, today), [state.assets, state.liabilities]);
+  const { fetchedAt: fxFetchedAt } = useMarket(); // live-FX arrival → revalue
+  const netWorth = useMemo(() => netWorthRWF(state, today), [state.assets, state.liabilities, fxFetchedAt]);
 
   // Resolve the right "current value" for a goal based on its fundingType.
   // Delegates to engine/goals.js — the single source of truth shared with the
   // dashboard widget and insight rules, so progress never disagrees across views.
   const currentValueFor = useMemo(() => {
     return (goal) => goalCurrentRWF(goal, state, today);
-  }, [state.assets, state.liabilities]);
+  }, [state.assets, state.liabilities, fxFetchedAt]);
 
-  const active   = goals.filter(g => !g.achieved);
-  const achieved = goals.filter(g => g.achieved);
+  // "Achieved" includes fully-funded goals the user hasn't marked yet — the
+  // header must agree with the card's own "Done" state (design review #3).
+  const isFunded = (g) => {
+    const target = toBase(g.targetAmount || 0, g.currency || 'RWF');
+    return target > 0 && currentValueFor(g) >= target;
+  };
+  const active   = goals.filter(g => !g.achieved && !isFunded(g));
+  const achieved = goals.filter(g => g.achieved || isFunded(g));
 
   return (
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
@@ -393,7 +401,11 @@ export default function GoalsView({ state, dispatch }) {
                 const curr   = currentValueFor(g);
                 const pct    = target > 0 ? Math.min((curr / target) * 100, 100) : 0;
                 return { g, pct };
-              }).sort((a, b) => b.pct - a.pct);
+              })
+                // A fully-funded goal is achieved, not "closest to done" —
+                // it counts in the achieved tally instead (design review #3).
+                .filter(x => x.pct < 100)
+                .sort((a, b) => b.pct - a.pct);
               const top = withProgress[0];
               if (!top || !top.g) return { label: 'Closest to done', value: '—', sub: 'add a goal to start' };
               const daysLeft = top.g.deadline ? Math.ceil((new Date(top.g.deadline) - today) / 86400000) : null;

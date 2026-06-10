@@ -10,6 +10,7 @@ import GlobalSearch from './components/GlobalSearch.jsx';
 import { NAV_ITEMS } from './nav.js';
 import { visibleNavIds } from './features.js';
 import { InsightsProvider } from './contexts/InsightsContext.jsx';
+import { useMarket } from './contexts/MarketContext.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
 import { useToast, ToastContainer } from './components/Toast.jsx';
 import FloatingAdvisor from './components/FloatingAdvisor.jsx';
@@ -193,6 +194,8 @@ export default function App() {
 
   // ─ Toast ──────────────────────────────────────────────────────
   const { toasts, showToast, dismiss } = useToast();
+  // Live-FX arrival signal — valuation memos depend on it (see netWorth memo).
+  const { fetchedAt: fxFetchedAt } = useMarket();
 
   // ─ Progressive nav ────────────────────────────────────────────
   // MUST live here, above every conditional return: hooks after an early
@@ -378,6 +381,10 @@ export default function App() {
   }, [state._nav]);
 
   // ─ Net worth & total cost ─────────────────────────────────
+  // fxFetchedAt is a real dependency: setLiveFX mutates module state React
+  // can't see, so without it this memo kept pre-fetch conversion rates while
+  // views recomputed with live BNR rates — the sidebar and the Goals page
+  // showed two different net worths (design review #1).
   const { netWorth, totalCost } = useMemo(() => {
     const today = new Date();
     const gross = state.assets.reduce((s, a) => s + valueRWF(a, today), 0);
@@ -386,7 +393,7 @@ export default function App() {
       netWorth:  gross - debt,
       totalCost: state.assets.reduce((s, a) => s + costRWF(a), 0),
     };
-  }, [state.assets, state.liabilities]);
+  }, [state.assets, state.liabilities, fxFetchedAt]);
 
   // ─ Daily snapshot ─────────────────────────────────────────
   // Fires when profile name first arrives, then once per calendar day.

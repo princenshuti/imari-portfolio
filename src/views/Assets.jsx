@@ -354,8 +354,8 @@ export default function AssetsView({ state, dispatch, showToast }) {
       </div>
 
       {/* ─ Summary stats strip ─────────────────────────────────── */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20,
+      <div className="assets-summary-grid" style={{
+        display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginBottom: 20,
       }}>
         {/* Assets count */}
         <div style={{
@@ -552,7 +552,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
             <div className="hr" />
 
             {/* Column headers */}
-            <div className="row muted" style={{
+            <div className="row muted asset-table-head" style={{
               display: 'grid', gridTemplateColumns: '28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
               padding: '8px 22px', fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
               textTransform: 'uppercase', gap: 12, alignItems: 'center',

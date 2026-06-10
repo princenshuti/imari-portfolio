@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { LIABILITY_TYPES, CURRENCIES, toBase, fmt, fmtBase, valueRWF, id } from '../data.js';
 import { Field, inputStyle } from '../components/Field.jsx';
+import { useMarket } from '../contexts/MarketContext.jsx';
 import Modal from '../components/Modal.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import LoanAnalysis from '../components/LoanAnalysis.jsx';
@@ -116,13 +117,14 @@ export default function LiabilitiesView({ state, dispatch }) {
   const [pendingDelete, setPendingDelete] = useState(null);
   const today = new Date();
 
+  const { fetchedAt: fxFetchedAt } = useMarket(); // live-FX arrival → revalue
   const totalDebt = useMemo(() =>
     liabilities.reduce((s, l) => s + toBase(l.remainingAmount || 0, l.currency || 'RWF'), 0),
-    [liabilities]);
+    [liabilities, fxFetchedAt]);
 
   const totalAssets = useMemo(() =>
     assets.reduce((s, a) => s + valueRWF(a, today), 0),
-    [assets]);
+    [assets, fxFetchedAt]);
 
   const trueNetWorth = totalAssets - totalDebt;
 
@@ -162,7 +164,7 @@ export default function LiabilitiesView({ state, dispatch }) {
 
       {/* ── Actions ── */}
       <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
-        <button type="button" onClick={() => setEditing({})} className="btn btn-danger">＋ Add liability</button>
+        <button type="button" onClick={() => setEditing({})} className="btn btn-primary">＋ Add liability</button>
       </div>
 
       {/* ── Liability groups ── */}
@@ -228,7 +230,7 @@ export default function LiabilitiesView({ state, dispatch }) {
                         <div style={{ height: '100%', width: paidPct + '%', background: 'var(--up)', borderRadius: 3, transition: 'width 0.4s ease' }} />
                       </div>
                       <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>
-                        {paidPct.toFixed(0)}% paid off ({fmt(paid / (original > 0 ? toBase(l.originalAmount, l.currency) : 1), l.currency, { compact: true })} paid)
+                        {paidPct.toFixed(0)}% paid off ({fmt((l.originalAmount || 0) - (l.remainingAmount || 0), l.currency, { compact: true })} paid)
                       </div>
                     </div>
                   )}

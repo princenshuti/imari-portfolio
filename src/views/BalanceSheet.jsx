@@ -3,6 +3,7 @@ import {
   CLASSES, LIABILITY_TYPES, valueRWF, costRWF, toBase, fromBase, fmtBase,
 } from '../data.js';
 import { downloadCSV } from '../services/download.js';
+import { useMarket } from '../contexts/MarketContext.jsx';
 
 // B18 — Personal balance sheet. The net-worth total here MUST equal the
 // dashboard figure (single source of truth): same valueRWF/costRWF/toBase math.
@@ -12,6 +13,7 @@ export default function BalanceSheetView({ state }) {
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
+  const { fetchedAt: fxFetchedAt } = useMarket(); // live-FX arrival → revalue
   const data = useMemo(() => {
     // Assets grouped by class group.
     const groups = {};
@@ -43,7 +45,7 @@ export default function BalanceSheetView({ state }) {
     const totalDebt = liabGroups.reduce((s, g) => s + g.total, 0);
 
     return { assetGroups, totalAssets, totalCost, liabGroups, totalDebt, netWorth: totalAssets - totalDebt, estimatedCount };
-  }, [assets, liabilities]);
+  }, [assets, liabilities, fxFetchedAt]);
 
   const show = (rwf) => fmtBase(rwf, ccy, { compact: false });
 

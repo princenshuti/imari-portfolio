@@ -1102,14 +1102,14 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         <MetricWidget key="tax" delay={40} title="Tax Estimate"
           value={fmtBase(taxTotal, profile.displayCurrency, { compact: taxTotal > 1e7 })}
           subtext={taxDays != null ? `next deadline in ${taxDays} days` : 'RRA obligations'}
-          asOf={wAsOf} now={today} deepLink="tax" onNav={nav}
+          deepLink="tax" onNav={nav}
           severity={taxDays != null && taxDays <= 30 ? 'warning' : 'info'}
           costHook="Estimate, not a filing — late penalties accrue if a deadline is missed." />);
       if (liabilities.length > 0) widgets.push(
         <MetricWidget key="debt" delay={80} title="Debt"
           value={fmtBase(totalDebt, profile.displayCurrency, { compact: totalDebt > 1e7 })}
           subtext={`${debtToAsset.toFixed(1)}% debt-to-asset`}
-          asOf={wAsOf} now={today} deepLink="liabilities" onNav={nav}
+          deepLink="liabilities" onNav={nav}
           severity={debtToAsset > 50 ? 'warning' : 'info'}
           costHook={financialStats.monthlyObligations > 0 ? `${fmtBase(financialStats.monthlyObligations, profile.displayCurrency, { compact: true })}/mo in repayments.` : undefined} />);
       // F6 — budget envelopes: only renders once the user has set limits.
@@ -1129,7 +1129,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         <MetricWidget key="investable" delay={120} title="Investable"
           value={fmtBase(investable, profile.displayCurrency, { compact: investable > 1e7 })}
           subtext="liquid minus a 3-month buffer"
-          asOf={wAsOf} now={today} deepLink="trends" onNav={nav}
+          deepLink="trends" onNav={nav}
           severity={investable > REFERENCE.idleCashFloorRWF ? 'warning' : 'good'}
           costHook={investable > REFERENCE.idleCashFloorRWF ? `Idle — at ~${REFERENCE.tBillYieldPct}% T-bill that's ~${fmtBase(forgoneYr, profile.displayCurrency, { compact: true })}/yr forgone.` : undefined} />);
       return <div className="dash-kpi-grid">{widgets}</div>;
@@ -1187,8 +1187,12 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
               textAlign: 'center', pointerEvents: 'none',
             }}>
-              <div className="num" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{stats.groups.length}</div>
-              <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>groups</div>
+              <div className="num" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>
+                {stats.totalValue > 0 && stats.groups[0] ? `${Math.round(stats.groups[0].value / stats.totalValue * 100)}%` : stats.groups.length}
+              </div>
+              <div className="muted" style={{ fontSize: 10, marginTop: 2, maxWidth: 72, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {stats.totalValue > 0 && stats.groups[0] ? stats.groups[0].group : 'groups'}
+              </div>
             </div>
           </div>
           <div className="col" style={{ gap: 8 }}>
@@ -1204,7 +1208,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               </div>
             ))}
             {stats.groups.length > 6 && (
-              <div className="muted" style={{ fontSize: 10, textAlign: 'center' }}>+{stats.groups.length - 6} more groups</div>
+              <div className="muted" style={{ fontSize: 10, textAlign: 'center' }}>+{stats.groups.length - 6} more group{stats.groups.length - 6 > 1 ? 's' : ''}</div>
             )}
           </div>
         </div>

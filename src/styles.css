@@ -79,12 +79,14 @@ body[data-theme="light"] {
   --r-pill: 999px;
 }
 
-/* ── Dark theme ──────────────────────────────────────────────── */
+/* ── Dark theme ────────────────────────────────────────────────
+   Surfaces are green-tinted charcoal, not blue-grey: dark mode must stay
+   the same warm product as the cream light theme (design review #17). */
 body[data-theme="dark"] {
-  --bg:      #0D1117;
-  --bg-2:    #161B22;
-  --paper:   #1C2128;
-  --paper-2: #222830;
+  --bg:      #0F120E;
+  --bg-2:    #171B15;
+  --paper:   #1C211B;
+  --paper-2: #242923;
 
   --line:        rgba(240, 237, 228, 0.08);
   --line-soft:   rgba(240, 237, 228, 0.05);
@@ -122,7 +124,7 @@ body[data-theme="dark"] {
   --plum: #B59ACC;
   --clay: #E0986A;
 
-  --glass-bg:     rgba(28, 33, 40, 0.72);
+  --glass-bg:     rgba(28, 33, 27, 0.72);
   --glass-border: rgba(240, 237, 228, 0.07);
 
   --shadow-0:   0 1px 2px rgba(0,0,0,0.25);
@@ -136,7 +138,7 @@ body[data-theme="dark"] {
 /* ── Auto dark mode ───────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   body:not([data-theme="light"]) {
-    --bg: #0D1117; --bg-2: #161B22; --paper: #1C2128; --paper-2: #222830;
+    --bg: #0F120E; --bg-2: #171B15; --paper: #1C211B; --paper-2: #242923;
     --line: rgba(240,237,228,0.08); --line-soft: rgba(240,237,228,0.05); --line-strong: rgba(240,237,228,0.13);
     /* Keep in sync with [data-theme="dark"] above — these drifted once and the
        system-preference dark mode shipped below-AA muted text. */
@@ -149,7 +151,7 @@ body[data-theme="dark"] {
     --down: #E07870; --down-ink: #F0958C; --down-soft: rgba(224,120,112,0.18);
     --scrim: rgba(0,0,0,0.62); --scrim-image: rgba(0,0,0,0.92);
     --sky: #7BA8E8; --plum: #B59ACC; --clay: #E0986A;
-    --glass-bg: rgba(28,33,40,0.72); --glass-border: rgba(240,237,228,0.07);
+    --glass-bg: rgba(28,33,27,0.72); --glass-border: rgba(240,237,228,0.07);
     --shadow-0: 0 1px 2px rgba(0,0,0,0.25);
     --shadow-1: 0 1px 3px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.20);
     --shadow-2: 0 2px 6px rgba(0,0,0,0.30), 0 6px 24px rgba(0,0,0,0.25);
@@ -1683,4 +1685,31 @@ input:focus, select:focus, textarea:focus {
 /* Hide landing from print */
 @media print {
   .landing-root { display: none !important; }
+}
+
+
+/* ── Mobile assets: cards, not a crushed table (design review #4) ─────────
+   The desktop row is a 7-column grid set inline; below 768px we re-grid it
+   into a card: name + P/L on the first row, display-currency value + actions
+   on the second. Cost-basis and native-value columns hide — they live in the
+   editor and on desktop. */
+@media (max-width: 768px) {
+  .asset-table-head { display: none !important; }
+  .assets-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  .asset-row-focusable {
+    grid-template-columns: 24px minmax(0, 1fr) auto !important;
+    row-gap: 8px !important;
+    padding: 12px 14px !important;
+  }
+  .asset-row-focusable > :nth-child(1) { grid-column: 1; grid-row: 1; }
+  .asset-row-focusable > :nth-child(2) { grid-column: 2; grid-row: 1; min-width: 0; }
+  .asset-row-focusable > :nth-child(3),
+  .asset-row-focusable > :nth-child(4) { display: none; }
+  .asset-row-focusable > :nth-child(5) {
+    grid-column: 2; grid-row: 2;
+    font-size: 14px !important; font-weight: 600; color: var(--ink) !important;
+  }
+  .asset-row-focusable > :nth-child(6) { grid-column: 3; grid-row: 1; }
+  .asset-row-focusable > :nth-child(7) { grid-column: 3; grid-row: 2; }
 }
