@@ -10,6 +10,7 @@ import { SEVERITY_RANK } from './_shared.js';
 import { REFERENCE } from './refs.js';
 
 import runwayMonths from './runwayMonths.js';
+import debtVsIdleCash from './debtVsIdleCash.js';
 import idleCashYieldGap from './idleCashYieldGap.js';
 import realVsNominalNetWorth from './realVsNominalNetWorth.js';
 import concentrationRisk from './concentrationRisk.js';
@@ -22,6 +23,7 @@ import landRevaluationStale from './landRevaluationStale.js';
 // Registration order = stable tiebreak for equal-severity, equal-magnitude items.
 export const RULES = [
   runwayMonths,
+  debtVsIdleCash,
   idleCashYieldGap,
   taxDeadlineExposure,
   concentrationRisk,
@@ -75,6 +77,15 @@ export function runInsights(state, ctx = {}) {
 
     insight.dismissed = dismissed.has(insight.id);
     out.push(insight);
+  }
+
+  // Rule interaction: when repaying expensive debt is the better use of the
+  // idle cash (debt-vs-idle-cash fired), don't ALSO pitch T-bills for the
+  // same francs — two competing recommendations for one balance reads as
+  // the app arguing with itself.
+  if (out.some(i => i.id === 'debt-vs-idle-cash')) {
+    const idx = out.findIndex(i => i.id === 'idle-cash-yield-gap');
+    if (idx >= 0) out.splice(idx, 1);
   }
 
   // Rank: cost insights first, by severity then magnitude; info-only after.

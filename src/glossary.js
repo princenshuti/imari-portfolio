@@ -62,6 +62,7 @@ export const TERMS_BY_INSIGHT = {
   'real-vs-nominal':       ['real-vs-nominal'],
   'concentration-risk':    ['concentration-risk', 'liquidity'],
   'idle-cash-yield-gap':   ['idle-cash', 'runway'],
+  'debt-vs-idle-cash':     ['idle-cash', 'debt-to-asset'],
   'tax-deadline-exposure': ['cgt', 'cost-basis'],
   'runway-months':         ['runway', 'liquidity'],
   'goal-pace-gap':         ['savings-rate'],

@@ -10,6 +10,8 @@ import goalPaceGap from './goalPaceGap.js';
 import incomeGeneratingShare from './incomeGeneratingShare.js';
 import topMoverAttribution from './topMoverAttribution.js';
 import landRevaluationStale from './landRevaluationStale.js';
+import debtVsIdleCash from './debtVsIdleCash.js';
+import { runInsights } from './index.js';
 
 const ctx = { now: NOW };
 
@@ -269,5 +271,55 @@ describe('landRevaluationStale', () => {
   it('returns null when no property has a revaluation date', () => {
     const a = asset({ kind: 'realestate-land', currentValue: 50_000_000 });
     expect(landRevaluationStale(mkState({ assets: [a] }), ctx)).toBeNull();
+  });
+});
+
+describe('debtVsIdleCash', () => {
+  const liab = (o = {}) => ({ id: o.id || `l-${Math.abs(JSON.stringify(o).length)}`, name: 'Bank loan', kind: 'bank-loan', currency: 'RWF', remainingAmount: 0, interestRate: 0, ...o });
+  const cash = asset({ kind: 'savings', currentValue: 5_000_000, name: 'BK savings' });
+  const expense = cf({ type: 'expense', recurring: 'monthly', amount: 500_000 }); // buffer = 1.5M
+
+  it('recommends repayment when idle cash sits next to an expensive loan', () => {
+    const loan = liab({ id: 'loan1', remainingAmount: 3_000_000, interestRate: 18 });
+    const ins = debtVsIdleCash(mkState({ assets: [cash], liabilities: [loan], cashflows: [expense] }), ctx);
+    expectWellFormed(ins);
+    expect(ins.id).toBe('debt-vs-idle-cash');
+    expect(ins.sourceRefs).toContain('loan1');
+    // surplus = 5M − 1.5M = 3.5M, applicable = min(3.5M, 3M) = 3M,
+    // net rate = 18 − 2 = 16% → saves 480k/yr
+    expect(ins.costOfAbsence.amount).toBe(3_000_000 * 0.16);
+  });
+
+  it('never recommends touching the emergency buffer', () => {
+    const smallCash = asset({ kind: 'savings', currentValue: 1_400_000 }); // below 1.5M buffer
+    const loan = liab({ remainingAmount: 3_000_000, interestRate: 18 });
+    expect(debtVsIdleCash(mkState({ assets: [smallCash], liabilities: [loan], cashflows: [expense] }), ctx)).toBeNull();
+  });
+
+  it('does not fire when the loan rate is below the safe T-bill yield', () => {
+    // 8% loan < 10% T-bill — investing the cash is the better move there.
+    const loan = liab({ remainingAmount: 3_000_000, interestRate: 8 });
+    expect(debtVsIdleCash(mkState({ assets: [cash], liabilities: [loan], cashflows: [expense] }), ctx)).toBeNull();
+  });
+
+  it('picks the highest-rate loan when several qualify', () => {
+    const cheap = liab({ id: 'cheap', remainingAmount: 9_000_000, interestRate: 12 });
+    const dear  = liab({ id: 'dear',  remainingAmount: 1_000_000, interestRate: 22 });
+    const ins = debtVsIdleCash(mkState({ assets: [cash], liabilities: [cheap, dear], cashflows: [expense] }), ctx);
+    expect(ins.sourceRefs).toContain('dear');
+    expect(ins.sourceRefs).not.toContain('cheap');
+  });
+
+  it('skips when the saving is too small to matter', () => {
+    const loan = liab({ remainingAmount: 200_000, interestRate: 12 }); // ~20k/yr
+    expect(debtVsIdleCash(mkState({ assets: [cash], liabilities: [loan], cashflows: [expense] }), ctx)).toBeNull();
+  });
+
+  it('runInsights suppresses the T-bill pitch when repayment wins the same cash', () => {
+    const loan = liab({ id: 'loanX', remainingAmount: 3_000_000, interestRate: 18 });
+    const { insights } = runInsights(mkState({ assets: [cash], liabilities: [loan], cashflows: [expense] }), ctx);
+    const ids = insights.map(i => i.id);
+    expect(ids).toContain('debt-vs-idle-cash');
+    expect(ids).not.toContain('idle-cash-yield-gap');
   });
 });
