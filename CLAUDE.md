@@ -44,3 +44,8 @@ Imari is a personal wealth tracker for Rwanda (assets, liabilities, net worth, g
 - Commit style follows existing history: `feat(scope): …`, `fix(scope): …`, `style(scope): …`.
 - Dark mode is supported — verify UI changes in both themes (B1 in the build guide was a dark-mode bug).
 - Currency is RWF; formatting helpers already exist (`src/format.test.js` covers them) — reuse, don't reimplement.
+- Dates on cash-flow entries are date-only strings — parse with `parseLocalDate` from `src/engine/recurrence.js`, never `new Date(str)` (UTC-midnight parsing shifted entries a day for west-of-UTC users). Recurrence/month math also lives there — don't re-derive cadence division.
+- New advisory logic = a rule in `src/engine/insights/` (pure `(state, {now, refs})`, quantified Cost-of-Absence, real `sourceRefs`, silent when data is thin) registered in `index.js`. Map its id in `src/glossary.js` if it uses jargon.
+- New views register in `nav.js` (routing derives from `NAV_ITEMS` — nothing else to update for routing) and, if optional, get a module entry in `src/features.js`.
+- Cloud saves are compare-and-swap on `updated_at` (`savePortfolio` in `cloud.js`) — never add an unconditional portfolio write.
+- In `App.jsx`, all hooks go ABOVE the conditional auth/loading returns — a hook added below them crashes the app at runtime with every test green.

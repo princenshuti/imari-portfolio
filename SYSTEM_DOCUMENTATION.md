@@ -181,15 +181,27 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 ### Education layer
 - Plain-language glossary (real vs nominal, CGT, concentration risk, runway, …) surfaced as click-to-open explainer chips under insight cards and in Settings — [glossary.js](src/glossary.js)
 
-### AI advisor
-- Multi-turn chat grounded in the user's portfolio snapshot (system prompt)
-- Markdown rendering
-- History capped at 80 messages, input capped to protect tokens
+### Insight Engine (advisory rules)
+16 deterministic, individually-tested rules in [src/engine/insights/](src/engine/insights/) — pure functions of (state, now, refs); every insight carries a quantified Cost-of-Absence, real source refs, and a `dataAsOf`. The engine decides WHAT; the AI explains HOW.
+- Cash & debt: `debt-vs-idle-cash` (repay the expensive loan before buying T-bills — suppresses the competing T-bill pitch for the same money), `idle-cash-yield-gap`, `runway-months`
+- Foresight: `obligation-smoothing` (monthly set-aside for an uncovered upcoming lump), `maturity-reinvestment`, `tax-deadline-exposure`, `goal-pace-gap` (absurd-slippage capped at honest "out of reach" copy)
+- Risk: `fx-debt-exposure` (modeled 5% depreciation scenario, silent without income data), `concentration-risk`, `receivable-overdue`
+- Wealth quality: `rental-yield-gap`, `real-vs-nominal`, `income-generating-share`, `land-revaluation-stale`, `pension-contribution-gap`, `top-mover-attribution`
+- Honesty discipline: rules go silent when data is insufficient; scenarios are labelled modeled; emergency buffers are never recommended for spending.
+
+### AI advisor + Advice Center
+- The Advisor view opens with **Today's recommendations** — the engine's ranked insights, each with its number, deep-link action, and a "Discuss" button that hands it to the chat. The sidebar Advisor item shows a live recommendation-count badge.
+- Multi-turn chat grounded in the user's portfolio snapshot **and provenance-tagged market conditions** (BNR FX buy/sell with rate dates, CPI, repo rate, RSE, T-bill reference); the prompt forbids recomputing totals or quoting market figures from memory.
+- Markdown rendering; history capped at 80 messages; input capped to protect tokens
 - Routed through `ai-proxy` Edge Function (Anthropic key never reaches the browser)
 
-### Trends
-- Live crypto prices (CoinGecko) and FX (open.er-api.com)
-- Cached BNR rates from the `bnr-rates` scheduled function
+### Progressive features
+- The menu starts at four core items (Dashboard, Assets, Advisor, Settings) and grows with the user's data: first expense reveals Cash Flow + Reports, first debt reveals Liabilities, a salary/pension reveals Retirement, etc. — [features.js](src/features.js)
+- Settings → Features: explicit force-on/off per module with an "auto" indicator and reset. Hidden is never blocked — routes, search, and deep links still resolve.
+
+### Trends & market data
+- Live crypto prices (CoinGecko) and FX (open.er-api.com fallback)
+- BNR official rates (buy/avg/sell per currency) from the `bnr-rates` Edge Function, scheduled daily by pg_cron **and self-healing**: if the newest stored rate is older than 24h, any client visit re-triggers the function (idempotent 10-day upsert) — a dead cron can no longer cause silent indefinite staleness ([market.js](src/services/market.js))
 - Personal watchlist (crypto / equities / forex symbols)
 
 ### Tax report
@@ -226,8 +238,8 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 1. User opens **Assets**, clicks *Add*; `AssetEditor` modal opens.
 2. On submit, `dispatch({ type: 'upsertAsset', asset })` runs the reducer ([App.jsx:104](src/App.jsx)).
 3. If the asset is account-shaped (e.g. savings, mobile money), `currentValue` is recomputed from `purchasePrice + linkedCashflows`.
-4. A debounced `useEffect` calls `savePortfolio(portfolioId, state)`; Supabase RLS verifies membership and writes.
-5. Other connected sessions receive a realtime payload and re-render.
+4. A debounced `useEffect` queues `savePortfolio(portfolioId, state, lastSeenUpdatedAt)` — saves are serialized per tab and **compare-and-swap on `updated_at`**: the UPDATE only lands if this tab has seen the row's current version. On conflict the client never overwrites; it re-fetches the authoritative row, adopts it, and shows "Another session saved newer changes." This is what stopped stale background tabs from silently reverting edits (the last-writer-wins bug, fixed 2026-06).
+5. Other connected sessions receive a realtime payload and re-render (the payload's `updated_at` refreshes their concurrency token).
 
 ### 4.3 AI advisor turn
 
@@ -243,11 +255,16 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 2. The function fetches BNR's published rates, normalises them, and upserts into a cached table.
 3. The frontend reads cached rates on load; the service worker keeps a 1-hour stale-while-revalidate copy for offline use.
 
-### 4.5 Deploy
+### 4.5 Deploy — staging vs production
 
-1. Push to `main` triggers [.github/workflows/deploy.yml](.github/workflows/deploy.yml).
-2. CI runs `npm ci` then `npm run build` (Vite). `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are injected from repo secrets; the Anthropic key is **not** — it lives only as a Supabase Function secret.
-3. The `dist/` artifact is uploaded and published to the `github-pages` environment.
+**Staging (automatic).** Every push to `main` triggers [.github/workflows/pages.yml](.github/workflows/pages.yml): `npm ci` → `npm test` → `npm run i18n:audit` → `vite build --base=/imari-portfolio/` → publish to GitHub Pages at https://princenshuti.github.io/imari-portfolio/. Supabase URL/anon key come from repo secrets; the Anthropic key never does — it lives only as a Supabase Function secret.
+
+**Production (deliberate, manual).** imali.princenshuti.com on cPanel. Promotion paths, in order of reliability:
+1. `npm run deploy` locally — builds with base `/` and uploads `dist/` over FTPS ([scripts/deploy.mjs](scripts/deploy.mjs), credentials in gitignored `.env.deploy`). **Known issue (2026-06): the host's FTPS passive data connections time out from both CI and local — the cPanel HTTPS API (token in `.env.deploy`) is the working alternative.**
+2. The Actions-tab "Deploy to cPanel" workflow ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)) — same FTP timeout issue.
+3. cPanel Git Version Control + [.cpanel.yml](.cpanel.yml) — requires committing `dist/` to a deploy branch and clicking "Deploy HEAD" in cPanel.
+
+Production deploys are never a side effect of a push — that was changed deliberately after a half-finished commit nearly shipped.
 
 ---
 
@@ -314,11 +331,15 @@ Until all three are done, email-based auth and the invitation flow silently brea
 
 ## 7. Known limits & next steps
 
-- **No automated tests.** Regressions are caught visually or by users. *(Update 2026-06: 87 vitest tests now cover the calculation engines, reducer, and format helpers; UI flows remain uncovered.)*
+- **UI flows have no automated tests.** 196 vitest tests cover every calculation engine, the reducer, services, and content integrity — but rendering/routing regressions are caught visually (a hooks-order crash once shipped to staging with all tests green). A headless smoke test in CI is the known gap.
 - **Single Postgres row per portfolio.** Portfolio state is one JSON blob; large portfolios will eventually need a normalised schema for query efficiency.
 - **No audit log.** Member edits overwrite silently — there's no per-field history beyond snapshots.
 - **Anthropic rate limits are global to the function**, not per user; abuse mitigation is basic.
 - **Tax report is hard-coded to 2024 RRA bands.** Needs yearly maintenance.
+- **Advisor context is hard-capped at 8000 chars** (client `ai.js` and `ai-proxy` both slice) while the grounded context grows with portfolio size — for larger portfolios the tail of the JSON (market conditions) is silently truncated. Needs a budgeted serializer (top-N insights, compact JSON, indicators before assets). *(Found in 2026-06 code review; open.)*
+- **Insight dismissals are session-local** to the Dashboard; the Advisor badge/Advice Center don't observe them. Dismissals should persist in state and feed every `runInsights` call. *(Open.)*
+- **The insight engine runs per-consumer** (App badge, Dashboard, Advisor, FloatingAdvisor) instead of once via a provider, and the badge's static import folded the engine + Advisor view into the main bundle. *(Open; perf, not correctness.)*
+- **Supabase schema must be at migration 005** (`portfolios.catrules/budgets` columns). The client degrades gracefully when behind, but rules/budgets won't cloud-sync until it's applied.
 
 ### Deferred to the Imari mobile app (2026-06)
 
