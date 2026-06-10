@@ -1,8 +1,9 @@
 name: Deploy to cPanel (imaliai.maxventures.rw)
 
+# Manual-only: production promotion is a deliberate act, never a side effect
+# of a push. Pushes to main publish the GitHub Pages staging preview instead
+# (see pages.yml). Trigger this from the Actions tab when staging is verified.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:

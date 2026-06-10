@@ -1,0 +1,52 @@
+# Staging preview — publishes every push on main to GitHub Pages at
+# https://princenshuti.github.io/imari-portfolio/ so changes are verified
+# there before the manual cPanel production deploy (deploy.yml).
+name: Deploy staging preview (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+      - run: npm run i18n:audit
+      # Pages serves from /imari-portfolio/, so the base path must match;
+      # production keeps base '/' (vite.config.js) for the cPanel docroot.
+      - run: npx vite build --base=/imari-portfolio/
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # VITE_ANTHROPIC_KEY is intentionally NOT passed — the Anthropic key
+          # lives in the Supabase Edge Function `ai-proxy` (server-side).
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
