@@ -8,6 +8,8 @@ import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import { NAV_ITEMS } from './nav.js';
+import { visibleNavIds } from './features.js';
+import { runInsights } from './engine/insights/index.js';
 import MobileTabBar from './components/MobileTabBar.jsx';
 import { useToast, ToastContainer } from './components/Toast.jsx';
 import FloatingAdvisor from './components/FloatingAdvisor.jsx';
@@ -532,6 +534,14 @@ export default function App() {
   }
 
   const accountCount = state.assets.filter(a => a.kind === 'savings' || a.kind === 'momo-cash').length;
+  // Progressive nav: menus show core + modules that have data or were enabled
+  // explicitly (Settings → Features). Routes stay valid even when hidden.
+  const visibleIds = useMemo(() => visibleNavIds(state), [state]);
+  // Advice badge on the AI Advisor nav item — count of active recommendations.
+  const adviceCount = useMemo(() => {
+    try { return runInsights(state).insights.filter(i => i.costOfAbsence).length; }
+    catch { return 0; }
+  }, [state]);
   // Active language for the time-of-day greeting: synced profile locale first,
   // then the localStorage mirror the I18nProvider uses, else English.
   const activeLocale = state.profile.locale
@@ -585,6 +595,7 @@ export default function App() {
           active={nav} onNav={navigateTo}
           profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
           session={session} role={role} liabilities={state.liabilities || []}
+          visibleIds={visibleIds} adviceCount={adviceCount}
         />
         <div className="col main-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
           {showTopBar && (
@@ -606,7 +617,7 @@ export default function App() {
             </Suspense>
           </main>
         </div>
-        <MobileTabBar active={nav} onNav={navigateTo} />
+        <MobileTabBar active={nav} onNav={navigateTo} visibleIds={visibleIds} />
         <div data-noprint><ToastContainer toasts={toasts} dismiss={dismiss} /></div>
         <div data-noprint><FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} /></div>
       </div>

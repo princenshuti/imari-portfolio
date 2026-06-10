@@ -23,10 +23,13 @@ const TAB_KEY = {
   settings:     'nav.settings',
 };
 
-export default function MobileTabBar({ active, onNav }) {
+export default function MobileTabBar({ active, onNav, visibleIds = null }) {
   const { t } = useT();
   const [moreOpen, setMoreOpen] = useState(false);
-  const isMoreActive = MORE_ITEMS.some(i => i.id === active);
+  // Progressive nav: hide modules the user hasn't enabled / has no data for.
+  const mainTabs = visibleIds ? MAIN_TABS.filter(i => visibleIds.has(i.id)) : MAIN_TABS;
+  const moreItems = visibleIds ? MORE_ITEMS.filter(i => visibleIds.has(i.id)) : MORE_ITEMS;
+  const isMoreActive = moreItems.some(i => i.id === active);
 
   const navigate = (id) => { onNav(id); setMoreOpen(false); };
   const labelFor = (it) => (TAB_KEY[it.id] ? t(TAB_KEY[it.id]) : it.label);
@@ -53,7 +56,7 @@ export default function MobileTabBar({ active, onNav }) {
           boxShadow: '0 -8px 32px rgba(0,0,0,0.14)',
         }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {MORE_ITEMS.map(it => (
+            {moreItems.map(it => (
               <button
                 key={it.id}
                 onClick={() => navigate(it.id)}
@@ -75,7 +78,7 @@ export default function MobileTabBar({ active, onNav }) {
       )}
 
       <nav className="mobile-tab-bar" aria-label={t('mobile_nav.label')}>
-        {MAIN_TABS.map(it => (
+        {mainTabs.map(it => (
           <button
             key={it.id}
             onClick={() => navigate(it.id)}

@@ -3,6 +3,7 @@ import { CURRENCIES, MILESTONES, LIVE_FX, fmtNum, INCOME_CATEGORIES, EXPENSE_CAT
 import { isValidRule } from '../engine/catRules.js';
 import { GLOSSARY } from '../glossary.js';
 import Explain from '../components/Explain.jsx';
+import { FEATURE_MODULES, isFeatureEnabled } from '../features.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { useT, SUPPORTED_LOCALES } from '../contexts/I18nContext.jsx';
 import { exportJSON, importJSONFile } from '../store.js';
@@ -372,6 +373,61 @@ function MilestoneSection({ profile, dispatch, showToast }) {
 // §10 Diaspora waitlist. MoMo SMS auto-sync (§3) and WhatsApp quick-entry (§4)
 // are deferred to the mobile app — neither is reachable from a PWA (browsers
 // can't read SMS; WhatsApp Business provisioning is tied to the mobile lifecycle).
+// Progressive features — the menu grows with the user's financial life.
+// Modules turn on automatically when their data appears; this panel gives
+// explicit control (force on to explore, force off to declutter).
+function FeaturesSection({ state, dispatch }) {
+  const features = state.profile.features || {};
+  const setFeature = (key, val) =>
+    dispatch({ type: 'setProfile', patch: { features: { ...features, [key]: val } } });
+  const resetFeature = (key) => {
+    const { [key]: _, ...rest } = features;
+    dispatch({ type: 'setProfile', patch: { features: rest } });
+  };
+
+  return (
+    <Section title="Features" subtitle="Imari starts simple and switches features on when you add related data. Force any of them on or off here — hidden features stay reachable via search and links.">
+      <div className="col" style={{ gap: 8 }}>
+        {FEATURE_MODULES.map(m => {
+          const explicit = features[m.key];
+          const on = isFeatureEnabled(state, m.key);
+          return (
+            <div key={m.key} className="row" style={{ gap: 10, padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div className="row" style={{ gap: 8, alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</span>
+                  {explicit === undefined && (
+                    <span className="pill pill-soft" style={{ fontSize: 10 }} title="Switches on automatically when you add related data">auto</span>
+                  )}
+                </div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.4 }}>{m.hint}</div>
+              </div>
+              <div className="row" style={{ gap: 8, flexShrink: 0 }}>
+                {explicit !== undefined && (
+                  <button type="button" className="btn-link" style={{ fontSize: 11 }} onClick={() => resetFeature(m.key)}>
+                    reset to auto
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  aria-label={`${m.label}: ${on ? 'enabled' : 'disabled'}`}
+                  onClick={() => setFeature(m.key, !on)}
+                  className={`btn ${on ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ minWidth: 64, padding: '6px 12px', fontSize: 12 }}
+                >
+                  {on ? 'On' : 'Off'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
 // F5 — user-defined categorisation rules: "when a description contains X,
 // categorise as Y". Applied before the AI pass on statement imports, so the
 // user's explicit word always wins (and costs nothing).
@@ -809,6 +865,8 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
       </Section>
 
       <MilestoneSection profile={state.profile} dispatch={dispatch} showToast={showToast} />
+
+      <FeaturesSection state={state} dispatch={dispatch} />
 
       <CatRulesSection catRules={state.catRules || []} dispatch={dispatch} showToast={showToast} />
 

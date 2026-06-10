@@ -5,7 +5,7 @@ import { MaxventuresIcon } from './MaxventuresLogo.jsx';
 import { navItemsByGroup } from '../nav.js';
 import { useT } from '../contexts/I18nContext.jsx';
 
-const NAV_GROUPS = navItemsByGroup();
+const ALL_NAV_GROUPS = navItemsByGroup();
 const COLLAPSE_KEY = 'imari:sidebar:collapsed';
 
 // Map nav-item id → i18n key so labels translate while structure stays static.
@@ -35,8 +35,15 @@ const GROUP_KEY = {
   'Tools':           'nav.group_tools',
 };
 
-export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [] }) {
+export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [], visibleIds = null, adviceCount = 0 }) {
   const { t } = useT();
+  // Progressive nav: only features the user enabled or has data for.
+  // null = show everything (back-compat).
+  const NAV_GROUPS = visibleIds
+    ? ALL_NAV_GROUPS
+        .map(g => ({ ...g, items: g.items.filter(it => visibleIds.has(it.id)) }))
+        .filter(g => g.items.length > 0)
+    : ALL_NAV_GROUPS;
   const totalDebt = liabilities.reduce((s, l) => s + toBase(l.remainingAmount || 0, l.currency || 'RWF'), 0);
   const trueNetWorth = netWorth; // already assets-liabilities in App.jsx
   const gain    = netWorth - totalCost;
@@ -190,6 +197,13 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
                   >
                     <span aria-hidden="true" style={{ width: 18, textAlign: 'center', fontSize: 13, opacity: it.id === active ? 1 : 0.65 }}>{it.glyph}</span>
                     {!collapsed && <span>{label}</span>}
+                    {/* Advice badge — active recommendation count from the engine */}
+                    {it.id === 'advisor' && adviceCount > 0 && !collapsed && (
+                      <span className="pill pill-brand" style={{ marginLeft: 'auto', fontSize: 10, padding: '1px 7px' }}
+                        aria-label={`${adviceCount} active recommendations`}>
+                        {adviceCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}

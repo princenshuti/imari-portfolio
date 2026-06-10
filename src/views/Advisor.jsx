@@ -214,6 +214,14 @@ export default function AdvisorView({ state, dispatch }) {
   // conditions and could only discuss the portfolio in a vacuum.
   const { market, overrides, fetchedAt } = useMarket();
 
+  // Advice Center — the deterministic engine's active recommendations, ranked.
+  // The engine provides the facts; "Discuss" hands one to the chat to explain.
+  const recommendations = useMemo(
+    () => runInsights(state, { limit: 16 }).insights.filter(i => i.costOfAbsence),
+    [state]
+  );
+  const [showAllRecs, setShowAllRecs] = useState(false);
+
   const portfolioContext = useMemo(() => {
     const today = new Date();
     const totalRWF = assets.reduce((s, a) => s + valueRWF(a, today), 0);
@@ -390,6 +398,52 @@ You are a financial advisor. Only answer financial questions grounded in the dat
           </button>
         </div>
       </div>
+
+      {/* ── Advice Center — engine recommendations above the chat ── */}
+      {recommendations.length > 0 && (
+        <div data-noprint style={{ padding: '12px 28px 4px', borderBottom: '0.5px solid var(--line)', background: 'var(--bg)' }}>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+              Today's recommendations <span className="pill pill-brand" style={{ fontSize: 10, marginLeft: 6 }}>{recommendations.length}</span>
+            </div>
+            {recommendations.length > 3 && (
+              <button type="button" className="btn-link" style={{ fontSize: 11 }} onClick={() => setShowAllRecs(v => !v)}>
+                {showAllRecs ? 'Show fewer' : `Show all ${recommendations.length}`}
+              </button>
+            )}
+          </div>
+          <div className="col" style={{ gap: 8, marginBottom: 10, maxHeight: showAllRecs ? '40vh' : undefined, overflowY: showAllRecs ? 'auto' : undefined }}>
+            {(showAllRecs ? recommendations : recommendations.slice(0, 3)).map(r => {
+              const sev = r.costOfAbsence.severity;
+              const color = sev === 'critical' ? 'var(--down)' : sev === 'warning' ? 'var(--gold)' : 'var(--sky)';
+              return (
+                <div key={r.id} className="row" style={{
+                  gap: 12, padding: '10px 14px', background: 'var(--paper)', borderRadius: 10,
+                  border: '0.5px solid var(--line)', borderLeft: `3px solid ${color}`,
+                  alignItems: 'center', flexWrap: 'wrap',
+                }}>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{r.headline}</div>
+                    <div className="muted" style={{ fontSize: 11.5, marginTop: 2, lineHeight: 1.45 }}>{r.costOfAbsence.costStatement}</div>
+                  </div>
+                  <div className="row" style={{ gap: 8, flexShrink: 0 }}>
+                    {r.costOfAbsence.action && (
+                      <button type="button" className="btn btn-ghost" style={{ fontSize: 11.5, padding: '6px 11px' }}
+                        onClick={() => dispatch({ type: 'nav', to: r.costOfAbsence.action.to })}>
+                        {r.costOfAbsence.action.label}
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-primary" style={{ fontSize: 11.5, padding: '6px 11px' }}
+                      onClick={() => ask(`Imari flagged this for me: "${r.headline}". ${r.costOfAbsence.costStatement} Walk me through what's behind it and exactly how I should act on it, step by step.`)}>
+                      Discuss →
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="row" style={{ flex: 1, minHeight: 0, alignItems:'stretch' }}>
         <div className="col" style={{ flex: 1, minWidth: 0 }}>
