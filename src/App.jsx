@@ -194,6 +194,16 @@ export default function App() {
   // ─ Toast ──────────────────────────────────────────────────────
   const { toasts, showToast, dismiss } = useToast();
 
+  // ─ Progressive nav + advice badge ─────────────────────────────
+  // MUST live here, above every conditional return: hooks after an early
+  // return crash React with a hooks-order violation the moment the loading/
+  // auth branches flip (this exact bug blanked staging once).
+  const visibleIds = useMemo(() => visibleNavIds(state), [state]);
+  const adviceCount = useMemo(() => {
+    try { return runInsights(state).insights.filter(i => i.costOfAbsence).length; }
+    catch { return 0; }
+  }, [state]);
+
   // ─ Hash-based navigation (survives reload & enables back/fwd)
   function navigateTo(view) {
     window.location.hash = view;
@@ -534,14 +544,6 @@ export default function App() {
   }
 
   const accountCount = state.assets.filter(a => a.kind === 'savings' || a.kind === 'momo-cash').length;
-  // Progressive nav: menus show core + modules that have data or were enabled
-  // explicitly (Settings → Features). Routes stay valid even when hidden.
-  const visibleIds = useMemo(() => visibleNavIds(state), [state]);
-  // Advice badge on the AI Advisor nav item — count of active recommendations.
-  const adviceCount = useMemo(() => {
-    try { return runInsights(state).insights.filter(i => i.costOfAbsence).length; }
-    catch { return 0; }
-  }, [state]);
   // Active language for the time-of-day greeting: synced profile locale first,
   // then the localStorage mirror the I18nProvider uses, else English.
   const activeLocale = state.profile.locale
