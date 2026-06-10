@@ -1,6 +1,6 @@
 import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense, Component } from 'react';
 import { FX, valueRWF, costRWF, toBase, fmtBase, MILESTONES } from './data.js';
-import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
+import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, fetchPortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
 import { seedHistory } from './services/snapshots.js';
 import { reducer } from './reducer.js';
@@ -164,6 +164,13 @@ export default function App() {
   const [stateReady, setStateReady] = useState(false);
   const prevNetWorthRef = useRef(null); // tracks last known net worth for crossed-threshold detection
   const skipNextSave = useRef(false);
+  // Optimistic-concurrency token: the row's updated_at as last seen by THIS
+  // tab (from load, realtime, or our own save). Saves are conditional on it,
+  // so a tab holding stale state can never overwrite newer cloud data.
+  const lastUpdatedAtRef = useRef(null);
+  // Saves run strictly one-at-a-time so a save never races its predecessor's
+  // token refresh (which would self-conflict).
+  const saveQueueRef = useRef(Promise.resolve());
 
   // ─ Theme ──────────────────────────────────────────────────────
   const [themePref, setThemePref] = useState(getThemePref);
@@ -271,9 +278,10 @@ export default function App() {
     let aborted = false;
     setLoadingPortfolio(true);
     loadOrCreatePortfolio(session.user)
-      .then(({ portfolioId, role, state: cloudState }) => {
+      .then(({ portfolioId, role, state: cloudState, updatedAt }) => {
         if (aborted) return;
         skipNextSave.current = true;
+        lastUpdatedAtRef.current = updatedAt || null;
         if (cloudState.fx) Object.assign(FX, cloudState.fx);
         dispatch({ type: 'replaceAll', state: cloudState });
         setPortfolioId(portfolioId);
@@ -300,6 +308,7 @@ export default function App() {
     return subscribePortfolio(portfolioId, (newRow) => {
       if (!newRow) return;
       skipNextSave.current = true;
+      lastUpdatedAtRef.current = newRow.updated_at || lastUpdatedAtRef.current;
       if (newRow.fx) Object.assign(FX, newRow.fx);
       dispatch({ type: 'replaceAll', state: {
         profile:           newRow.profile,
@@ -323,7 +332,24 @@ export default function App() {
     if (skipNextSave.current) { skipNextSave.current = false; return; }
     if (portfolioId && role !== 'viewer') {
       const t = setTimeout(() => {
-        savePortfolio(portfolioId, state).catch(e => {
+        // Serialize: each save waits for the previous one so the concurrency
+        // token is always current when this save reads it.
+        saveQueueRef.current = saveQueueRef.current.then(async () => {
+          const { conflict, updatedAt } = await savePortfolio(portfolioId, state, lastUpdatedAtRef.current);
+          if (!conflict) {
+            if (updatedAt) lastUpdatedAtRef.current = updatedAt;
+            return;
+          }
+          // Someone newer wrote first (another tab/device). Never overwrite —
+          // adopt the authoritative row instead.
+          const fresh = await fetchPortfolio(portfolioId);
+          if (!fresh) return;
+          lastUpdatedAtRef.current = fresh.updatedAt;
+          skipNextSave.current = true;
+          if (fresh.state.fx) Object.assign(FX, fresh.state.fx);
+          dispatch({ type: 'replaceAll', state: fresh.state });
+          showToast('Another session saved newer changes — refreshed to the latest data.', 'warning');
+        }).catch(e => {
           showToast('Auto-save failed — ' + e.message, 'error');
         });
       }, 350);
@@ -476,6 +502,7 @@ export default function App() {
       'upsertLiability','deleteLiability',
       'upsertGoal','deleteGoal',
       'upsertCashflow','deleteCashflow',
+      'upsertCatRule','deleteCatRule','setBudget',
       'addSnapshot','seedSnapshots',
       'reachMilestone','appendChat','clearChat','setInsight',
     ]);

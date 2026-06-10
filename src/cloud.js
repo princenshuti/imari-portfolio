@@ -122,30 +122,57 @@ export async function loadOrCreatePortfolio(user) {
   return {
     portfolioId,
     role: myRole,
-    state: {
-      // Merge cloud profile over safe defaults so no field is ever undefined
-      profile: {
-        name: '', displayCurrency: 'RWF', phone: '', bio: '', location: '', avatar: null,
-        ...(data.profile || {}),
-        email: user.email,           // always authoritative from auth
-      },
-      assets:            Array.isArray(data.assets)      ? data.assets      : [],
-      liabilities:       Array.isArray(data.liabilities) ? data.liabilities : [],
-      goals:             Array.isArray(data.goals)       ? data.goals       : [],
-      cashflows:         Array.isArray(data.cashflows)   ? data.cashflows   : [],
-      snapshots:         Array.isArray(data.snapshots)   ? data.snapshots   : [],
-      reachedMilestones: Array.isArray(data.reachedmilestones) ? data.reachedmilestones : [],
-      catRules:          Array.isArray(data.catrules) ? data.catrules : [],
-      budgets:           data.budgets && typeof data.budgets === 'object' && !Array.isArray(data.budgets) ? data.budgets : {},
-      fx:                data.fx   || { ...FX },
-      chat:              Array.isArray(data.chat) ? data.chat : [],
-      insight:           data.insight ?? null,
-    },
+    updatedAt: data.updated_at,
+    state: rowToState(data, user.email),
   };
 }
 
-export async function savePortfolio(portfolioId, state) {
-  if (!supabase || !portfolioId) return;
+/** Map a portfolios row to client state. Shared by initial load and conflict refresh. */
+function rowToState(data, email) {
+  return {
+    // Merge cloud profile over safe defaults so no field is ever undefined
+    profile: {
+      name: '', displayCurrency: 'RWF', phone: '', bio: '', location: '', avatar: null,
+      ...(data.profile || {}),
+      ...(email ? { email } : {}),   // authoritative from auth when known
+    },
+    assets:            Array.isArray(data.assets)      ? data.assets      : [],
+    liabilities:       Array.isArray(data.liabilities) ? data.liabilities : [],
+    goals:             Array.isArray(data.goals)       ? data.goals       : [],
+    cashflows:         Array.isArray(data.cashflows)   ? data.cashflows   : [],
+    snapshots:         Array.isArray(data.snapshots)   ? data.snapshots   : [],
+    reachedMilestones: Array.isArray(data.reachedmilestones) ? data.reachedmilestones : [],
+    catRules:          Array.isArray(data.catrules) ? data.catrules : [],
+    budgets:           data.budgets && typeof data.budgets === 'object' && !Array.isArray(data.budgets) ? data.budgets : {},
+    fx:                data.fx   || { ...FX },
+    chat:              Array.isArray(data.chat) ? data.chat : [],
+    insight:           data.insight ?? null,
+  };
+}
+
+/** Re-fetch the authoritative row — used after a save conflict. */
+export async function fetchPortfolio(portfolioId) {
+  if (!supabase || !portfolioId) return null;
+  const { data, error } = await supabase
+    .from('portfolios')
+    .select('*')
+    .eq('id', portfolioId)
+    .single();
+  if (error) throw error;
+  return { updatedAt: data.updated_at, state: rowToState(data) };
+}
+
+/**
+ * Save with optimistic concurrency. When `expectedUpdatedAt` is given, the
+ * UPDATE only lands if the row still carries that timestamp — i.e. this client
+ * has seen the latest version. A stale tab's auto-save therefore can no longer
+ * clobber newer data (the last-writer-wins bug where edits visibly reverted
+ * seconds later); it gets `{ conflict: true }` and must refresh instead.
+ *
+ * @returns {{ conflict: boolean, updatedAt: string|null }}
+ */
+export async function savePortfolio(portfolioId, state, expectedUpdatedAt = null) {
+  if (!supabase || !portfolioId) return { conflict: false, updatedAt: null };
   const payload = {
     profile:     state.profile,
     assets:      state.assets,
@@ -161,15 +188,25 @@ export async function savePortfolio(portfolioId, state) {
     insight:     state.insight,
     updated_at:  new Date().toISOString(),
   };
-  let { error } = await supabase.from('portfolios').update(payload).eq('id', portfolioId);
+
+  const attempt = async (body) => {
+    let q = supabase.from('portfolios').update(body).eq('id', portfolioId);
+    if (expectedUpdatedAt) q = q.eq('updated_at', expectedUpdatedAt);
+    return q.select('updated_at');
+  };
+
+  let { data, error } = await attempt(payload);
   // Graceful degrade until supabase-migration-005.sql is applied: an unknown
   // column (PGRST204) must not take the whole auto-save down with it.
   if (error && (error.code === 'PGRST204' || /catrules|budgets/i.test(error.message || ''))) {
     console.warn('portfolios.catrules/budgets columns missing — run supabase-migration-005.sql; saving without them.');
     const { catrules, budgets, ...legacy } = payload;
-    ({ error } = await supabase.from('portfolios').update(legacy).eq('id', portfolioId));
+    ({ data, error } = await attempt(legacy));
   }
   if (error) throw error;
+  // No row matched the expected updated_at → someone newer wrote first.
+  if (expectedUpdatedAt && (!data || data.length === 0)) return { conflict: true, updatedAt: null };
+  return { conflict: false, updatedAt: data?.[0]?.updated_at ?? null };
 }
 
 export function subscribePortfolio(portfolioId, onUpdate) {
