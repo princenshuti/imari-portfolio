@@ -58,4 +58,28 @@ export function projectNetWorth(input = {}) {
   return { assumptions: a, horizons };
 }
 
+/**
+ * Monthly path for the projection fan chart: low / expected / high series
+ * from now to `months` ahead, stepped to keep point counts sane.
+ * Same math as projectNetWorth — one source of truth for the fan.
+ */
+export function projectSeries(input = {}, { months = 240, stepMonths = 3 } = {}) {
+  const a = { ...DEFAULT_ASSUMPTIONS, ...(input.assumptions || {}) };
+  const pv = input.currentNetWorth || 0;
+  const monthly = input.monthlySavings || 0;
+  const lump = input.lumpSum || 0;
+  const lowRate = a.expectedAnnualGrowthPct - a.bandSpreadPct;
+  const highRate = a.expectedAnnualGrowthPct + a.bandSpreadPct;
+  const points = [];
+  for (let m = 0; m <= months; m += stepMonths) {
+    points.push({
+      month: m,
+      low: futureValue(pv, monthly, lump, lowRate, m),
+      expected: futureValue(pv, monthly, lump, a.expectedAnnualGrowthPct, m),
+      high: futureValue(pv, monthly, lump, highRate, m),
+    });
+  }
+  return { assumptions: a, points };
+}
+
 export default projectNetWorth;

@@ -4,18 +4,19 @@ import {
   toBase, fmtBase, fmt, GOAL_CATEGORIES,
   fixedAssetTax, VEHICLE_CATEGORIES, EXPENSE_CATEGORIES,
 } from '../data.js';
-import { PortfolioChart, BenchmarkBar, Donut } from '../components/charts.jsx';
+import { PortfolioChart, BenchmarkBar, Donut, ProjectionFan } from '../components/charts.jsx';
 import { TrendCard } from '../components/Field.jsx';
 import AssetIcon from '../components/AssetIcon.jsx';
 import { filterByRange, calcReturn } from '../services/snapshots.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { monthlyPayment } from '../services/finance.js';
 import { useInsights } from '../contexts/InsightsContext.jsx';
-import { SEVERITY_RANK } from '../engine/insights/_shared.js';
+import { SEVERITY_RANK, monthlyFlowsRWF } from '../engine/insights/_shared.js';
 import { goalCurrentRWF, goalProgressPct } from '../engine/goals.js';
 import { staleNetWorthInsight, netWorthAsOf } from '../engine/freshness.js';
 import { REFERENCE } from '../engine/insights/refs.js';
 import { projectPension } from '../engine/retirement/index.js';
+import { projectSeries, DEFAULT_ASSUMPTIONS } from '../engine/projection/index.js';
 import { budgetStatus } from '../engine/budgets.js';
 import { glossaryFor, GLOSSARY } from '../glossary.js';
 import { severityColor } from '../severity.js';
@@ -826,6 +827,19 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
   const hasCF = cashflows.length > 0;
   const showAlerts = concentrationAlerts.length > 0 || riskAlerts.length > 0 || maintenanceAssets.length > 0;
 
+  // ── Hero projection mode (Phase 4 #13 — Fast Forward lives here now) ──
+  const [projMode, setProjMode] = useState(false);
+  const baseMonthlySaving = useMemo(() => {
+    const { monthlyIncome, monthlyExpense } = monthlyFlowsRWF(cashflows, today);
+    return Math.max(0, Math.round(monthlyIncome - monthlyExpense));
+  }, [cashflows]);
+  const [projMonthly, setProjMonthly] = useState(null); // null = use base
+  const effMonthly = projMonthly ?? baseMonthlySaving;
+  const fan = useMemo(
+    () => projMode ? projectSeries({ currentNetWorth: trueNetWorth, monthlySavings: effMonthly }) : null,
+    [projMode, trueNetWorth, effMonthly]
+  );
+
   // ─── Layout state ──────────────────────────────────────────────
   const { order, hidden, editMode, setEditMode, reorder, toggleHide, resetLayout } = useDashboardLayout();
 
@@ -951,19 +965,55 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             </div>
             <div className="row" style={{ gap: 6 }}>
               {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
-                <button key={r} onClick={() => setChartRange(r)} className="dash-btn-range" style={{
+                <button key={r} onClick={() => { setProjMode(false); setChartRange(r); }} className="dash-btn-range" style={{
                   padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
-                  background: chartRange === r ? 'var(--brand)' : 'var(--bg-2)',
-                  color: chartRange === r ? 'var(--brand-ink)' : 'var(--ink-2)',
-                  border: 0, fontFamily: 'inherit', fontWeight: chartRange === r ? 600 : 400,
+                  background: !projMode && chartRange === r ? 'var(--brand)' : 'var(--bg-2)',
+                  color: !projMode && chartRange === r ? 'var(--brand-ink)' : 'var(--ink-2)',
+                  border: 0, fontFamily: 'inherit', fontWeight: !projMode && chartRange === r ? 600 : 400,
                 }}>{r}</button>
               ))}
+              {/* Fast Forward lives here now — the same chart, continued past today */}
+              <button onClick={() => setProjMode(v => !v)} className="dash-btn-range" aria-pressed={projMode} style={{
+                padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
+                background: projMode ? 'var(--gold)' : 'var(--gold-soft)',
+                color: projMode ? '#fff' : 'var(--gold-ink)',
+                border: 0, fontFamily: 'inherit', fontWeight: 600,
+              }}>Project ⤴</button>
             </div>
           </div>
           <div style={{ marginTop: 16 }}>
-            <PortfolioChart snapshots={chartSnaps} displayCurrency={profile.displayCurrency} height={210} annotate />
+            {projMode && fan ? (
+              <ProjectionFan points={fan.points} displayCurrency={profile.displayCurrency} height={210} />
+            ) : (
+              <PortfolioChart snapshots={chartSnaps} displayCurrency={profile.displayCurrency} height={210} annotate />
+            )}
           </div>
-          {chartHasSynthetic && (
+          {projMode && fan && (
+            <div className="row" style={{ gap: 14, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <label className="row" style={{ gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--ink-2)' }}>
+                Saving
+                <input
+                  type="range" min="0" max={Math.max(baseMonthlySaving * 3, 1_000_000)} step="50000"
+                  value={effMonthly}
+                  onChange={e => setProjMonthly(+e.target.value)}
+                  aria-label="Monthly saving for the projection"
+                  style={{ width: 160, accentColor: 'var(--brand)' }}
+                />
+                <span className="num" style={{ fontWeight: 700, color: 'var(--ink)' }}>
+                  {fmtBase(effMonthly, profile.displayCurrency, { compact: true })}/mo
+                </span>
+              </label>
+              {projMonthly != null && projMonthly !== baseMonthlySaving && (
+                <button type="button" className="btn-link" style={{ fontSize: 11 }} onClick={() => setProjMonthly(null)}>
+                  reset to your real rate ({fmtBase(baseMonthlySaving, profile.displayCurrency, { compact: true })}/mo)
+                </button>
+              )}
+              <span className="muted" style={{ fontSize: 10.5, marginLeft: 'auto' }}>
+                Modeled · {DEFAULT_ASSUMPTIONS.expectedAnnualGrowthPct}% ±{DEFAULT_ASSUMPTIONS.bandSpreadPct}% nominal · prefilled from your cash flow · not a guarantee
+              </span>
+            </div>
+          )}
+          {!projMode && chartHasSynthetic && (
             <div className="muted" style={{ fontSize: 10.5, marginTop: 6, fontStyle: 'italic' }}>
               Early history is a synthetic seed for illustration — real daily snapshots accrue from when you started using Imari.
             </div>

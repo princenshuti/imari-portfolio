@@ -89,7 +89,7 @@ export default {
       eyebrow:        'Suivi du patrimoine personnel · Conçu pour le Rwanda',
       headline_1:     'Arrêtez de deviner',
       headline_2:     'ce que vous valez.',
-      sub:            "Si votre argent est réparti entre plusieurs banques, MoMo, des dollars, du foncier et quelques placements, vous estimez votre patrimoine net de tête — et vous vous trompez généralement. Imari met fin aux suppositions : tous vos comptes et actifs dans une vue d'ensemble, en RWF et en USD, calculée sur les valeurs que vous saisissez — pour savoir où vous en êtes aujourd'hui et si vous avancez par rapport au trimestre dernier.",
+      sub:            "Chaque compte, actif et dette dans une seule image en direct — RWF et USD. Voyez où vous en êtes aujourd'hui, et si vous avez progressé depuis le trimestre dernier.",
       cta_primary:    'Commencer — c\'est gratuit',
       cta_secondary:  "J'ai déjà un compte",
       trust:          'Gratuit. Sans carte, sans mot de passe bancaire — chiffré au repos et en transit.',

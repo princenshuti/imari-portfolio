@@ -52,3 +52,29 @@ describe('projectNetWorth', () => {
     expect(projectNetWorth(input).assumptions.expectedAnnualGrowthPct).toBe(DEFAULT_ASSUMPTIONS.expectedAnnualGrowthPct);
   });
 });
+
+
+describe('projectSeries (fan chart path)', () => {
+  it('starts at the current net worth and orders low ≤ expected ≤ high', async () => {
+    const { projectSeries } = await import('./index.js');
+    const { points } = projectSeries({ currentNetWorth: 10_000_000, monthlySavings: 100_000 }, { months: 24, stepMonths: 6 });
+    expect(points[0].expected).toBe(10_000_000);
+    expect(points[0].low).toBe(10_000_000);
+    for (const p of points) {
+      expect(p.low).toBeLessThanOrEqual(p.expected);
+      expect(p.expected).toBeLessThanOrEqual(p.high);
+    }
+    expect(points[points.length - 1].month).toBe(24);
+    expect(points[points.length - 1].expected).toBeGreaterThan(10_000_000);
+  });
+
+  it('matches projectNetWorth at shared horizons', async () => {
+    const { projectSeries, default: projectNetWorth } = await import('./index.js');
+    const input = { currentNetWorth: 5_000_000, monthlySavings: 200_000 };
+    const { points } = projectSeries(input, { months: 60, stepMonths: 12 });
+    const { horizons } = projectNetWorth(input);
+    const h5 = horizons.find(h => h.key === '5Y');
+    const p60 = points.find(p => p.month === 60);
+    expect(p60.expected).toBeCloseTo(h5.expected, 4);
+  });
+});

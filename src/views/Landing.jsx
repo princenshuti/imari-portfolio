@@ -166,43 +166,31 @@ export default function Landing({ onSignIn }) {
           </div>
         </div>
 
-        {/* Floating preview card with a live cost-of-absence chip */}
-        <div className="landing-preview" aria-hidden>
-          <div className="landing-preview-card">
-            <div className="landing-preview-label">{t('landing.preview.label')}</div>
-            <div className="landing-preview-amount num">
-              <span className="landing-preview-ccy">RWF</span>
-              <span>24,830,000</span>
+        {/* Real product shot in a browser frame — credibility over illustration
+            (design review #21). The floating mini box is gone; the one overlay
+            kept is the thesis: the Cost-of-Absence chip. */}
+        <div className="landing-preview" aria-hidden style={{ position: 'relative' }}>
+          <div style={{
+            borderRadius: 14, overflow: 'hidden', background: 'var(--paper)',
+            border: '0.5px solid var(--line-strong)', boxShadow: 'var(--shadow-pop)',
+            transform: 'rotate(0.6deg)',
+          }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '9px 12px', background: 'var(--bg-2)', borderBottom: '0.5px solid var(--line)' }}>
+              {['#E0635C', '#E5BC55', '#3FB889'].map(c => (
+                <span key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.85 }} />
+              ))}
+              <span className="num" style={{ fontSize: 9.5, color: 'var(--ink-4)', marginLeft: 8 }}>imali.princenshuti.com</span>
             </div>
-            <div className="landing-preview-delta">
-              <span className="pill pill-up">↑ 8.4%</span>
-              <span className="landing-preview-period">{t('landing.preview.delta_period')}</span>
-            </div>
-            <svg className="landing-preview-spark" viewBox="0 0 200 50" preserveAspectRatio="none"
-              role="img" aria-label={t('landing.preview.spark_alt')}>
-              <defs>
-                <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="var(--brand)" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path d="M0,38 L20,34 L40,36 L60,28 L80,30 L100,22 L120,24 L140,18 L160,14 L180,16 L200,8" fill="none" stroke="var(--brand)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M0,38 L20,34 L40,36 L60,28 L80,30 L100,22 L120,24 L140,18 L160,14 L180,16 L200,8 L200,50 L0,50 Z" fill="url(#sparkFill)" />
-            </svg>
-            <div className="landing-preview-costchip">
-              <span className="landing-preview-costglyph">!</span>
-              <span>{'RWF 35k/mo idle — not earning T-bill yield'}</span>
-            </div>
+            <img
+              src={`${import.meta.env.BASE_URL}product-hero.png`}
+              alt=""
+              loading="lazy"
+              style={{ display: 'block', width: '100%', height: 'auto' }}
+            />
           </div>
-          <div className="landing-preview-mini">
-            <div className="landing-preview-mini-row">
-              <span className="landing-preview-mini-label">{t('landing.preview.savings_rate')}</span>
-              <span className="num landing-preview-mini-val">32%</span>
-            </div>
-            <div className="landing-preview-mini-row">
-              <span className="landing-preview-mini-label">{t('landing.preview.goal_house')}</span>
-              <span className="num landing-preview-mini-val t-brand">68%</span>
-            </div>
+          <div className="landing-preview-costchip" style={{ position: 'absolute', bottom: -14, left: 18 }}>
+            <span className="landing-preview-costglyph">!</span>
+            <span>{'RWF 35k/mo idle — not earning T-bill yield'}</span>
           </div>
         </div>
       </header>

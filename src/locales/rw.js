@@ -97,7 +97,7 @@ export default {
       eyebrow:        'Igikoresho cy\'ubutunzi · Cyakorewe u Rwanda',
       headline_1:     'Hagarika gukeka',
       headline_2:     'ubutunzi bwawe.',
-      sub:            'Niba amafaranga yawe ari mu mabanki menshi, MoMo, USD, ubutaka n\'andi mishinga, urakeka ubutunzi bwawe — kandi akenshi uribeshya. Imari ihagarika gukeka: konti zose n\'ibyo utunze biri ahantu hamwe, muri RWF na USD, hashingiwe ku gaciro wanditse — kugira ngo umenye aho uhagaze uyu munsi.',
+      sub:            'Konti zose, ibyo utunze n\'imyenda — ahantu hamwe, muri RWF na USD. Reba aho uhagaze uyu munsi, n\'uko wateye imbere kuva igihembwe gishize.',
       cta_primary:    'Tangira — ni ubuntu',
       cta_secondary:  'Mfite konti',
       trust:          'Tangira ubuntu. Nta ikarita, nta amagambo y\'ibanga ya banki — bishyizwemo umuziro.',

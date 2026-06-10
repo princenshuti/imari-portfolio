@@ -6,6 +6,7 @@ import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { goalCurrentRWF } from '../engine/goals.js';
 import { netWorthRWF } from '../engine/insights/_shared.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
+import { monthlyFlowsRWF } from '../engine/insights/_shared.js';
 
 const EMPTY_GOAL = {
   category: 'investment', title: '', targetAmount: '', currency: 'RWF',
@@ -199,7 +200,8 @@ function nextBnrAuction() {
   return d.toISOString().slice(0, 10);
 }
 
-function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLock }) {
+function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLock, monthlySaving = 0 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const cat = GOAL_CATEGORIES.find(c => c.id === goal.category) || GOAL_CATEGORIES[0];
   const targetRWF = toBase(goal.targetAmount || 0, goal.currency || 'RWF');
   // currentValue is derived per-fundingType by the parent — net-worth / liquid / linked-sum
@@ -214,6 +216,19 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
 
   const isAchieved = goal.achieved || pct >= 100;
   const isOverdue  = deadline && deadline < today && !isAchieved;
+
+  // "Funded by Mar 2027 at your current savings rate" — the honest projection
+  // from the user's own cash flow. Hidden when there's no flow data; "out of
+  // reach" when the rate rounds to zero (never a 2406-year date).
+  let fundedBy = null, fundedLate = false;
+  if (!isAchieved && remaining > 0 && monthlySaving > 0) {
+    const monthsToFund = remaining / monthlySaving;
+    if (monthsToFund <= 600) {
+      const d = new Date(today); d.setMonth(d.getMonth() + Math.ceil(monthsToFund));
+      fundedBy = d;
+      fundedLate = deadline ? d > deadline : false;
+    }
+  }
 
   // Status pill — green on track / amber slipping / red overdue (UX review #43)
   // "Slipping" = the implied required monthly save is > 2× a reasonable rate
@@ -270,11 +285,30 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
             </div>
           </div>
         </div>
-        <div className="row row-actions" style={{ gap: 8 }}>
-          <button type="button" onClick={onEdit} aria-label={`Edit ${goal.title}`} className="btn btn-ghost btn-xs">Edit</button>
-          <button type="button" onClick={onDelete} aria-label={`Delete ${goal.title}`} className="btn btn-xs" style={{
-            border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down-ink)',
-          }}>Delete</button>
+        <div className="row-actions" style={{ position: 'relative' }}>
+          <button type="button" className="btn-icon-sm" aria-haspopup="menu" aria-expanded={menuOpen}
+            aria-label={`Actions for ${goal.title}`} onClick={() => setMenuOpen(v => !v)}
+            onBlur={(e) => { if (!e.currentTarget.parentElement.contains(e.relatedTarget)) setMenuOpen(false); }}>
+            <span aria-hidden="true">⋯</span>
+          </button>
+          {menuOpen && (
+            <div role="menu" style={{
+              position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 30, minWidth: 130,
+              background: 'var(--paper)', border: '0.5px solid var(--line-strong)',
+              borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-2)', overflow: 'hidden',
+            }}>
+              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit(); }}
+                style={{ all: 'unset', display: 'block', boxSizing: 'border-box', width: '100%', padding: '9px 14px', fontSize: 12.5, cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >✎ Edit goal</button>
+              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onDelete(); }}
+                style={{ all: 'unset', display: 'block', boxSizing: 'border-box', width: '100%', padding: '9px 14px', fontSize: 12.5, cursor: 'pointer', color: 'var(--down-ink)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--down-soft)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >× Delete…</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -314,6 +348,37 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
         </div>
       </div>
 
+      {/* Celebration — an achieved goal looks WON, not merely complete */}
+      {isAchieved && (
+        <div className="row" style={{
+          padding: '10px 14px', borderRadius: 'var(--r-sm)', gap: 10, alignItems: 'center',
+          background: 'linear-gradient(135deg, var(--gold-soft), var(--up-soft))',
+        }}>
+          <span aria-hidden="true" style={{ fontSize: 18 }}>🎉</span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--up-ink)' }}>
+            Achieved{goal.achievedAt ? ` · ${new Date(goal.achievedAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}` : ''} — {fmt(goal.targetAmount, goal.currency, { compact: true })} reached.
+          </span>
+        </div>
+      )}
+
+      {/* Funded-by projection — the user's own pace, honestly stated */}
+      {fundedBy && (
+        <div style={{
+          padding: '8px 12px', borderRadius: 'var(--r-sm)', marginBottom: 8,
+          background: fundedLate ? 'var(--gold-soft)' : 'var(--up-soft)',
+          fontSize: 11, color: fundedLate ? 'var(--gold-ink, var(--gold))' : 'var(--up-ink)',
+        }}>
+          Funded by <strong>{fundedBy.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong> at
+          your current {fmtBase(monthlySaving, displayCurrency, { compact: true })}/mo saving
+          {fundedLate && deadline ? ` — after your ${deadline.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} deadline` : ''}.
+        </div>
+      )}
+      {!isAchieved && remaining > 0 && monthlySaving <= 0 && (
+        <div className="muted" style={{ fontSize: 10.5, marginBottom: 8 }}>
+          Add income and expenses in Cash Flow to project a funded-by date.
+        </div>
+      )}
+
       {/* Monthly savings needed */}
       {monthlySavingsNeeded !== null && remaining > 0 && !isAchieved && (
         <div style={{
@@ -352,6 +417,10 @@ export default function GoalsView({ state, dispatch }) {
   const today = new Date();
 
   const { fetchedAt: fxFetchedAt } = useMarket(); // live-FX arrival → revalue
+  const monthlySaving = useMemo(() => {
+    const { monthlyIncome, monthlyExpense } = monthlyFlowsRWF(state.cashflows || [], today);
+    return Math.max(0, monthlyIncome - monthlyExpense);
+  }, [state.cashflows]);
   const netWorth = useMemo(() => netWorthRWF(state, today), [state.assets, state.liabilities, fxFetchedAt]);
 
   // Resolve the right "current value" for a goal based on its fundingType.
@@ -425,7 +494,7 @@ export default function GoalsView({ state, dispatch }) {
 
       {/* Active goals */}
       {active.map(g => (
-        <GoalCard key={g.id} goal={g} currentValue={currentValueFor(g)} displayCurrency={profile.displayCurrency}
+        <GoalCard key={g.id} goal={g} currentValue={currentValueFor(g)} monthlySaving={monthlySaving} displayCurrency={profile.displayCurrency}
           onEdit={() => setEditing(g)}
           onDelete={() => setPendingDelete(g)}
           onLock={(lock) => dispatch({ type: 'upsertGoal', goal: { ...g, lock } })}
@@ -439,7 +508,7 @@ export default function GoalsView({ state, dispatch }) {
             Achieved ({achieved.length})
           </div>
           {achieved.map(g => (
-            <GoalCard key={g.id} goal={g} currentValue={currentValueFor(g)} displayCurrency={profile.displayCurrency}
+            <GoalCard key={g.id} goal={g} currentValue={currentValueFor(g)} monthlySaving={monthlySaving} displayCurrency={profile.displayCurrency}
               onEdit={() => setEditing(g)}
               onDelete={() => setPendingDelete(g)}
             />

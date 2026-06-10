@@ -102,7 +102,7 @@ export default {
       eyebrow:        'Personal wealth tracker · Built for Rwanda',
       headline_1:     'Stop guessing',
       headline_2:     "what you're worth.",
-      sub:            'If your money is spread across banks, MoMo, USD cash, land and a few investments, you are estimating your net worth in your head — and usually getting it wrong. Imari ends the guesswork: every account and every asset in one live picture, in RWF and USD, based on the values you enter — so you can see where you stand today and whether you are ahead of last quarter.',
+      sub:            'Every account, asset and debt in one live picture — RWF and USD. See where you stand today, and whether you are ahead of last quarter.',
       cta_primary:    "Get started — it's free",
       cta_secondary:  'I already have an account',
       trust:          'Free to start. No card, no bank passwords — encrypted in transit and at rest.',

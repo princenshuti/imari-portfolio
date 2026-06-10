@@ -472,3 +472,73 @@ export function Donut({ slices, size = 120, thickness = 14, gap = 1.5, ariaLabel
     </svg>
   );
 }
+
+/**
+ * ProjectionFan — the "where am I going" chart (design review #13).
+ * Median projection line with a low↔high uncertainty band and labeled
+ * milestone markers. Honest by construction: every label says modeled,
+ * the band IS the uncertainty, and the inputs are the user's own numbers.
+ *
+ * props:
+ *   points          [{ month, low, expected, high }] from projectSeries (RWF)
+ *   displayCurrency
+ *   height
+ *   milestones      months to mark, e.g. [12, 60, 120, 240]
+ */
+export function ProjectionFan({ points = [], displayCurrency = 'RWF', height = 210, milestones = [12, 60, 120, 240] }) {
+  if (!points || points.length < 2) return null;
+  const W = 800, H = height, PAD = { t: 18, r: 16, b: 26, l: 0 };
+  const CW = W - PAD.l - PAD.r, CH = H - PAD.t - PAD.b;
+  const maxMonth = points[points.length - 1].month || 1;
+  let maxV = -Infinity, minV = Infinity;
+  for (const p of points) { if (p.high > maxV) maxV = p.high; if (p.low < minV) minV = p.low; }
+  minV *= 0.96; maxV *= 1.03;
+  const range = maxV - minV || 1;
+  const xOf = (m) => PAD.l + (m / maxMonth) * CW;
+  const yOf = (v) => PAD.t + CH - ((v - minV) / range) * CH;
+
+  const line = (key) => points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(p.month).toFixed(1)},${yOf(p[key]).toFixed(1)}`).join(' ');
+  const band = line('high') + ' ' +
+    [...points].reverse().map(p => `L${xOf(p.month).toFixed(1)},${yOf(p.low).toFixed(1)}`).join(' ') + ' Z';
+
+  const compact = (v) => {
+    const x = fromBase(v, displayCurrency);
+    return x >= 1e9 ? `${(x / 1e9).toFixed(1)}B` : x >= 1e6 ? `${(x / 1e6).toFixed(0)}M` : `${(x / 1e3).toFixed(0)}k`;
+  };
+  const msLabel = (m) => m >= 12 ? `${Math.round(m / 12)}Y` : `${m}M`;
+  const marks = milestones
+    .filter(m => m > 0 && m <= maxMonth)
+    .map(m => points.reduce((best, p) => Math.abs(p.month - m) < Math.abs(best.month - m) ? p : best, points[0]));
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height, display: 'block', overflow: 'visible' }}
+      role="img"
+      aria-label={`Modeled net-worth projection: ${marks.map(p => `${msLabel(p.month)} ≈ ${compact(p.expected)}`).join(', ')}. Band shows the low-to-high range.`}>
+      <defs>
+        <linearGradient id="fanBand" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.16" />
+          <stop offset="100%" stopColor="var(--brand)" stopOpacity="0.04" />
+        </linearGradient>
+      </defs>
+      <path d={band} fill="url(#fanBand)" />
+      <path d={line('low')} stroke="var(--brand)" strokeWidth="1" fill="none" opacity="0.35" />
+      <path d={line('high')} stroke="var(--brand)" strokeWidth="1" fill="none" opacity="0.35" />
+      <path d={line('expected')} stroke="var(--brand)" strokeWidth="2.5" fill="none" strokeDasharray="6 4" strokeLinecap="round" />
+      <circle cx={xOf(0)} cy={yOf(points[0].expected)} r="4" fill="var(--brand)" stroke="var(--paper)" strokeWidth="2" />
+      <text x={xOf(0) + 6} y={yOf(points[0].expected) - 8} fontSize="9.5" fontWeight="600" fill="var(--ink-3)" fontFamily="inherit">Today</text>
+      {marks.map((p) => (
+        <g key={p.month} aria-hidden="true">
+          <line x1={xOf(p.month)} x2={xOf(p.month)} y1={yOf(p.high)} y2={H - PAD.b} stroke="var(--line)" strokeDasharray="2 3" />
+          <circle cx={xOf(p.month)} cy={yOf(p.expected)} r="3.5" fill="var(--paper)" stroke="var(--brand)" strokeWidth="2" />
+          <text x={xOf(p.month)} y={yOf(p.expected) - 10} textAnchor="middle" fontSize="10.5" fontWeight="700"
+            fill="var(--brand)" fontFamily="inherit" stroke="var(--paper)" strokeWidth="3" paintOrder="stroke">
+            {compact(p.expected)}
+          </text>
+          <text x={xOf(p.month)} y={H - PAD.b + 14} textAnchor="middle" fontSize="9.5" fill="var(--ink-4)" fontFamily="inherit">
+            {msLabel(p.month)}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}

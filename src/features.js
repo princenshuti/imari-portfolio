@@ -58,13 +58,6 @@ export const FEATURE_MODULES = [
     auto: (s) => (s.cashflows || []).length > 0 || (s.liabilities || []).length > 0,
   },
   {
-    key: 'projections',
-    label: 'Fast Forward projections',
-    hint: 'Net-worth projection scenarios.',
-    navIds: ['projections'],
-    auto: (s) => (s.goals || []).length > 0,
-  },
-  {
     key: 'retirement',
     label: 'Retirement',
     hint: 'RSSB / Ejo Heza readiness and trajectory.',
