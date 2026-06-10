@@ -195,6 +195,14 @@ export function parseAssetExcel(file) {
     const reader = new FileReader();
     reader.onload = async e => {
       try {
+        // ExcelJS reads only the zip-based .xlsx — check the actual bytes so a
+        // legacy .xls or a renamed HTML/PDF gets a human error, not raw JSZip.
+        const head = new Uint8Array(e.target.result.slice(0, 4));
+        if (!(head[0] === 0x50 && head[1] === 0x4B && head[2] === 0x03 && head[3] === 0x04)) {
+          throw new Error(head[0] === 0xD0 && head[1] === 0xCF
+            ? 'This is the old binary Excel format (.xls). Open it in Excel and save as .xlsx, then import again.'
+            : 'This isn’t an Excel (.xlsx) file. Download the template, fill it in, and upload that file.');
+        }
         const ExcelJS = (await import('exceljs')).default;
         const wb = new ExcelJS.Workbook();
         // load() safely parses OOXML — ExcelJS does not eval() content

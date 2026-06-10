@@ -11,23 +11,29 @@ import { completeText } from '../ai.js';
 // ─── File-type dispatcher ────────────────────────────────────────────────────
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB — covers a year of MoMo
 
-export function parseFile(file) {
-  if (!file) return Promise.reject(new Error('No file provided'));
+// Banks lie in file extensions: Equity/BK portals export HTML tables or the
+// legacy binary format named ".xls", and ExcelJS only reads the zip-based
+// .xlsx — feeding it anything else surfaces a raw JSZip error. So dispatch on
+// the file's actual leading bytes, never on its name.
+export async function parseFile(file) {
+  if (!file) throw new Error('No file provided');
   if (file.size > MAX_BYTES) {
-    return Promise.reject(new Error(`File too large (max ${MAX_BYTES / 1024 / 1024} MB). Export a shorter date range.`));
+    throw new Error(`File too large (max ${MAX_BYTES / 1024 / 1024} MB). Export a shorter date range.`);
   }
-  const name = (file.name || '').toLowerCase();
-  if (name.endsWith('.xlsx') || name.endsWith('.xls')) return parseExcel(file);
-  return readText(file).then(parseCSV);
-}
+  const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  const startsWith = (...bytes) => bytes.every((b, i) => head[i] === b);
 
-function readText(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = () => reject(r.error || new Error('Could not read file'));
-    r.readAsText(file);
-  });
+  if (startsWith(0x50, 0x4B, 0x03, 0x04)) return parseExcel(file); // zip container = real .xlsx
+  if (startsWith(0xD0, 0xCF, 0x11, 0xE0)) {
+    throw new Error('This is the old binary Excel format (.xls), which Imari can’t read. Open it in Excel and save as .xlsx, or export CSV from your bank portal.');
+  }
+  if (startsWith(0x25, 0x50, 0x44, 0x46)) { // %PDF
+    throw new Error('PDF statements aren’t supported yet. Export the statement as Excel (.xlsx) or CSV from your bank portal instead.');
+  }
+
+  const text = await file.text();
+  if (/<table[\s>]/i.test(text)) return parseHTMLTable(text); // HTML table dressed as .xls
+  return parseCSV(text);
 }
 
 // ─── CSV / TSV parser ────────────────────────────────────────────────────────
@@ -59,8 +65,7 @@ export function parseCSV(text) {
   // First row whose cells look like a recognisable header
   let headerIdx = 0;
   for (let i = 0; i < Math.min(8, lines.length); i++) {
-    const lower = lines[i].toLowerCase();
-    if (/date|amount|debit|credit|description|narrat|money in|money out|received|sent/.test(lower)) {
+    if (HEADER_HINT.test(lines[i])) {
       headerIdx = i;
       break;
     }
@@ -78,65 +83,97 @@ export function parseCSV(text) {
   return { headers, rawHeaders, rows };
 }
 
+// ─── HTML-table parser ───────────────────────────────────────────────────────
+// Several Rwandan bank portals "export to Excel" by serving an HTML <table>
+// with a .xls filename. Regex extraction (not DOMParser) keeps this testable
+// in the node Vitest environment; bank exports are machine-generated and
+// regular enough for it.
+const HEADER_HINT = /date|amount|debit|credit|description|narrat|money in|money out|received|sent/i;
+
+export function parseHTMLTable(html) {
+  const decode = s => s
+    .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#0?39;/g, "'")
+    .replace(/\s+/g, ' ').trim();
+  const cellsOf = tr => [...tr.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]\s*>/gi)]
+    .map(m => decode(m[1].replace(/<[^>]+>/g, ' ')));
+
+  for (const [table] of html.matchAll(/<table[\s\S]*?<\/table\s*>/gi)) {
+    const rowsCells = [...table.matchAll(/<tr[\s\S]*?<\/tr\s*>/gi)]
+      .map(([tr]) => cellsOf(tr))
+      .filter(cells => cells.length);
+    const headerIdx = rowsCells.findIndex(cells => HEADER_HINT.test(cells.join(' ')));
+    if (headerIdx === -1) continue;
+
+    const headers = rowsCells[headerIdx];
+    const rows = rowsCells.slice(headerIdx + 1).map(cells => {
+      const row = {};
+      headers.forEach((h, i) => { row[h] = (cells[i] || '').trim(); });
+      return row;
+    }).filter(r => Object.values(r).some(v => v));
+    if (rows.length) return { headers, rawHeaders: headers, rows };
+  }
+  throw new Error('This file is a web page without a recognisable transaction table. Export the statement as CSV or Excel (.xlsx) instead.');
+}
+
 // ─── Excel parser (lazy-loaded — exceljs only fetched when used) ─────────────
-export function parseExcel(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        const ExcelJS = (await import('exceljs')).default;
-        const wb = new ExcelJS.Workbook();
-        await wb.xlsx.load(ev.target.result);
+export async function parseExcel(file) {
+  try {
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
 
-        // Prefer a sheet that looks like a statement (has "statement" / "transaction"
-        // in the name), otherwise take the first non-empty sheet.
-        const ws =
-          wb.worksheets.find(s => /statement|transaction|trans/i.test(s.name)) ||
-          wb.worksheets.find(s => s.rowCount > 1) ||
-          wb.worksheets[0];
-        if (!ws) throw new Error('No usable sheet found in this workbook.');
+    // Prefer a sheet that looks like a statement (has "statement" / "transaction"
+    // in the name), otherwise take the first non-empty sheet.
+    const ws =
+      wb.worksheets.find(s => /statement|transaction|trans/i.test(s.name)) ||
+      wb.worksheets.find(s => s.rowCount > 1) ||
+      wb.worksheets[0];
+    if (!ws) throw new Error('No usable sheet found in this workbook.');
 
-        // Find the header row: scan first 12 rows for one with recognisable column names.
-        let headerRowNum = 1;
-        for (let r = 1; r <= Math.min(12, ws.rowCount); r++) {
-          const cells = [];
-          ws.getRow(r).eachCell({ includeEmpty: true }, c => cells.push(String(cellText(c.value) || '').toLowerCase()));
-          const joined = cells.join(' | ');
-          if (/date|amount|debit|credit|description|narrat|money in|money out|received|sent/.test(joined)) {
-            headerRowNum = r;
-            break;
-          }
-        }
-
-        const headers = [];
-        ws.getRow(headerRowNum).eachCell({ includeEmpty: true }, (c, idx) => {
-          headers[idx - 1] = String(cellText(c.value) || '').trim();
-        });
-        // Trim empty trailing columns
-        while (headers.length && !headers[headers.length - 1]) headers.pop();
-        if (!headers.length) throw new Error('Could not find a header row in this Excel file.');
-
-        const rows = [];
-        const lastRow = ws.rowCount;
-        for (let r = headerRowNum + 1; r <= lastRow; r++) {
-          const row = {};
-          let hasAny = false;
-          headers.forEach((h, i) => {
-            const v = cellText(ws.getRow(r).getCell(i + 1).value);
-            row[h] = v;
-            if (v !== '' && v != null) hasAny = true;
-          });
-          if (hasAny) rows.push(row);
-        }
-
-        resolve({ headers, rawHeaders: headers, rows });
-      } catch (err) {
-        reject(err instanceof Error ? err : new Error(String(err)));
+    // Find the header row: scan first 12 rows for one with recognisable column names.
+    let headerRowNum = 1;
+    for (let r = 1; r <= Math.min(12, ws.rowCount); r++) {
+      const cells = [];
+      ws.getRow(r).eachCell({ includeEmpty: true }, c => cells.push(String(cellText(c.value) || '').toLowerCase()));
+      const joined = cells.join(' | ');
+      if (HEADER_HINT.test(joined)) {
+        headerRowNum = r;
+        break;
       }
-    };
-    reader.onerror = () => reject(reader.error || new Error('Could not read Excel file'));
-    reader.readAsArrayBuffer(file);
-  });
+    }
+
+    const headers = [];
+    ws.getRow(headerRowNum).eachCell({ includeEmpty: true }, (c, idx) => {
+      headers[idx - 1] = String(cellText(c.value) || '').trim();
+    });
+    // Trim empty trailing columns
+    while (headers.length && !headers[headers.length - 1]) headers.pop();
+    if (!headers.length) throw new Error('Could not find a header row in this Excel file.');
+
+    const rows = [];
+    const lastRow = ws.rowCount;
+    for (let r = headerRowNum + 1; r <= lastRow; r++) {
+      const row = {};
+      let hasAny = false;
+      headers.forEach((h, i) => {
+        const v = cellText(ws.getRow(r).getCell(i + 1).value);
+        row[h] = v;
+        if (v !== '' && v != null) hasAny = true;
+      });
+      if (hasAny) rows.push(row);
+    }
+
+    return { headers, rawHeaders: headers, rows };
+  } catch (err) {
+    // JSZip's "end of central directory" means a damaged/truncated zip —
+    // translate it; the raw message reads like a stack trace to users.
+    const raw = String((err && err.message) || err);
+    if (/central directory|zip/i.test(raw)) {
+      throw new Error('This Excel file looks damaged or incomplete. Re-download it from your bank portal, or export CSV instead.');
+    }
+    throw err instanceof Error ? err : new Error(raw);
+  }
 }
 
 // Unwrap ExcelJS rich-text / formula / date cell values into plain strings or dates.
