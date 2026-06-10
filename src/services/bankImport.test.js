@@ -28,10 +28,31 @@ describe('parseFile content sniffing', () => {
     expect(rows[1].Credit).toBe('850,000');
   });
 
-  it('rejects legacy binary .xls with a human message', async () => {
+  it('parses legacy binary .xls (BIFF) via SheetJS', async () => {
+    const mod = await import('xlsx');
+    const XLSX = mod.default ?? mod;
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Bank of Kigali', '', '', ''], // preamble above the header row
+      ['Date', 'Description', 'Debit', 'Credit'],
+      ['02/06/2026', 'Fuel', 30000, ''],
+      ['03/06/2026', 'Salary', '', 850000],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Statement');
+    const buf = XLSX.write(wb, { bookType: 'xls', type: 'array' });
+    expect(new Uint8Array(buf.slice(0, 2))).toEqual(new Uint8Array([0xD0, 0xCF])); // really OLE2
+
+    const { headers, rows } = await parseFile(file(buf, 'statement.xls'));
+    expect(headers).toEqual(['Date', 'Description', 'Debit', 'Credit']);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ Description: 'Fuel', Debit: '30000' });
+    expect(rows[1].Credit).toBe('850000');
+  });
+
+  it('translates a corrupt .xls instead of leaking a parser error', async () => {
     const ole2 = new Uint8Array([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]);
     await expect(parseFile(file(ole2, 'statement.xls')))
-      .rejects.toThrow(/old binary Excel format.*\.xlsx|csv/i);
+      .rejects.toThrow(/could not be read/);
   });
 
   it('rejects a PDF with a human message', async () => {

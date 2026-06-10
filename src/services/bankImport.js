@@ -24,9 +24,7 @@ export async function parseFile(file) {
   const startsWith = (...bytes) => bytes.every((b, i) => head[i] === b);
 
   if (startsWith(0x50, 0x4B, 0x03, 0x04)) return parseExcel(file); // zip container = real .xlsx
-  if (startsWith(0xD0, 0xCF, 0x11, 0xE0)) {
-    throw new Error('This is the old binary Excel format (.xls), which Imari can’t read. Open it in Excel and save as .xlsx, or export CSV from your bank portal.');
-  }
+  if (startsWith(0xD0, 0xCF, 0x11, 0xE0)) return parseLegacyXls(file); // OLE2 = legacy binary .xls
   if (startsWith(0x25, 0x50, 0x44, 0x46)) { // %PDF
     throw new Error('PDF statements aren’t supported yet. Export the statement as Excel (.xlsx) or CSV from your bank portal instead.');
   }
@@ -174,6 +172,42 @@ export async function parseExcel(file) {
     }
     throw err instanceof Error ? err : new Error(raw);
   }
+}
+
+// ─── Legacy .xls parser (lazy-loaded — SheetJS only fetched when used) ───────
+// ExcelJS reads only zip-based .xlsx; several banks still export BIFF .xls.
+// SheetJS is pinned to the official cdn.sheetjs.com 0.20.3 build — the npm
+// registry copy is an unpatched 0.18.5 with known CVEs. Keep it that way.
+async function parseLegacyXls(file) {
+  let grid, sheetNames;
+  try {
+    const mod = await import('xlsx');
+    const XLSX = mod.default ?? mod;
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+    sheetNames = wb.SheetNames;
+    const name = sheetNames.find(n => /statement|transaction|trans/i.test(n)) || sheetNames[0];
+    grid = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' })
+      .map(cells => cells.map(v => v instanceof Date ? v.toISOString() : String(v ?? '').trim()));
+  } catch {
+    throw new Error('This Excel file could not be read. Re-download it from your bank portal, or export CSV instead.');
+  }
+  if (!grid.length) throw new Error('No usable sheet found in this workbook.');
+
+  // Same header heuristic as the other parsers: first row in the opening
+  // stretch with recognisable statement columns; otherwise row 1.
+  const found = grid.slice(0, 12).findIndex(cells => HEADER_HINT.test(cells.join(' | ')));
+  const headerIdx = found === -1 ? 0 : found;
+  const headers = [...grid[headerIdx]];
+  while (headers.length && !headers[headers.length - 1]) headers.pop();
+  if (!headers.some(Boolean)) throw new Error('Could not find a header row in this Excel file.');
+
+  const rows = grid.slice(headerIdx + 1).map(cells => {
+    const row = {};
+    headers.forEach((h, i) => { row[h] = cells[i] ?? ''; });
+    return row;
+  }).filter(r => Object.values(r).some(v => v));
+
+  return { headers, rawHeaders: headers, rows };
 }
 
 // Unwrap ExcelJS rich-text / formula / date cell values into plain strings or dates.
