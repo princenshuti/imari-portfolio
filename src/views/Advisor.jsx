@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { CLASSES, FX, valueRWF, costRWF, suggestValue, toBase } from '../data.js';
+import { CLASSES, FX, TREND_DOMAINS, valueRWF, costRWF, suggestValue, toBase } from '../data.js';
 import { getApiKey } from '../ai.js';
 import { completeChat } from '../ai.js';
 import { runInsights } from '../engine/insights/index.js';
+import { REFERENCE } from '../engine/insights/refs.js';
+import { useMarket } from '../contexts/MarketContext.jsx';
 
 function escapeHTML(s) {
   return s.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -208,6 +210,10 @@ export default function AdvisorView({ state, dispatch }) {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [chat, pending]);
 
+  // Live/reference market data — the advisor was previously blind to current
+  // conditions and could only discuss the portfolio in a vacuum.
+  const { market, overrides, fetchedAt } = useMarket();
+
   const portfolioContext = useMemo(() => {
     const today = new Date();
     const totalRWF = assets.reduce((s, a) => s + valueRWF(a, today), 0);
@@ -272,14 +278,45 @@ export default function AdvisorView({ state, dispatch }) {
       country: 'Rwanda',
       regulators: { central: 'BNR', markets: 'CMA', tax: 'RRA', pension: 'RSSB' },
       taxNotes: 'RRA progressive PAYE: 0% up to 60k RWF/mo, 20% 60-100k, 30% above 100k. Capital gains on shares held <12mo. Govt bond interest favourably treated.',
+      // Current market conditions, provenance-tagged. live = fetched from an
+      // API just now; reference = manually sourced from official publications
+      // (no public API exists); modeled = an estimate, say so when citing.
+      marketConditions: {
+        dataFetchedAt: fetchedAt ? new Date(fetchedAt).toISOString() : null,
+        bnrFx: market?.bnrRates
+          ? Object.fromEntries(Object.entries(market.bnrRates).map(([ccy, r]) => [ccy, {
+              buyRWF: r.buy, sellRWF: r.sell, midRWF: r.avg, rateDate: r.date,
+              provenance: 'BNR official daily rate',
+            }]))
+          : null,
+        indicators: TREND_DOMAINS.map(d => {
+          const o = overrides?.[d.id];
+          return {
+            id: d.id,
+            name: d.label,
+            value: o?.value ?? d.value,
+            unit: d.unit || null,
+            changePct: o?.change ?? d.change ?? null,
+            provenance: o?.live ? 'live' : d.dataKind === 'reference' ? 'reference (official publication, manually sourced)' : 'modeled estimate',
+            source: o?.source || d.source,
+          };
+        }),
+        referenceBenchmarks: {
+          tBillYieldPct: REFERENCE.tBillYieldPct,
+          cpiYoYPct: REFERENCE.cpiYoYPct,
+          idleYieldThresholdPct: REFERENCE.idleYieldThresholdPct,
+          concentrationGuidePct: REFERENCE.concentrationPct,
+        },
+      },
     };
-  }, [assets, profile, state]);
+  }, [assets, profile, state, market, overrides, fetchedAt]);
 
   const systemPrompt = useMemo(() => `You are Imari Advisor — an AI financial assistant for ${profile.name || 'the user'} in Rwanda.
 You can see their full portfolio in the context below. Be concrete, cite the user's specific assets and numbers when relevant.
 Reply in plain English, short paragraphs. Use Markdown-style **bold** for emphasis but no headings.
 Display amounts in their primary currency (${profile.displayCurrency}) unless quoting an asset's own currency.
 Be honest: Rwanda-specific regulations (BNR, CMA, RRA, RSSB) inform your reasoning. Not professional advice.
+MARKET GROUNDING: the context includes "marketConditions" — current BNR FX buy/sell rates, Rwanda macro indicators (CPI, BNR repo rate, RSE index, gold, crypto), and reference benchmarks (T-bill yield, CPI). Advice must connect the portfolio to these conditions: real (inflation-adjusted) returns vs CPI, FX exposure vs the RWF/USD rate, idle cash vs the T-bill yield, equity positions vs the RSE index. Always cite the figure you used and its provenance ("live", "reference", or "modeled") and rate date where given. NEVER quote a market rate, yield, or index level from memory — if it is not in marketConditions, say you don't have it.
 If asked about live market prices you don't have, say so and suggest the user update the asset's last price.
 The context includes a "precomputedInsights" list from Imari's deterministic engine — prefer those facts and figures over re-deriving your own; explain and prioritize them, never contradict or invent numbers.
 NUMBERS: use "totals" and "allocationByGroup" exactly as given — never recompute totals, percentages, or concentration yourself (asset values are in mixed currencies; the RWF figures and percentages provided are the only correct ones). "netWorthRWF" already subtracts liabilities. Allocation/concentration percentages are % of total assets — quote them that way, matching the dashboard.
