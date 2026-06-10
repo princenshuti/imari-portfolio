@@ -272,13 +272,13 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
 
         {/* X-axis labels */}
         {xLabels.map((l, i) => (
-          <text key={i} x={l.x} y={H - 4} textAnchor="middle"
+          <text key={i} className="pc-axis" x={l.x} y={H - 4} textAnchor="middle"
             fontSize="9" fill="var(--ink-4)" fontFamily="inherit">{l.label}</text>
         ))}
 
         {/* Y-axis labels */}
         {yTicks.slice(1).map((v, i) => (
-          <text key={i} x={W - PAD.r + 4} y={yOf(v) + 4} fontSize="9"
+          <text key={i} className="pc-axis" x={W - PAD.r + 4} y={yOf(v) + 4} fontSize="9"
             fill="var(--ink-4)" fontFamily="inherit" textAnchor="start">
             {fromBase(v, displayCurrency) >= 1e6
               ? `${(fromBase(v, displayCurrency) / 1e6).toFixed(1)}M`
@@ -516,13 +516,13 @@ export function ProjectionFan({ points = [], displayCurrency = 'RWF', height = 2
       aria-label={`Modeled net-worth projection: ${marks.map(p => `${msLabel(p.month)} ≈ ${compact(p.expected)}`).join(', ')}. Band shows the low-to-high range.`}>
       <defs>
         <linearGradient id="fanBand" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.16" />
-          <stop offset="100%" stopColor="var(--brand)" stopOpacity="0.04" />
+          <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.26" />
+          <stop offset="100%" stopColor="var(--brand)" stopOpacity="0.07" />
         </linearGradient>
       </defs>
       <path d={band} fill="url(#fanBand)" />
-      <path d={line('low')} stroke="var(--brand)" strokeWidth="1" fill="none" opacity="0.35" />
-      <path d={line('high')} stroke="var(--brand)" strokeWidth="1" fill="none" opacity="0.35" />
+      <path d={line('low')} stroke="var(--brand)" strokeWidth="1.25" fill="none" opacity="0.55" strokeDasharray="2 3" />
+      <path d={line('high')} stroke="var(--brand)" strokeWidth="1.25" fill="none" opacity="0.55" strokeDasharray="2 3" />
       <path d={line('expected')} stroke="var(--brand)" strokeWidth="2.5" fill="none" strokeDasharray="6 4" strokeLinecap="round" />
       <circle cx={xOf(0)} cy={yOf(points[0].expected)} r="4" fill="var(--brand)" stroke="var(--paper)" strokeWidth="2" />
       <text x={xOf(0) + 6} y={yOf(points[0].expected) - 8} fontSize="9.5" fontWeight="600" fill="var(--ink-3)" fontFamily="inherit">Today</text>
@@ -530,11 +530,11 @@ export function ProjectionFan({ points = [], displayCurrency = 'RWF', height = 2
         <g key={p.month} aria-hidden="true">
           <line x1={xOf(p.month)} x2={xOf(p.month)} y1={yOf(p.high)} y2={H - PAD.b} stroke="var(--line)" strokeDasharray="2 3" />
           <circle cx={xOf(p.month)} cy={yOf(p.expected)} r="3.5" fill="var(--paper)" stroke="var(--brand)" strokeWidth="2" />
-          <text x={xOf(p.month)} y={yOf(p.expected) - 10} textAnchor="middle" fontSize="10.5" fontWeight="700"
-            fill="var(--brand)" fontFamily="inherit" stroke="var(--paper)" strokeWidth="3" paintOrder="stroke">
+          <text x={xOf(p.month)} y={yOf(p.expected) - 11} textAnchor="middle" fontSize="13" fontWeight="700"
+            fill="var(--brand)" fontFamily="inherit" stroke="var(--paper)" strokeWidth="4" paintOrder="stroke">
             {compact(p.expected)}
           </text>
-          <text x={xOf(p.month)} y={H - PAD.b + 14} textAnchor="middle" fontSize="9.5" fill="var(--ink-4)" fontFamily="inherit">
+          <text x={xOf(p.month)} y={H - PAD.b + 15} textAnchor="middle" fontSize="10.5" fontWeight="600" fill="var(--ink-3)" fontFamily="inherit">
             {msLabel(p.month)}
           </text>
         </g>

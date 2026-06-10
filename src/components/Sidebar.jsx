@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fmtBase, toBase } from '../data.js';
 import { signOut } from '../cloud.js';
-import { MaxventuresIcon } from './MaxventuresLogo.jsx';
+import ImariMark from './ImariMark.jsx';
 import { navItemsByGroup } from '../nav.js';
 import { useT } from '../contexts/I18nContext.jsx';
 import { useInsights } from '../contexts/InsightsContext.jsx';
@@ -90,7 +90,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-2)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
         >
-          <MaxventuresIcon size={collapsed ? 30 : 38} id="sidebar-mv" />
+          <ImariMark size={collapsed ? 30 : 38} />
           {!collapsed && (
             <div>
               <div className="font-serif" style={{ fontSize: 21, lineHeight: 1, letterSpacing: '-0.02em' }}>Imari</div>

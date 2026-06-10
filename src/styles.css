@@ -1533,12 +1533,6 @@ input:focus, select:focus, textarea:focus {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.landing-footer-logo {
-  height: 22px;
-  width: auto;
-  opacity: 0.7;
-}
-
 /* ── Entry animation ──────────────────────────────────────────── */
 @keyframes landing-fade-up {
   from { opacity: 0; transform: translateY(12px); }
@@ -1729,4 +1723,37 @@ input:focus, select:focus, textarea:focus {
   .hover-actions .row-actions { opacity: 0; transition: opacity 0.13s ease-out; }
   .hover-actions:hover .row-actions,
   .hover-actions:focus-within .row-actions { opacity: 1; }
+}
+
+
+/* ── Round-3 mobile pass ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* #6 — numbers first: hero (order 10) leads, the advisor banner/strip
+     (order 11) follows it, remaining sections continue (12+), Arrange last. */
+  .dash-flow { display: flex; flex-direction: column; }
+  .dash-flow > div[style*="order: 9"] { order: 99 !important; }
+
+  /* #9 — chart axis labels are illegible noise at 390px; the range pill
+     carries the context. */
+  .pc-axis { display: none; }
+
+  /* #8 — the advisor FAB is redundant on mobile: AI Advisor sits in the
+     bottom tab bar one tap away, and Discuss buttons still open the panel. */
+  .fa-launcher { display: none !important; }
+}
+
+
+/* Mobile assets toolbar (round-3 #7): chips scroll on one line; the Excel
+   template download is a desktop workflow. */
+@media (max-width: 768px) {
+  .only-desktop { display: none !important; }
+  .assets-chip-row {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .assets-chip-row::-webkit-scrollbar { display: none; }
+  .assets-chip-row > * { flex-shrink: 0; }
 }

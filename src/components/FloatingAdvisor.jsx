@@ -405,7 +405,7 @@ You are a financial advisor. Only answer financial questions grounded in the dat
 
       {/* ── FAB trigger button ──────────────────────────────────────────────── */}
       <button
-        className="fa-btn"
+        className="fa-launcher fa-btn"
         onMouseDown={onMouseDown}
         aria-label={open ? 'Close Imari AI Advisor' : 'Open Imari AI Advisor'}
         aria-expanded={open}

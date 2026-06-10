@@ -283,15 +283,15 @@ export default function AssetsView({ state, dispatch, showToast }) {
           {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
-        <button onClick={downloadAssetTemplate} className="btn btn-ghost" title="Download an Excel template for bulk import">↓ Template</button>
-        <button onClick={() => fileRef.current?.click()} className="btn btn-ghost" title="Import filled-in Excel template">↑ Import</button>
+        <button onClick={downloadAssetTemplate} className="btn btn-ghost only-desktop" title="Download an Excel template for bulk import">↓ Template</button>
+        <button onClick={() => fileRef.current?.click()} className="btn btn-ghost" title="Import filled-in Excel template (template available on desktop)">↑ Import</button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
           onChange={e => e.target.files?.[0] && handleImport(e.target.files[0])} />
         <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add asset</button>
       </div>
 
-      {/* ─ Filter chips row ────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* ─ Filter chips row — one scrollable line on mobile (round-3 #7) ── */}
+      <div className="assets-chip-row" style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {/* Type chips — All + each group that has assets */}
         {['all', ...ALL_GROUPS.filter(g => groups.some(gr => gr.group === g))].map(g => {
           const isActive = typeFilter === g;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase.js';
+import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 
 export default function ResetPassword({ onDone, session }) {
   const [password, setPassword] = useState('');
@@ -100,11 +101,7 @@ export default function ResetPassword({ onDone, session }) {
           <div className="muted" style={{ fontSize: 10, marginBottom: 8, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             Powered by
           </div>
-          <img
-            src={`${import.meta.env.BASE_URL}maxventures-logo.png`}
-            alt="Maxventures"
-            style={{ width: 120, opacity: 0.85, display: 'inline-block' }}
-          />
+          <MaxventuresWordmark />
         </div>
       </div>
     </div>

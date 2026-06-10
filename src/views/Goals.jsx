@@ -456,7 +456,11 @@ export default function GoalsView({ state, dispatch }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}>
           {[
             { label: 'Active goals', value: active.length, sub: 'in progress' },
-            { label: 'Net worth', value: fmtBase(netWorth, profile.displayCurrency, { compact: true }), sub: 'assets − liabilities', isNum: true },
+            // Goal-specific, not a sidebar duplicate (round-3 #13): the total
+            // gap across active goals — the number this page exists to close.
+            { label: 'Still needed', value: fmtBase(
+                active.reduce((s, g) => s + Math.max(0, toBase(g.targetAmount || 0, g.currency || 'RWF') - currentValueFor(g)), 0),
+                profile.displayCurrency, { compact: true }), sub: 'across active goals', isNum: true },
             // "Closest to done" — goal with the highest % progress (per its
             // own funding type, so the math matches the card below). Picking
             // by deadline alone is misleading: a 1B target with a deadline is

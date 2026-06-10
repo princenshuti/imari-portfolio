@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useT } from '../contexts/I18nContext.jsx';
+import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 
 // Inline SVG icon set — Heroicons-style outline at 24x24
 function Icon({ name }) {
@@ -320,7 +321,7 @@ export default function Landing({ onSignIn }) {
           </div>
           <div className="landing-footer-meta">
             <span>{t('landing.footer.powered_by')}</span>
-            <img src={`${import.meta.env.BASE_URL}maxventures-logo.png`} alt="Maxventures" className="landing-footer-logo" />
+            <MaxventuresWordmark fontSize={11} />
           </div>
         </footer>
       </section>

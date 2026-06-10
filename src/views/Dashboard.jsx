@@ -345,7 +345,10 @@ const SECTION_META = {
   benchmarks: { label: 'Benchmarks & Goals',      canHide: true  },
   markets:    { label: 'Markets Watchlist',       canHide: true  },
 };
-const DEFAULT_SECTION_ORDER = ['hero','widgets','position','cashflow','financials','retirement','idlecash','macro','category','alerts','benchmarks','markets'];
+const DEFAULT_SECTION_ORDER = ['hero','widgets','position','cashflow','alerts','financials','retirement','idlecash','macro','category','benchmarks','markets'];
+// Hidden by default — shown via Arrange. The five-section default is the
+// whole "minimal" thesis; power users opt back in per section.
+const DEFAULT_HIDDEN_SECTIONS = ['financials','retirement','idlecash','macro','category','benchmarks','markets'];
 
 function useDashboardLayout() {
   const [order, setOrder] = useState(() => {
@@ -362,10 +365,13 @@ function useDashboardLayout() {
   });
   const [hidden, setHidden] = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem('imari-dash-hidden') || '[]');
+      const s = JSON.parse(localStorage.getItem('imari-dash-hidden'));
       if (Array.isArray(s)) return new Set(s);
     } catch {}
-    return new Set();
+    // Round-3 design edit: the dashboard ships a five-section story (state →
+    // metrics → position → spending → alerts). Everything else is one
+    // "Arrange" tap away — opt-in, not default noise.
+    return new Set(DEFAULT_HIDDEN_SECTIONS);
   });
   const [editMode, setEditMode] = useState(false);
 
@@ -401,7 +407,7 @@ function useDashboardLayout() {
   return { order, hidden, editMode, setEditMode, reorder, toggleHide, resetLayout };
 }
 
-function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReorder, onToggleHide, children }) {
+function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReorder, onToggleHide, mobileOrder, children }) {
   const [dragOver, setDragOver] = useState(false);
   const collapsed = isHidden || !hasData;
 
@@ -426,6 +432,7 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReord
         outlineOffset: 4,
         borderRadius: 12,
         transition: 'outline-color 0.1s ease',
+        order: mobileOrder, // only takes effect in the mobile flex column
         cursor: editMode ? 'grab' : 'default',
       }}
     >
@@ -503,6 +510,30 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     return candidates[0];
   }, [engine, state, dismissedSet]);
   const dismissCost = engine.dismiss;
+
+  // Calm-vs-alarm policy (round-3 #5): the full-width red card fires only the
+  // first time a critical finding appears (or when it escalates). After that
+  // it lives in the strip + Advice Center like everything else. Seen-tracking
+  // is deliberately per-device (localStorage): "I've absorbed this alarm" is
+  // a reading state, not portfolio data.
+  const SEEN_KEY = 'imari:bannerSeen:v1';
+  const bannerIsNew = useMemo(() => {
+    if (!pinnedCost || pinnedCost.costOfAbsence?.severity !== 'critical') return false;
+    try {
+      const seen = JSON.parse(localStorage.getItem(SEEN_KEY) || '{}');
+      const rec = seen[pinnedCost.id];
+      const fresh = rec && (Date.now() - new Date(rec.at).getTime()) < 14 * 86400000;
+      return !(fresh && SEVERITY_RANK[rec.sev] >= SEVERITY_RANK[pinnedCost.costOfAbsence.severity]);
+    } catch { return true; }
+  }, [pinnedCost]);
+  useEffect(() => {
+    if (!pinnedCost || !bannerIsNew) return;
+    try {
+      const seen = JSON.parse(localStorage.getItem(SEEN_KEY) || '{}');
+      seen[pinnedCost.id] = { sev: pinnedCost.costOfAbsence.severity, at: new Date().toISOString() };
+      localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+    } catch {}
+  }, [pinnedCost, bannerIsNew]);
 
   // Live market overrides for the "Markets you watch" watchlist. Reads from the
   // same context Trends uses, so USD/RWF (and crypto, gold, S&P) shows the same
@@ -963,7 +994,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 )}
               </div>
             </div>
-            <div className="row" style={{ gap: 6 }}>
+            <div className="row" style={{ gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
                 <button key={r} onClick={() => { setProjMode(false); setChartRange(r); }} className="dash-btn-range" style={{
                   padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
@@ -974,7 +1005,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               ))}
               {/* Fast Forward lives here now — the same chart, continued past today */}
               <button onClick={() => setProjMode(v => !v)} className="dash-btn-range" aria-pressed={projMode} style={{
-                padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
+                padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                 background: projMode ? 'var(--gold)' : 'var(--gold-soft)',
                 color: projMode ? '#fff' : 'var(--gold-ink)',
                 border: 0, fontFamily: 'inherit', fontWeight: 600,
@@ -1364,48 +1395,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             </div>
           </div>
 
-          {/* Return by asset class */}
-          {Object.keys(fs.returnByClass).length > 0 && (
-            <div className="card" style={{ padding: '20px 22px' }}>
-              <div className="font-serif" style={{ fontSize: 17, marginBottom: 14 }}>Return by asset class</div>
-              <div className="col" style={{ gap: 12 }}>
-                {Object.entries(fs.returnByClass)
-                  .map(([group, d]) => ({
-                    group, color: d.color,
-                    retPct: d.cost > 0 ? ((d.value - d.cost) / d.cost * 100) : 0,
-                    value: d.value,
-                  }))
-                  .sort((a, b) => b.retPct - a.retPct)
-                  .map((r, i) => {
-                    const isUp = r.retPct >= 0;
-                    return (
-                      <div key={i}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
-                            <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{r.group}</span>
-                          </div>
-                          <span className="num" style={{ fontSize: 12, fontWeight: 700, color: isUp ? 'var(--up)' : 'var(--down)' }}>
-                            <span aria-hidden="true" style={{ marginRight: 3 }}>{isUp ? '▲' : '▼'}</span>{isUp ? '+' : ''}{r.retPct.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div style={{ height: 4, background: 'var(--bg-2)', borderRadius: 2, overflow: 'hidden' }}>
-                          <div style={{
-                            height: '100%', borderRadius: 2,
-                            width: Math.min(Math.abs(r.retPct) / Math.max(...Object.values(fs.returnByClass).map(d => d.cost > 0 ? Math.abs((d.value - d.cost) / d.cost * 100) : 0), 1) * 100, 100) + '%',
-                            background: isUp ? r.color : 'var(--down)',
-                            transition: 'width 0.6s cubic-bezier(0.23,1,0.32,1)',
-                          }} />
-                        </div>
-                        <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>
-                          {fmtBase(r.value, profile.displayCurrency, { compact: true })} value
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          )}
         </div>
       );
     })() : null,
@@ -1470,7 +1459,13 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       return (
         <div>
           <div className="font-serif" style={{ fontSize: 19, marginBottom: 4 }}>Your personal macro</div>
-          <div className="muted" style={{ fontSize: 11, marginBottom: 14 }}>How Rwanda's economy lands on your money — not the headlines.</div>
+          <div style={{ fontSize: 12.5, marginBottom: 14, color: 'var(--ink-2)' }}>
+            {m.personalized && Math.abs(m.personalCpi - m.headlineCpi) >= 0.3 ? (
+              <>Your inflation runs <strong style={{ color: m.personalCpi > m.headlineCpi ? 'var(--down)' : 'var(--up)' }}>{m.personalCpi.toFixed(1)}%</strong> — {m.personalCpi > m.headlineCpi ? 'faster' : 'slower'} than the national {m.headlineCpi}%.</>
+            ) : (
+              <>How Rwanda's economy lands on your money — not the headlines.</>
+            )}
+          </div>
           <div className="row" style={{ gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
             {/* Personal inflation */}
             <Card title={
@@ -1675,7 +1670,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
   };
 
   return (
-    <div className="dash-page">
+    <div className="dash-page dash-flow">
 
       {/* Keyframes */}
       <style>{`
@@ -1698,13 +1693,13 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           CostOfAbsence treatment is reserved for CRITICAL findings; everything
           else is a calm one-line strip that deep-links to the Advice Center —
           the single canonical surface for recommendations. */}
-      {pinnedCost && pinnedCost.costOfAbsence?.severity !== 'critical' ? (
+      {pinnedCost && !bannerIsNew ? (
         <button
           type="button"
           onClick={() => dispatch({ type: 'nav', to: 'advisor' })}
           className="dash-advisor-strip"
           style={{
-            all: 'unset', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 10,
+            all: 'unset', boxSizing: 'border-box', order: 11, display: 'flex', alignItems: 'center', gap: 10,
             width: '100%', padding: '11px 16px', marginBottom: 16, cursor: 'pointer',
             borderRadius: 'var(--r-lg)', background: 'var(--paper)',
             border: '0.5px solid var(--line)', boxShadow: 'var(--shadow-1)',
@@ -1727,6 +1722,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         </button>
       ) : pinnedCost ? (
         <CostOfAbsence
+          style={{ order: 11 }}
           severity={pinnedCost.costOfAbsence.severity}
           headline={pinnedCost.headline}
           costStatement={pinnedCost.costOfAbsence.costStatement}
@@ -1752,7 +1748,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       ) : null}
 
       {/* ── Arrange button ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: editMode ? 10 : 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: editMode ? 10 : 8, order: 9 }}>
         <button
           className="dash-arrange-btn"
           onClick={() => setEditMode(e => !e)}
@@ -1814,7 +1810,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       )}
 
       {/* ── Sections (order + visibility driven by useDashboardLayout) ── */}
-      {order.map(id => {
+      {order.map((id, sectionIdx) => {
         const content = sectionContent[id];
         if (!editMode && !content) return null; // data-conditional: skip when no data
         return (
@@ -1826,6 +1822,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             isHidden={hidden.has(id)}
             hasData={!!content}
             editMode={editMode}
+            mobileOrder={10 + sectionIdx * 2}
             onReorder={reorder}
             onToggleHide={toggleHide}
           >

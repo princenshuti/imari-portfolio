@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { signIn, signUp, resetPassword, isConfigured } from '../cloud.js';
 import { useT } from '../contexts/I18nContext.jsx';
+import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 
 export default function Login({ pendingInvite, initialMode = 'signin' }) {
   const { t } = useT();
@@ -199,11 +200,9 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
           <div className="muted" style={{ fontSize: 10, marginBottom: 8, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             Powered by
           </div>
-          <img
-            src={`${import.meta.env.BASE_URL}maxventures-logo.png`}
-            alt="Maxventures"
-            style={{ width: 120, opacity: 0.85, display: 'inline-block' }}
-          />
+          {/* Monochrome wordmark — the color bitmap carried a baked-in white
+              box that clashed with the cream surface (design review #16). */}
+          <MaxventuresWordmark />
         </div>
       </div>
     </div>
