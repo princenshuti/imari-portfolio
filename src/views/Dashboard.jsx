@@ -17,6 +17,7 @@ import { staleNetWorthInsight, netWorthAsOf } from '../engine/freshness.js';
 import { REFERENCE } from '../engine/insights/refs.js';
 import { projectPension } from '../engine/retirement/index.js';
 import { budgetStatus } from '../engine/budgets.js';
+import { glossaryFor, GLOSSARY } from '../glossary.js';
 import CostOfAbsence from '../components/CostOfAbsence.jsx';
 import MetricWidget from '../components/MetricWidget.jsx';
 
@@ -1344,7 +1345,8 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               <CostOfAbsence severity="warning"
                 costStatement={`At your current contributions you'll replace only ${Math.floor(proj.replacementRatio)}% of income at 60 — below a comfortable 60%. Topping up Ejo Heza closes the gap.`}
                 action={{ label: 'Review pension', to: 'assets' }}
-                onAction={(to) => dispatch({ type: 'nav', to })} />
+                onAction={(to) => dispatch({ type: 'nav', to })}
+                terms={[{ id: 'replacement-ratio', ...GLOSSARY['replacement-ratio'] }]} />
             </div>
           )}
         </div>
@@ -1920,6 +1922,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           now={today}
           onAction={(to) => dispatch({ type: 'nav', to })}
           onDismiss={() => dismissCost(pinnedCost.id)}
+          terms={glossaryFor(pinnedCost.id)}
         />
       ) : assets.length > 0 ? (
         <div role="status" style={{

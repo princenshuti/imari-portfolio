@@ -15,6 +15,7 @@
  *   onDismiss()   optional dismiss handler → renders an accessible × control
  */
 import FreshnessChip from './FreshnessChip.jsx';
+import Explain from './Explain.jsx';
 
 const SEVERITY = {
   critical: { color: 'var(--down)', glyph: '⚠', label: 'Critical' },
@@ -24,7 +25,7 @@ const SEVERITY = {
 
 export default function CostOfAbsence({
   severity = 'info', headline, costStatement, action, asOf,
-  onAction, onDismiss, now, style,
+  onAction, onDismiss, now, style, terms,
 }) {
   if (!costStatement) return null; // never render an empty / sourceless card
   const s = SEVERITY[severity] || SEVERITY.info;
@@ -95,6 +96,10 @@ export default function CostOfAbsence({
           )}
           {asOf && <FreshnessChip asOf={asOf} type="netWorth" now={now} />}
         </div>
+
+        {/* F9 — education layer: plain-language explainers for the terms this
+            insight leans on. Click-to-open, never hover-only. */}
+        {terms?.length > 0 && <Explain entries={terms} style={{ marginTop: 12 }} />}
       </div>
 
       {onDismiss && (

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { CURRENCIES, MILESTONES, LIVE_FX, fmtNum, INCOME_CATEGORIES, EXPENSE_CATEGORIES, id as newId } from '../data.js';
 import { isValidRule } from '../engine/catRules.js';
+import { GLOSSARY } from '../glossary.js';
+import Explain from '../components/Explain.jsx';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { useT, SUPPORTED_LOCALES } from '../contexts/I18nContext.jsx';
 import { exportJSON, importJSONFile } from '../store.js';
@@ -809,6 +811,11 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
       <MilestoneSection profile={state.profile} dispatch={dispatch} showToast={showToast} />
 
       <CatRulesSection catRules={state.catRules || []} dispatch={dispatch} showToast={showToast} />
+
+      {/* F9 — the full glossary; the same explainers surface inline under insights. */}
+      <Section title="Glossary" subtitle="The terms Imari's insights use, in plain language. Tap one to read it.">
+        <Explain entries={Object.entries(GLOSSARY).map(([gid, e]) => ({ id: gid, ...e }))} />
+      </Section>
 
       <Section title="Tax & Reporting" subtitle="View your estimated Rwanda tax liability and capital gains breakdown.">
         <div className="row" style={{ gap: 10 }}>
