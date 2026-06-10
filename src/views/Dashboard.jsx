@@ -859,7 +859,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
 
       const widgets = [
         <MetricWidget key="cash" delay={0} title="Cash in Hand"
-          value={fmtBase(liquid, profile.displayCurrency, { compact: liquid > 1e7 })}
+          value={fmtBase(liquid, profile.displayCurrency, { compact: true })}
           subtext={months != null && months <= 120
             ? `${months.toFixed(1)} months of expenses`
             : months != null
@@ -871,14 +871,14 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       ];
       if (taxTotal > 0) widgets.push(
         <MetricWidget key="tax" delay={40} title="Tax Estimate"
-          value={fmtBase(taxTotal, profile.displayCurrency, { compact: taxTotal > 1e7 })}
+          value={fmtBase(taxTotal, profile.displayCurrency, { compact: true })}
           subtext={taxDays != null ? `next deadline in ${taxDays} days` : 'RRA obligations'}
           deepLink="tax" onNav={nav}
           severity={taxDays != null && taxDays <= 30 ? 'warning' : 'info'}
           costHook="Estimate, not a filing — late penalties accrue if a deadline is missed." />);
       if (liabilities.length > 0) widgets.push(
         <MetricWidget key="debt" delay={80} title="Debt"
-          value={fmtBase(totalDebt, profile.displayCurrency, { compact: totalDebt > 1e7 })}
+          value={fmtBase(totalDebt, profile.displayCurrency, { compact: true })}
           subtext={`${debtToAsset.toFixed(1)}% debt-to-asset`}
           deepLink="liabilities" onNav={nav}
           severity={debtToAsset > 50 ? 'warning' : 'info'}
@@ -898,7 +898,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               : undefined} />);
       widgets.push(
         <MetricWidget key="investable" delay={120} title="Investable"
-          value={fmtBase(investable, profile.displayCurrency, { compact: investable > 1e7 })}
+          value={fmtBase(investable, profile.displayCurrency, { compact: true })}
           subtext="liquid minus a 3-month buffer"
           deepLink="trends" onNav={nav}
           severity={investable > REFERENCE.idleCashFloorRWF ? 'warning' : 'good'}
@@ -933,7 +933,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             <div>
               <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Net worth</div>
               <div className="font-serif dash-hero-amount" style={{ lineHeight: 1, letterSpacing: '-0.025em' }}>
-                {fmtBase(trueNetWorth, profile.displayCurrency, { compact: trueNetWorth > 1e8 })}
+                {fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })}
               </div>
               <div className="row" style={{ gap: 10, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 {chartSnaps.length >= 2 && (
@@ -1278,7 +1278,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               <div>
                 <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Liquid balance</div>
                 <div className="num" style={{ fontSize: 26, fontWeight: 700 }}>
-                  {fmtBase(fs.liquidRWF, profile.displayCurrency, { compact: fs.liquidRWF > 1e8 })}
+                  {fmtBase(fs.liquidRWF, profile.displayCurrency, { compact: true })}
                 </div>
                 <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Cash + mobile money + bank savings</div>
               </div>

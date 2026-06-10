@@ -36,7 +36,7 @@ const GROUP_KEY = {
   'Tools':           'nav.group_tools',
 };
 
-export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [], visibleIds = null }) {
+export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [], visibleIds = null, momChange = null }) {
   const { t } = useT();
   const { count: adviceCount } = useInsights();
   // Progressive nav: only features the user enabled or has data for.
@@ -157,16 +157,21 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           )}
         </div>
 
-        {totalCost > 0 && (
+        {/* Month-over-month, not all-time — and quiet when ~flat, so the
+            persistent chrome never trains daily loss-aversion (#19). */}
+        {momChange && Math.abs(momChange.pct) >= 0.5 ? (
           <div className="row" style={{ gap: 7, alignItems: 'center', marginTop: 8 }}>
-            <span className={`pill ${up ? 'pill-up' : 'pill-down'}`} style={{ fontSize: 10 }}>
-              <span aria-hidden="true">{up ? '▲' : '▼'}</span> {Math.abs(gainPct).toFixed(1)}%
-            </span>
-            <span className="muted" style={{ fontSize: 10 }}>
-              {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })}
+            <span className={`pill ${momChange.delta >= 0 ? 'pill-up' : 'pill-down'}`} style={{ fontSize: 10 }}>
+              <span aria-hidden="true">{momChange.delta >= 0 ? '▲' : '▼'}</span> {Math.abs(momChange.pct).toFixed(1)}% this month
             </span>
           </div>
-        )}
+        ) : momChange ? (
+          <div className="muted" style={{ fontSize: 10, marginTop: 8 }}>≈ steady this month</div>
+        ) : totalCost > 0 ? (
+          <div className="muted" style={{ fontSize: 10, marginTop: 8 }}>
+            {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })} all-time vs cost
+          </div>
+        ) : null}
 
         <div className="muted" style={{ fontSize: 10.5, marginTop: 6 }}>
           {displayCurrency} · {profile.name || 'You'}

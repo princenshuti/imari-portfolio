@@ -395,6 +395,18 @@ export default function App() {
     };
   }, [state.assets, state.liabilities, fxFetchedAt]);
 
+  // Month-over-month movement for the sidebar chip (#19) — day-to-day
+  // volatility in persistent chrome cut the wrong way; MoM is the honest pace.
+  const momChange = useMemo(() => {
+    const snaps = state.snapshots || [];
+    if (snaps.length < 2) return null;
+    const target = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const past = [...snaps].sort((a, b) => a.date.localeCompare(b.date)).filter(sn => sn.date <= target).pop();
+    if (!past || !Number.isFinite(past.netWorth) || past.netWorth === 0) return null;
+    const delta = netWorth - past.netWorth;
+    return { delta, pct: (delta / Math.abs(past.netWorth)) * 100 };
+  }, [state.snapshots, netWorth]);
+
   // ─ Daily snapshot ─────────────────────────────────────────
   // Fires when profile name first arrives, then once per calendar day.
   // visibilitychange catches long-running tabs that cross midnight.
@@ -608,7 +620,7 @@ export default function App() {
           active={nav} onNav={navigateTo}
           profile={state.profile} netWorth={netWorth} totalCost={totalCost} displayCurrency={state.profile.displayCurrency}
           session={session} role={role} liabilities={state.liabilities || []}
-          visibleIds={visibleIds}
+          visibleIds={visibleIds} momChange={momChange}
         />
         <div className="col main-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
           {showTopBar && (

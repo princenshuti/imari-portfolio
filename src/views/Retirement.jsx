@@ -60,10 +60,7 @@ export default function RetirementView({ state, dispatch }) {
 
   return (
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-      <div style={{ marginBottom: 18 }}>
-        <div className="font-serif" style={{ fontSize: 26 }}>Retirement readiness</div>
-        <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>RSSB / Ejo Heza pension trajectory — a modeled projection grounded in the statutory schedule.</div>
-      </div>
+      <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>A modeled projection grounded in the statutory schedule — never a guarantee.</div>
 
       {/* Statutory context strip */}
       <div className="card" style={{ padding: '12px 16px', marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'baseline' }}>

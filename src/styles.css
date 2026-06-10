@@ -1720,3 +1720,13 @@ input:focus, select:focus, textarea:focus {
   .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .dash-advisor-strip span.muted { display: none; } /* strip stays one calm line */
 }
+
+
+/* ── Hover-reveal row actions (design review #23) ─────────────────────────
+   Lists stay quiet: edit/delete appear on row hover or keyboard focus.
+   Touch devices (no hover) keep them always visible. */
+@media (hover: hover) and (pointer: fine) {
+  .hover-actions .row-actions { opacity: 0; transition: opacity 0.13s ease-out; }
+  .hover-actions:hover .row-actions,
+  .hover-actions:focus-within .row-actions { opacity: 1; }
+}

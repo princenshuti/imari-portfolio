@@ -45,10 +45,7 @@ export default function ReportsView({ state }) {
   return (
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18, gap: 12, flexWrap: 'wrap' }} data-noprint>
-        <div>
-          <div className="font-serif" style={{ fontSize: 26 }}>Monthly report</div>
-          <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Auto-generated from your entries — nothing typed, nothing invented.</div>
-        </div>
+        <div className="muted" style={{ fontSize: 13 }}>Nothing typed, nothing invented.</div>
         <div className="row" style={{ gap: 8 }}>
           <button onClick={() => setMonthOffset(m => m + 1)} className="btn btn-ghost" style={{ padding: '7px 14px' }}>‹ Prev</button>
           <div style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', background: 'var(--paper)', border: '1px solid var(--line)', fontSize: 13, fontWeight: 600 }}>{monthLabel}</div>

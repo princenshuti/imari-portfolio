@@ -242,7 +242,7 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
   const milestones = [25, 50, 75];
 
   return (
-    <div className="card" style={{
+    <div className="hover-actions card" style={{
       padding: '20px 22px', marginBottom: 14,
       borderLeft: `3px solid ${isAchieved ? 'var(--up)' : isOverdue ? 'var(--down)' : 'var(--brand)'}`,
     }}>
@@ -270,7 +270,7 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
             </div>
           </div>
         </div>
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row row-actions" style={{ gap: 8 }}>
           <button type="button" onClick={onEdit} aria-label={`Edit ${goal.title}`} className="btn btn-ghost btn-xs">Edit</button>
           <button type="button" onClick={onDelete} aria-label={`Delete ${goal.title}`} className="btn btn-xs" style={{
             border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down-ink)',
@@ -375,11 +375,9 @@ export default function GoalsView({ state, dispatch }) {
 
       {/* Header */}
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 22 }}>
-        <div>
-          <div className="font-serif" style={{ fontSize: 26 }}>Financial Goals</div>
-          <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            {active.length} active · {achieved.length} achieved
-          </div>
+        {/* Title lives in the TopBar — the page header does real work only (#12). */}
+        <div className="muted" style={{ fontSize: 13 }}>
+          {active.length} active · {achieved.length} achieved
         </div>
         <button onClick={() => setEditing({})} className="btn btn-primary">＋ New goal</button>
       </div>

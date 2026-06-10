@@ -192,7 +192,7 @@ export default function LiabilitiesView({ state, dispatch }) {
             return (
               <div key={l.id}>
                 {i > 0 && <div className="hr" style={{ margin: '0 20px' }} />}
-                <div style={{ padding: '14px 20px' }}>
+                <div className="hover-actions" style={{ padding: '14px 20px' }}>
                   <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
                     <div className="col" style={{ gap: 3 }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{l.name}</div>
@@ -214,7 +214,7 @@ export default function LiabilitiesView({ state, dispatch }) {
                           of {fmt(l.originalAmount || 0, l.currency, { compact: true })} original
                         </div>
                       </div>
-                      <div className="row" style={{ gap: 6 }}>
+                      <div className="row row-actions" style={{ gap: 6 }}>
                         <button type="button" onClick={() => setEditing(l)} aria-label={`Edit ${l.name}`} className="btn btn-ghost btn-xs">Edit</button>
                         <button type="button" onClick={() => setPendingDelete(l)}
                           aria-label={`Delete ${l.name}`} className="btn btn-xs" style={{

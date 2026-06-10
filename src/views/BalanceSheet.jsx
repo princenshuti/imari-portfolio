@@ -68,10 +68,7 @@ export default function BalanceSheetView({ state }) {
   return (
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18, gap: 12, flexWrap: 'wrap' }} data-noprint>
-        <div>
-          <div className="font-serif" style={{ fontSize: 26 }}>Balance sheet</div>
-          <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Assets − liabilities = net worth · as of {dateStr}</div>
-        </div>
+        <div className="muted" style={{ fontSize: 13 }}>as of {dateStr}</div>
         <div className="row" style={{ gap: 8 }}>
           <button onClick={exportCSV} className="btn btn-ghost">↓ CSV</button>
           <button onClick={() => window.print()} className="btn btn-primary">⎙ Print / Save PDF</button>

@@ -40,7 +40,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
       role="option"
       aria-selected={isSelected}
       aria-label={`${asset.name}, ${fmt(current, asset.currency, { compact: true })}`}
-      className="asset-row-focusable"
+      className="asset-row-focusable hover-actions"
       style={{
         display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
         alignItems:'center', padding: '14px 22px', gap: 12,
@@ -174,7 +174,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
         </div>
       </div>
 
-      <div className="row" style={{ gap: 2, justifyContent:'flex-end' }}>
+      <div className="row row-actions" style={{ gap: 2, justifyContent:'flex-end' }}>
         <button
           type="button"
           onClick={() => onEdit(asset)}

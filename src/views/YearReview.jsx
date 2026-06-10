@@ -17,7 +17,6 @@ export default function YearReviewView({ state }) {
   if (!review) {
     return (
       <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-        <div className="font-serif" style={{ fontSize: 26, marginBottom: 18 }}>Year in review</div>
         <div className="card" style={{ padding: 60, textAlign: 'center' }}>
           <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>Your year is still being written</div>
           <div className="muted" style={{ fontSize: 13, maxWidth: 420, margin: '0 auto', lineHeight: 1.6 }}>
@@ -36,11 +35,8 @@ export default function YearReviewView({ state }) {
 
   return (
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-      <div style={{ marginBottom: 18 }}>
-        <div className="font-serif" style={{ fontSize: 26 }}>Year in review</div>
-        <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-          {longDate(review.start.date)} → {longDate(review.end.date)} · {review.daysTracked} snapshots
-        </div>
+      <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>
+        {longDate(review.start.date)} → {longDate(review.end.date)} · {review.daysTracked} snapshots
       </div>
 
       {review.includesSynthetic && (

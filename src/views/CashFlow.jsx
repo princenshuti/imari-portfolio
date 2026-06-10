@@ -764,7 +764,7 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
   const isIncome = cf.type === 'income';
 
   return (
-    <div>
+    <div className="hover-actions">
       <div className="row" style={{ padding: '12px 20px', justifyContent: 'space-between' }}>
         <div className="col" style={{ gap: 3, minWidth: 0, flex: 1 }}>
           <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -784,7 +784,7 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
             {cf.notes || cf.recurring} · {cf.date}
           </div>
         </div>
-        <div className="row" style={{ gap: 10, alignItems: 'center', flexShrink: 0 }}>
+        <div className="row row-actions" style={{ gap: 10, alignItems: 'center', flexShrink: 0 }}>
           <div className="num" style={{ fontSize: 14, fontWeight: 700, color: isIncome ? 'var(--up)' : 'var(--down)' }}>
             {isIncome ? '+' : '−'}{fmt(cf.amount, cf.currency, { compact: true })}
           </div>
