@@ -86,10 +86,14 @@ async function fetchBnrRates() {
 // The daily pg_cron job is the primary refresh path, but a cron failure is
 // silent (the app falls back to open.er-api and the UI still looks alive — a
 // misconfigured schedule once went unnoticed for days). If the freshest BNR
-// row is older than this, any client visit re-triggers the Edge Function
+// row is older than 24h, any client visit re-triggers the Edge Function
 // itself. It upserts a 10-day window, so concurrent/duplicate triggers are
 // harmless; the sessionStorage guard just avoids re-firing every navigation.
-const BNR_STALE_DAYS = 2;
+// Note: BNR skips weekends/holidays, so the heal will fire on those days and
+// simply find nothing newer — one cheap idempotent call, by design: it also
+// means a fresh rate is picked up the moment BNR publishes, even if the
+// 06:15 UTC cron hasn't run yet.
+const BNR_STALE_DAYS = 1;
 const HEAL_GUARD_KEY = 'imari:bnrHeal:askedAt';
 
 function bnrIsStale(bnr) {
