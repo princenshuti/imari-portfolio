@@ -19,12 +19,11 @@
 #     clean old hashed chunks by hand (or replace the cp with an rsync
 #     --delete if the host has rsync available).
 #
-# DEPLOYPATH is the document root for imali.princenshuti.com. cPanel's
-# default for a subdomain created as "imali" under princenshuti.com is
-# $HOME/imali.princenshuti.com/. Confirm in cPanel → Domains before the
-# first deploy; adjust if your account uses public_html/imali/ instead.
+# DEPLOYPATH is the document root for imali.princenshuti.com, confirmed
+# in cPanel → Domains (account `princens`):
+#   /home/princens/public_html/imali.princenshuti.com
 deployment:
   tasks:
-    - export DEPLOYPATH=$HOME/imali.princenshuti.com/
+    - export DEPLOYPATH=$HOME/public_html/imali.princenshuti.com/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R dist/. $DEPLOYPATH
