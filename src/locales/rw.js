@@ -133,7 +133,7 @@ export default {
     },
     how: {
       eyebrow: 'Uko bikora',
-      title:   'Kuva ku zeru kugera ku shusho yuzuye, mu masaha make.',
+      title:   'Kuva ku zeru kugera ku shusho yuzuye, mu isaha ya mbere.',
     },
     footer: {
       title_1: 'Ishusho isanzwe ihari.',

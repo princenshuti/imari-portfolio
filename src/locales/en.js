@@ -138,7 +138,7 @@ export default {
     },
     how: {
       eyebrow: 'How it works',
-      title:   'From zero to a full picture, in one afternoon.',
+      title:   'From zero to a full picture, in your first hour.',
     },
     footer: {
       title_1: 'The picture is already there.',

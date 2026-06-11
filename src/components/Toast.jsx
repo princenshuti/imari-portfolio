@@ -41,8 +41,9 @@ export function ToastContainer({ toasts, dismiss }) {
     <div
       aria-live="polite"
       aria-atomic="false"
+      className="toast-container"
       style={{
-        position: 'fixed', bottom: 24, right: 20, zIndex: 9999,
+        position: 'fixed', zIndex: 9999,
         display: 'flex', flexDirection: 'column', gap: 8,
         pointerEvents: 'none',
       }}

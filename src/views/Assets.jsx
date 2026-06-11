@@ -36,6 +36,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
   // Pending destructive action awaiting modal confirm. `{kind:'single', asset}` for row deletes,
   // `{kind:'bulk', ids}` for bulk-action-bar deletes. Null = no modal.
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [pendingImport, setPendingImport] = useState(null); // parsed rows awaiting user confirmation
   const fileRef = useRef(null);
   const today   = new Date();
 
@@ -74,19 +75,10 @@ export default function AssetsView({ state, dispatch, showToast }) {
         inserts.length && `add ${inserts.length} new`,
         updates.length && `update ${updates.length} existing`,
       ].filter(Boolean).join(' · ');
-      const msg = `This will ${summary} asset${matched.length === 1 ? '' : 's'}.` +
-        (errors.length ? `\n\n${errors.length} row${errors.length === 1 ? ' was' : 's were'} skipped due to errors.` : '');
-      if (!confirm(msg)) return;
-      matched.forEach(asset => dispatch({ type: 'upsertAsset', asset }));
-      setImportResult({
-        kind: errors.length ? 'partial' : 'success',
-        message: [
-          inserts.length && `${inserts.length} asset${inserts.length === 1 ? '' : 's'} added.`,
-          updates.length && `${updates.length} asset${updates.length === 1 ? '' : 's'} updated.`,
-          errors.length  && `${errors.length} row${errors.length === 1 ? '' : 's'} skipped.`,
-        ].filter(Boolean).join('  '),
-        errors,
-      });
+      // Confirmation runs through ConfirmDestructive (not native confirm) so
+      // updates that overwrite existing rows get the same deliberate UI as
+      // every other irreversible action.
+      setPendingImport({ matched, errors, summary, inserts: inserts.length, updates: updates.length });
     } catch (e) {
       setImportResult({ kind: 'error', message: `Could not read the file: ${e.message}` });
     } finally {
@@ -409,7 +401,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
         }}>
           <div style={{
             fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4,
-            color: summary.gain >= 0 ? 'var(--up)' : 'var(--down)',
+            color: summary.gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)',
           }}>
             {summary.gain >= 0 ? '▲ Appreciation' : '▼ Depreciation'}
           </div>
@@ -421,7 +413,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
           </div>
           <div style={{
             fontSize: 11, fontWeight: 600, marginTop: 2,
-            color: summary.gain >= 0 ? 'var(--up)' : 'var(--down)',
+            color: summary.gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)',
           }}>
             {summary.gain >= 0 ? '+' : ''}{summary.gainPct.toFixed(1)}% overall
           </div>
@@ -475,7 +467,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
         <div style={{
           padding: '12px 16px', borderRadius: 10, marginBottom: 16,
           background: importResult.kind === 'success' ? 'var(--up-soft)' : importResult.kind === 'partial' ? 'var(--gold-soft)' : 'var(--down-soft)',
-          color: importResult.kind === 'success' ? 'var(--up)' : importResult.kind === 'partial' ? 'var(--gold)' : 'var(--down)',
+          color: importResult.kind === 'success' ? 'var(--up-ink)' : importResult.kind === 'partial' ? 'var(--gold-ink)' : 'var(--down-ink)',
           fontSize: 13, lineHeight: 1.5,
         }}>
           <div className="row" style={{ justifyContent: 'space-between', gap: 12 }}>
@@ -517,7 +509,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
             <div className="row" style={{ padding: '16px 22px', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <div className="row" style={{ gap: 10, alignItems: 'center' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: g.color, flexShrink: 0 }} />
-                <div className="font-serif" style={{ fontSize: 17 }}>{g.group}</div>
+                <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>{g.group}</h2>
                 <span className="pill pill-soft">{g.allItems.length}</span>
               </div>
               <div className="row" style={{ gap: 14, fontSize: 12, flexWrap: 'wrap' }}>
@@ -697,6 +689,36 @@ export default function AssetsView({ state, dispatch, showToast }) {
             ? `Delete ${pendingDelete.ids.size}`
             : 'Delete asset'
         }
+      />
+
+      <ConfirmDestructive
+        open={!!pendingImport}
+        onClose={() => setPendingImport(null)}
+        onConfirm={() => {
+          const { matched, errors, inserts, updates } = pendingImport;
+          matched.forEach(asset => dispatch({ type: 'upsertAsset', asset }));
+          setImportResult({
+            kind: errors.length ? 'partial' : 'success',
+            message: [
+              inserts && `${inserts} asset${inserts === 1 ? '' : 's'} added.`,
+              updates && `${updates} asset${updates === 1 ? '' : 's'} updated.`,
+              errors.length && `${errors.length} row${errors.length === 1 ? '' : 's'} skipped.`,
+            ].filter(Boolean).join('  '),
+            errors,
+          });
+          setPendingImport(null);
+        }}
+        title="Apply spreadsheet import?"
+        description={
+          <span>
+            This will {pendingImport?.summary} asset{pendingImport?.matched?.length === 1 ? '' : 's'}.
+            {pendingImport?.updates ? ' Updated rows overwrite the current values.' : ''}
+            {pendingImport?.errors?.length
+              ? ` ${pendingImport.errors.length} row${pendingImport.errors.length === 1 ? ' was' : 's were'} skipped due to errors.`
+              : ''}
+          </span>
+        }
+        confirmLabel={`Import ${pendingImport?.matched?.length || ''}`.trim()}
       />
     </div>
   );

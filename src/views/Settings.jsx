@@ -58,6 +58,7 @@ function MembersSection({ portfolioId, role, session }) {
   const [resentId, setResentId] = useState(null);
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
+  const [memberAction, setMemberAction] = useState(null); // {kind:'remove',member} | {kind:'revoke',inv}
 
   const refresh = async () => {
     setLoading(true); setError(null);
@@ -132,16 +133,19 @@ function MembersSection({ portfolioId, role, session }) {
     catch (e) { setError(e.message); }
   };
 
-  const handleRemove = async (member) => {
-    if (!confirm(`Remove ${member.email} from this portfolio?`)) return;
-    try { await removeMember(member.id); await refresh(); }
-    catch (e) { setError(e.message); }
-  };
-
-  const handleRevoke = async (inv) => {
-    if (!confirm(`Revoke pending invitation for ${inv.email}?`)) return;
-    try { await revokeInvitation(inv.id); await refresh(); }
-    catch (e) { setError(e.message); }
+  // Both run through ConfirmDestructive (consistent with every other
+  // irreversible action) instead of native confirm().
+  const handleRemove = (member) => setMemberAction({ kind: 'remove', member });
+  const handleRevoke = (inv) => setMemberAction({ kind: 'revoke', inv });
+  const confirmMemberAction = async () => {
+    const act = memberAction;
+    setMemberAction(null);
+    if (!act) return;
+    try {
+      if (act.kind === 'remove') await removeMember(act.member.id);
+      else await revokeInvitation(act.inv.id);
+      await refresh();
+    } catch (e) { setError(e.message); }
   };
 
   if (!isConfigured || !portfolioId) return null;
@@ -235,8 +239,8 @@ function MembersSection({ portfolioId, role, session }) {
                       <option value="editor">Editor</option>
                       <option value="viewer">Viewer</option>
                     </select>
-                    <button onClick={() => handleRemove(m)} style={{
-                      padding:'5px 9px', fontSize: 11, borderRadius: 6, border:'1px solid var(--down-soft)', background:'var(--paper)', color:'var(--down)', cursor:'pointer',
+                    <button onClick={() => handleRemove(m)} className="btn-unstyled" style={{
+                      padding:'8px 12px', minHeight: 32, fontSize: 11, borderRadius: 6, border:'1px solid var(--down-soft)', background:'var(--paper)', color:'var(--down-ink)',
                     }}>Remove</button>
                   </div>
                 )}
@@ -259,24 +263,25 @@ function MembersSection({ portfolioId, role, session }) {
                       </div>
                     </div>
                     <div className="row" style={{ gap: 6 }}>
-                      <button onClick={() => copyLink(inv.token)} style={{
-                        padding:'5px 9px', fontSize: 11, borderRadius: 6, border:'1px solid var(--line)', background:'var(--paper)', color:'var(--ink-2)', cursor:'pointer',
+                      <button onClick={() => copyLink(inv.token)} className="btn-unstyled" style={{
+                        padding:'8px 12px', minHeight: 32, fontSize: 11, borderRadius: 6, border:'1px solid var(--line)', background:'var(--paper)', color:'var(--ink-2)',
                       }}>{copiedToken === inv.token ? '✓ Copied' : 'Copy link'}</button>
                       <button
                         onClick={() => handleResend(inv)}
                         disabled={resendingId === inv.id}
+                        className="btn-unstyled"
                         style={{
-                          padding:'5px 9px', fontSize: 11, borderRadius: 6,
+                          padding:'8px 12px', minHeight: 32, fontSize: 11, borderRadius: 6,
                           border:'1px solid var(--line)', background:'var(--paper)',
-                          color: resentId === inv.id ? 'var(--up, #1b6e2c)' : 'var(--brand)',
+                          color: resentId === inv.id ? 'var(--up-ink)' : 'var(--brand)',
                           cursor: resendingId === inv.id ? 'default' : 'pointer',
                           opacity: resendingId === inv.id ? 0.6 : 1,
                         }}
                       >
                         {resendingId === inv.id ? 'Sending…' : resentId === inv.id ? '✓ Sent' : 'Resend email'}
                       </button>
-                      <button onClick={() => handleRevoke(inv)} style={{
-                        padding:'5px 9px', fontSize: 11, borderRadius: 6, border:'1px solid var(--down-soft)', background:'var(--paper)', color:'var(--down)', cursor:'pointer',
+                      <button onClick={() => handleRevoke(inv)} className="btn-unstyled" style={{
+                        padding:'8px 12px', minHeight: 32, fontSize: 11, borderRadius: 6, border:'1px solid var(--down-soft)', background:'var(--paper)', color:'var(--down-ink)',
                       }}>Revoke</button>
                     </div>
                   </div>
@@ -289,6 +294,27 @@ function MembersSection({ portfolioId, role, session }) {
 
       {/* B4 — in-portfolio member chat (realtime, members only) */}
       {portfolioId && <PortfolioChat portfolioId={portfolioId} session={session} />}
+
+      <ConfirmDestructive
+        open={!!memberAction}
+        onClose={() => setMemberAction(null)}
+        onConfirm={confirmMemberAction}
+        title={memberAction?.kind === 'remove' ? 'Remove this member?' : 'Revoke this invitation?'}
+        description={
+          memberAction?.kind === 'remove' ? (
+            <span>
+              <strong style={{ color: 'var(--ink)' }}>{memberAction.member.email}</strong> loses access
+              to this portfolio immediately. You can re-invite them later.
+            </span>
+          ) : (
+            <span>
+              The pending invite for <strong style={{ color: 'var(--ink)' }}>{memberAction?.inv?.email}</strong>
+              {' '}stops working immediately.
+            </span>
+          )
+        }
+        confirmLabel={memberAction?.kind === 'remove' ? 'Remove member' : 'Revoke invite'}
+      />
     </Section>
   );
 }
@@ -558,13 +584,12 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
     }
   };
 
+  const [pendingJsonImport, setPendingJsonImport] = useState(null);
   const onImport = async (file) => {
     try {
-      const obj = await importJSONFile(file);
-      if (confirm(`Import will replace your current data (${state.assets.length} assets → ${obj.assets.length}). Continue?`)) {
-        dispatch({ type:'replaceAll', state: obj });
-        showToast?.('Portfolio imported successfully.', 'success');
-      }
+      // Replacing the entire portfolio is the most destructive action in the
+      // app — it gets the typed-confirmation dialog, not a native confirm().
+      setPendingJsonImport(await importJSONFile(file));
     } catch (e) {
       showToast?.('Import failed: ' + e.message, 'error');
     }
@@ -594,6 +619,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
             <button
               key={opt.value}
               onClick={() => onThemeChange?.(opt.value)}
+              aria-pressed={themePref === opt.value}
               className={`btn ${themePref === opt.value ? 'btn-primary' : 'btn-ghost'}`}
               style={{ minWidth: 90 }}
             >
@@ -618,6 +644,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
               <button
                 key={loc.code}
                 onClick={() => i18n.setLocale(loc.code)}
+                aria-pressed={i18n.locale === loc.code}
                 className={`btn ${i18n.locale === loc.code ? 'btn-primary' : 'btn-ghost'}`}
                 style={{ minWidth: 110 }}
               >
@@ -921,6 +948,26 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         }
         confirmLabel="Delete all assets"
         requireType="DELETE"
+      />
+      <ConfirmDestructive
+        open={!!pendingJsonImport}
+        onClose={() => setPendingJsonImport(null)}
+        onConfirm={() => {
+          dispatch({ type: 'replaceAll', state: pendingJsonImport });
+          setPendingJsonImport(null);
+          showToast?.('Portfolio imported successfully.', 'success');
+        }}
+        title="Replace your whole portfolio?"
+        description={
+          <span>
+            The imported file replaces everything you have now
+            ({state.assets.length} assets → {pendingJsonImport?.assets?.length ?? 0}).
+            This cannot be undone.
+            <br />Type <strong style={{ fontFamily: 'monospace' }}>REPLACE</strong> to confirm.
+          </span>
+        }
+        confirmLabel="Replace portfolio"
+        requireType="REPLACE"
       />
 
       {/* About / brand footer */}

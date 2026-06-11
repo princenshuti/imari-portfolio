@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useT, SUPPORTED_LOCALES } from '../contexts/I18nContext.jsx';
 import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 
@@ -46,7 +46,7 @@ const COST_HEAD = {
 };
 const COSTS = [
   { sev: 'critical', stat: 'RWF 12,000', label: 'Late-levy penalty, avoided', body: 'An RRA deadline you would have missed — surfaced six days early, before the penalty starts.' },
-  { sev: 'warning', stat: 'RWF 35,000 / mo', label: 'Idle cash, not earning', body: 'RWF 4.2M resting in MoMo while BNR T-bills reference ~10%. A running counter of what you forgo.' },
+  { sev: 'warning', stat: 'RWF 47,000 / mo', label: 'Idle cash, not earning', body: 'RWF 4.2M resting in MoMo while BNR T-bills reference ~13.5%. A running counter of what you forgo.' },
   { sev: 'info', stat: '−2% in real terms', label: 'Net worth "flat" in RWF', body: 'After inflation and the franc\'s slide, standing still is quietly going backwards. Imari shows the real number.' },
   { sev: 'warning', stat: '38% of income', label: 'Your pension at 60', body: 'Below a comfortable 60% replacement. Imari shows the gap — and what an extra RWF 10k/month to Ejo Heza closes.' },
 ];
@@ -54,7 +54,7 @@ const COSTS = [
 // ── Feature set — everything Imari now does ───────────────────────────────
 const FEATURES = [
   { icon: 'spark', accent: 'var(--brand)', title: 'An insight engine, not a ledger',
-    desc: 'Runway, idle cash, concentration, tax exposure, real-vs-nominal drift — computed from your data and ranked by what it costs you to ignore. Deterministic and tested, to the franc.' },
+    desc: 'Runway, idle cash, concentration, tax exposure, real-vs-nominal drift — computed from your data and ranked by what it costs you to ignore. Computed and tested, to the franc.' },
   { icon: 'sheet', accent: 'var(--gold)', title: 'MoMo & bank statements, imported',
     desc: 'Upload your MTN MoMo or Airtel Money statement — or a bank CSV from BK, Equity, I&M — and Imari parses every line, auto-categorises and lets you confirm in seconds.' },
   { icon: 'umbrella', accent: 'var(--brand)', title: 'Your pension, finally counted',
@@ -97,7 +97,7 @@ const RAILS = ['MTN MoMo', 'Airtel Money', 'BNR', 'RRA', 'RSSB', 'Ejo Heza', 'RS
 // ── AI Advisor showcase — mirrors the real Advisor view ───────────────────
 const ADVISOR_HEAD = {
   eyebrow: 'AI-ready advisory',
-  title: 'A deterministic engine. An advisor that speaks.',
+  title: 'Every number computed. Every answer explained.',
   sub: 'Imari computes every figure — concentration, runway, tax, idle cash — from your data and today\'s BNR market pulse. The AI never invents a number; it explains the ones the engine already proved, and answers what you ask next.',
 };
 const ADVISOR_CHIPS = [
@@ -118,8 +118,8 @@ const PULSE = [
 const TRUST = [
   { icon: 'key-off', title: 'No bank passwords. Not ever.',
     desc: 'Imari never asks for your bank or MoMo login. There are no banking credentials here to phish, leak or steal — the most secure password is the one we never have.' },
-  { icon: 'lock', title: 'Encrypted, end to end of its journey',
-    desc: 'Your data is encrypted in transit and at rest, and isolated to your account alone. Nobody — not other users, not our team — browses your portfolio.' },
+  { icon: 'lock', title: 'Encrypted in transit and at rest',
+    desc: 'Your data is encrypted on every connection and on every disk it touches, and isolated to your account alone. Nobody — not other users, not our team — browses your portfolio.' },
   { icon: 'refresh', title: 'Every number is dated',
     desc: 'Imari shows how fresh each figure is and flags what has gone stale. A confidently-wrong number erodes trust faster than no number — so we never hide the date.' },
   { icon: 'eye', title: 'You share on your terms',
@@ -255,6 +255,66 @@ function AdvisorMock() {
   );
 }
 
+// 3D advisor showcase — Spline scene, loaded ONLY when the card scrolls near
+// the viewport, and skipped entirely under reduced motion or data-saver.
+// Costs ~0 KB until then: the runtime is a dynamic import, never in the
+// main bundle, and the scene streams from Spline's CDN.
+const SPLINE_SCENE = 'https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode';
+
+function SplineShowcase() {
+  const hostRef = useRef(null);
+  const [SplineComp, setSplineComp] = useState(null);
+  const [skipped, setSkipped] = useState(false);
+
+  useEffect(() => {
+    const conn = typeof navigator !== 'undefined' ? navigator.connection : null;
+    if (
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      (conn && (conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '')))
+    ) {
+      setSkipped(true);
+      return undefined;
+    }
+    const el = hostRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setSkipped(true);
+      return undefined;
+    }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some(e => e.isIntersecting)) {
+        io.disconnect();
+        import('@splinetool/react-spline')
+          .then(m => setSplineComp(() => m.default))
+          .catch(() => setSkipped(true));
+      }
+    }, { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // Decorative finale — when the environment can't afford it, it simply isn't there.
+  if (skipped) return null;
+
+  return (
+    <section className="landing-section landing-section--spline">
+      <div className="landing-spline-card" ref={hostRef}>
+        <div className="landing-spline-copy">
+          <span className="landing-section-eyebrow">{'Meet your advisor'}</span>
+          <h2 className="font-serif landing-section-title">{'A money mind that never sleeps.'}</h2>
+          <p className="landing-section-sub">
+            {'Drag the scene. The advisor behind Imari watches your numbers the same way — always on, never tired, never guessing.'}
+          </p>
+        </div>
+        <div className="landing-spline-stage" aria-hidden>
+          {SplineComp
+            ? <SplineComp scene={SPLINE_SCENE} />
+            : <div className="landing-spline-poster" />}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Landing({ onSignIn }) {
   const { t, locale, setLocale } = useT();
   const [scrolled, setScrolled] = useState(false);
@@ -352,13 +412,13 @@ export default function Landing({ onSignIn }) {
               {['#E0635C', '#E5BC55', '#3FB889'].map(c => (
                 <span key={c} className="landing-frame-dot" style={{ background: c }} />
               ))}
-              <span className="num landing-frame-url">imali.princenshuti.com</span>
+              <span className="num landing-frame-url">{'Imari · Dashboard'}</span>
             </div>
             <DashboardMock />
           </div>
           <div className="landing-preview-costchip">
             <span className="landing-preview-costglyph">!</span>
-            <span>{'RWF 5M idle — ~RWF 50K/mo forgone vs T-bills'}</span>
+            <span>{'RWF 5M idle — ~RWF 56K/mo forgone vs T-bills'}</span>
           </div>
         </div>
       </header>
@@ -462,7 +522,7 @@ export default function Landing({ onSignIn }) {
           ))}
         </div>
         <p className="landing-rwanda-langs">
-          {'Kinyarwanda · Français · English — the whole app, in your language.'}
+          {'Kinyarwanda · Français · English — landing, sign-in and navigation today; the full app interior is on its way.'}
         </p>
       </section>
 
@@ -513,6 +573,9 @@ export default function Landing({ onSignIn }) {
           ))}
         </ol>
       </section>
+
+      {/* 3D finale — lazy, below the fold, absent on constrained devices */}
+      <SplineShowcase />
 
       {/* Footer CTA */}
       <section className="landing-footer-cta">

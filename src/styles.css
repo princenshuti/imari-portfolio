@@ -1,6 +1,16 @@
 /* Imari — Rwanda-grounded wealth platform · v2 design system */
 
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+/* Fonts load from index.html (<link rel="preconnect"> + stylesheet) — an
+   @import here added a render-blocking hop behind the bundled CSS.
+   Metric-matched serif fallback so the hero headline doesn't reflow when
+   Instrument Serif swaps in (Georgia runs wider; size-adjust compensates). */
+@font-face {
+  font-family: 'Instrument Serif Fallback';
+  src: local('Georgia'), local('Times New Roman');
+  size-adjust: 94%;
+  ascent-override: 92%;
+  descent-override: 24%;
+}
 
 /* ── Light theme ─────────────────────────────────────────────── */
 :root,
@@ -162,8 +172,34 @@ body[data-theme="dark"] {
 }
 
 /* ── Typography ──────────────────────────────────────────────── */
-.font-serif { font-family: 'Instrument Serif', 'Iowan Old Style', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+.font-serif { font-family: 'Instrument Serif', 'Instrument Serif Fallback', 'Iowan Old Style', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
 .font-sans  { font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif; }
+
+/* Reset for buttons that render as plain content (rows, links, cards) WITHOUT
+   destroying keyboard affordance — inline `all: unset` killed every
+   :focus-visible outline because inline styles outrank author CSS. */
+.btn-unstyled {
+  all: unset;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.btn-unstyled:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Toast stack — bottom-right on desktop; on mobile it must clear the tab bar
+   (z-100, ~72px + safe area), which it used to cover. */
+.toast-container { bottom: 24px; right: 20px; }
+@media (max-width: 768px) {
+  .toast-container {
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    right: 12px;
+    align-items: stretch;
+  }
+}
 .font-mono  { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; }
 .num { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
@@ -2072,6 +2108,39 @@ input:focus, select:focus, textarea:focus {
   color: var(--ink-3);
 }
 
+/* ── 3D advisor showcase — Spline scene in a fixed-dark card ────
+   The scene's own backdrop is dark, so the card stays midnight in both
+   landing themes (same policy as the cost panel). */
+.landing-section--spline { padding-top: 0; }
+.landing-spline-card {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  background:
+    radial-gradient(700px 420px at 78% 30%, rgba(63, 184, 137, 0.14), transparent 62%),
+    #0A0F0C;
+  border: 1px solid rgba(254, 252, 247, 0.10);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-pop);
+  min-height: 420px;
+}
+.landing-spline-copy { padding: 48px 16px 48px 48px; }
+.landing-spline-copy .landing-section-eyebrow { color: #6BD9A8; }
+.landing-spline-copy .landing-section-title   { color: #FEFCF7; font-size: clamp(28px, 3.2vw, 38px); }
+.landing-spline-copy .landing-section-sub     { color: rgba(254, 252, 247, 0.70); }
+.landing-spline-stage {
+  position: relative;
+  align-self: stretch;
+  min-height: 420px;
+}
+.landing-spline-stage canvas { display: block; width: 100%; height: 100%; }
+.landing-spline-poster {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(360px 280px at 50% 55%, rgba(63, 184, 137, 0.18), transparent 70%);
+}
+
 /* ── Hero preview: cost-of-absence chip ───────────────────────── */
 .landing-preview-costchip {
   position: absolute; bottom: -14px; left: 18px;
@@ -2103,6 +2172,9 @@ input:focus, select:focus, textarea:focus {
   .landing-costs     { grid-template-columns: repeat(2, 1fr); }
   .landing-rwanda    { grid-template-columns: repeat(2, 1fr); }
   .landing-advisor   { grid-template-columns: 1fr; gap: 40px; }
+  .landing-spline-card  { grid-template-columns: 1fr; }
+  .landing-spline-copy  { padding: 36px 28px 8px; }
+  .landing-spline-stage { min-height: 340px; }
   .landing-pains     { grid-template-columns: 1fr; gap: 8px; }
   .landing-trust-grid{ grid-template-columns: 1fr; }
   .landing-steps     { grid-template-columns: 1fr; gap: 32px; }

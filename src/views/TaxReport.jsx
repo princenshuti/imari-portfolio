@@ -319,8 +319,9 @@ export default function TaxReportView({ state, dispatch }) {
                       key={m.id + m.why}
                       type="button"
                       onClick={() => dispatch?.({ type: 'nav', to: 'assets' })}
+                      className="btn-unstyled"
                       style={{
-                        all: 'unset', cursor: 'pointer', padding: '4px 0', display: 'block',
+                        padding: '4px 0', display: 'block',
                         borderBottom: '0.5px solid var(--line-soft)',
                       }}
                     >

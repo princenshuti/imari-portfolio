@@ -75,8 +75,12 @@ export function AreaChart({
         ref={svgRef}
         {...svgSize}
         viewBox={`0 0 ${w} ${h}`}
-        onMouseMove={onMove}
-        onMouseLeave={onLeave}
+        /* Pointer (not mouse) events so touch users can scrub the chart;
+           touch-action pan-y keeps vertical page scroll working. */
+        onPointerMove={onMove}
+        onPointerLeave={onLeave}
+        onPointerDown={onMove}
+        style={{ ...(svgSize.style || {}), touchAction: 'pan-y' }}
         role="img"
         aria-label={a11yLabel}
       >
@@ -238,9 +242,10 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
-        style={{ width: '100%', height, display: 'block', overflow: 'visible', cursor: 'crosshair' }}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHover(null)}
+        style={{ width: '100%', height, display: 'block', overflow: 'visible', cursor: 'crosshair', touchAction: 'pan-y' }}
+        onPointerMove={handleMouseMove}
+        onPointerLeave={() => setHover(null)}
+        onPointerDown={handleMouseMove}
         role="img"
         aria-label={`Portfolio growth chart — ${snapshots.length} data points from ${snapshots[0]?.date} to ${snapshots[snapshots.length-1]?.date}. Latest net worth ${fmtBase(snapshots[snapshots.length-1]?.netWorth, displayCurrency, { compact: true })}.`}
       >

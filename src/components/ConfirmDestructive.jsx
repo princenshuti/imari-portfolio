@@ -31,21 +31,39 @@ export function ConfirmDestructive({
 }) {
   const [typed, setTyped] = useState('');
   const inputRef = useRef(null);
+  const dialogRef = useRef(null);
+  const cancelRef = useRef(null);
 
-  // Reset typed text + autofocus the right element each time the modal opens.
+  // Reset typed text, move focus INTO the dialog on open (Cancel by default —
+  // Enter must never re-fire the destructive action), restore it on close.
   useEffect(() => {
     if (!open) { setTyped(''); return; }
+    const prev = document.activeElement;
     const t = setTimeout(() => {
       if (requireType && inputRef.current) inputRef.current.focus();
+      else if (cancelRef.current) cancelRef.current.focus();
     }, 30);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      if (prev && typeof prev.focus === 'function') prev.focus();
+    };
   }, [open, requireType]);
 
-  // Esc closes the modal (parity with native confirm).
+  // Esc closes; Tab is trapped inside the dialog (parity with Modal.jsx —
+  // without this, keyboard users tab into the obscured page behind the scrim).
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
-      if (e.key === 'Escape' && !loading) onClose?.();
+      if (e.key === 'Escape' && !loading) { onClose?.(); return; }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      const focusables = dialogRef.current.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -72,6 +90,7 @@ export function ConfirmDestructive({
       }}
     >
       <div
+        ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
         className="card"
         style={{
@@ -135,6 +154,7 @@ export function ConfirmDestructive({
         {/* Action row */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
           <button
+            ref={cancelRef}
             type="button"
             onClick={onClose}
             disabled={loading}

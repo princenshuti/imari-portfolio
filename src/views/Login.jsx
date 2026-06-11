@@ -96,6 +96,9 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
     width:'100%', padding:'12px 14px', borderRadius: 9, border:'1px solid var(--line-strong)',
     background:'var(--paper-2)', fontSize: 14, fontFamily:'inherit', color:'var(--ink)',
   };
+  // Inputs tint red alongside the error banner (aria-invalid already set).
+  const errInputStyle = { ...inputStyle, border: '1px solid var(--down)' };
+  const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: -6 };
 
   const errorId   = 'login-error';
   const messageId = 'login-message';
@@ -140,23 +143,23 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
         </div>
 
         <form onSubmit={submit} className="col" style={{ gap: 12 }}>
-          <label htmlFor="login-email" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{t('login.email_label')}</label>
+          <label htmlFor="login-email" style={labelStyle}>{t('login.email_label')}</label>
           <input
             id="login-email"
             type="email" required value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="you@example.com" autoComplete="email" style={inputStyle}
+            placeholder="you@example.com" autoComplete="email" style={error ? errInputStyle : inputStyle}
             disabled={!!pendingInvite?.email}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : message ? messageId : undefined}
           />
           {mode !== 'forgot' && (
             <>
-              <label htmlFor="login-password" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{t('login.password_label')}</label>
+              <label htmlFor="login-password" style={labelStyle}>{t('login.password_label')}</label>
               <input
                 id="login-password"
                 type="password" required value={password} onChange={e => setPassword(e.target.value)}
                 placeholder={mode === 'signup' ? t('login.password_short') : t('login.password_label')}
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} style={inputStyle}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} style={error ? errInputStyle : inputStyle}
                 aria-invalid={!!error}
                 aria-describedby={error ? errorId : undefined}
                 minLength={mode === 'signup' ? 8 : undefined}

@@ -54,11 +54,8 @@ Write 2 short paragraphs in plain English explaining what this trajectory means 
 
   return (
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-      <div style={{ marginBottom: 18 }}>
-        <div className="font-serif" style={{ fontSize: 26 }}>Fast Forward</div>
-        <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>Where today's habits take your net worth — a modeled projection, not a guarantee.</div>
-      </div>
-
+      {/* Page title + subtitle live in the TopBar (App.jsx) — repeating them
+          here doubled the heading (same fix as Goals, review #12). */}
       {/* Scenario controls */}
       <div className="card" style={{ padding: '18px 20px', marginBottom: 18 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
@@ -100,7 +97,7 @@ Write 2 short paragraphs in plain English explaining what this trajectory means 
       {/* AI advisory narration */}
       <div className="card" style={{ padding: '18px 20px' }}>
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: aiText || aiErr ? 12 : 0 }}>
-          <div className="font-serif" style={{ fontSize: 16 }}>What this means</div>
+          <h2 className="font-serif" style={{ fontSize: 16, margin: 0, fontWeight: 400 }}>What this means</h2>
           <button onClick={narrate} disabled={aiPending} className="btn btn-primary btn-sm">{aiPending ? 'Thinking…' : '✦ Explain scenario'}</button>
         </div>
         {aiErr && <div role="alert" style={{ fontSize: 12.5, color: 'var(--down-ink)' }}>{aiErr}</div>}

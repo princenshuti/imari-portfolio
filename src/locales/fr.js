@@ -125,7 +125,7 @@ export default {
     },
     how: {
       eyebrow: 'Comment ça marche',
-      title:   'De zéro à une vision complète, en un après-midi.',
+      title:   'De zéro à une vision complète, dès la première heure.',
     },
     footer: {
       title_1: "L'image existe déjà.",

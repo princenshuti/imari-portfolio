@@ -246,7 +246,7 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
   }
   const statusMeta = {
     'on-track': { label: 'On track', color: 'var(--up)',   bg: 'var(--up-soft)'   },
-    'slipping': { label: 'Slipping', color: 'var(--gold)', bg: 'var(--gold-soft)' },
+    'slipping': { label: 'Slipping', color: 'var(--gold-ink)', bg: 'var(--gold-soft)' },
     'overdue':  { label: 'Overdue',  color: 'var(--down)', bg: 'var(--down-soft)' },
     'done':     { label: 'Done',     color: 'var(--up)',   bg: 'var(--up-soft)'   },
   }[status];
@@ -274,7 +274,7 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
             <div className="muted" style={{ fontSize: 11 }}>
               {cat.label}
               {deadlineFmt && (
-                <span style={{ marginLeft: 8, color: isOverdue ? 'var(--down)' : daysLeft < 90 ? 'var(--gold)' : 'var(--ink-3)' }}>
+                <span style={{ marginLeft: 8, color: isOverdue ? 'var(--down-ink)' : daysLeft < 90 ? 'var(--gold-ink)' : 'var(--ink-3)' }}>
                   · {deadlineFmt} {isOverdue
                     ? `(${Math.abs(daysLeft)}d overdue)`
                     : daysLeft !== null ? `(${daysLeft}d left)` : ''}
@@ -292,18 +292,18 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
             <span aria-hidden="true">⋯</span>
           </button>
           {menuOpen && (
-            <div role="menu" style={{
+            <div style={{
               position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 30, minWidth: 130,
               background: 'var(--paper)', border: '0.5px solid var(--line-strong)',
               borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-2)', overflow: 'hidden',
             }}>
-              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit(); }}
-                style={{ all: 'unset', display: 'block', boxSizing: 'border-box', width: '100%', padding: '9px 14px', fontSize: 12.5, cursor: 'pointer' }}
+              <button type="button" className="btn-unstyled" onClick={() => { setMenuOpen(false); onEdit(); }}
+                style={{ display: 'block', width: '100%', padding: '9px 14px', fontSize: 12.5 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >✎ Edit goal</button>
-              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onDelete(); }}
-                style={{ all: 'unset', display: 'block', boxSizing: 'border-box', width: '100%', padding: '9px 14px', fontSize: 12.5, cursor: 'pointer', color: 'var(--down-ink)' }}
+              <button type="button" className="btn-unstyled" onClick={() => { setMenuOpen(false); onDelete(); }}
+                style={{ display: 'block', width: '100%', padding: '9px 14px', fontSize: 12.5, color: 'var(--down-ink)' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--down-soft)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >× Delete…</button>

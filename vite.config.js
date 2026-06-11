@@ -28,7 +28,22 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // No `png`: og-image.png is for social crawlers, not the app shell.
+        // The spreadsheet libraries are lazy-loaded on the import path and
+        // cached by the browser on first use — precaching them forced every
+        // first visit to download ~1.4 MB it would likely never run.
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+        // Lazy heavyweights stay OUT of the precache: the spreadsheet libs
+        // (import path only) and the entire Spline 3D family (landing finale
+        // only — react-spline, physics, navmesh, opentype, howler, boolean,
+        // gaussian-splat, process, ui are all its split chunks). The browser
+        // HTTP cache covers them after first use.
+        globIgnores: [
+          '**/exceljs*', '**/xlsx*',
+          '**/react-spline*', '**/physics*', '**/navmesh*', '**/opentype*',
+          '**/howler*', '**/boolean-*', '**/gaussian-splat*', '**/process-*',
+          '**/ui-*',
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.coingecko\.com\/.*/i,

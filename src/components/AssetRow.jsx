@@ -139,8 +139,9 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
             type="button"
             onDoubleClick={beginEdit}
             aria-label={onSaveValue ? `Value of ${asset.name} (double-click to edit)` : undefined}
+            className="btn-unstyled"
             style={{
-              all: 'unset', cursor: onSaveValue ? 'text' : 'default',
+              cursor: onSaveValue ? 'text' : 'default',
               fontSize: 13, fontWeight: 500, fontFamily: 'var(--mono, monospace)',
             }}
           >

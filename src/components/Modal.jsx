@@ -79,6 +79,15 @@ export default function Modal({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  // Lock body scroll while open — on iOS the page behind long modal forms
+  // (AssetEditor) otherwise scrolls during flicks and shifts on close.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
   if (!open) return null;
 
   const scrim = scrimVariant === 'image' ? 'var(--scrim-image)' : 'var(--scrim)';

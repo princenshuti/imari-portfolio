@@ -50,7 +50,7 @@ export default function MobileTabBar({ active, onNav, visibleIds = null }) {
 
       {moreOpen && (
         <div style={{
-          position: 'fixed', bottom: 66, left: 0, right: 0, zIndex: 50,
+          position: 'fixed', bottom: 'calc(58px + env(safe-area-inset-bottom, 8px))', left: 0, right: 0, zIndex: 50,
           background: 'var(--paper)', borderTop: '0.5px solid var(--line)',
           borderRadius: '16px 16px 0 0', padding: '16px 12px 8px',
           boxShadow: '0 -8px 32px rgba(0,0,0,0.14)',

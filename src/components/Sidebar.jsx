@@ -79,9 +79,8 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           type="button"
           onClick={() => onNav('dashboard')}
           aria-label={t('nav.home_label')}
-          className="sidebar-brand"
+          className="sidebar-brand btn-unstyled"
           style={{
-            all: 'unset',
             display: 'flex', gap: 10, alignItems: 'center', flex: 1, minWidth: 0,
             padding: '6px 6px', borderRadius: 'var(--r-md)',
             cursor: 'pointer',
@@ -119,8 +118,8 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
 
       {/* ── Net worth card — hidden when sidebar is collapsed ── */}
       {!collapsed && (
-      <button onClick={() => onNav('dashboard')} style={{
-        all: 'unset', display: 'block', cursor: 'pointer',
+      <button onClick={() => onNav('dashboard')} className="btn-unstyled" style={{
+        display: 'block',
         padding: 16, borderRadius: 'var(--r-lg)',
         background: 'linear-gradient(145deg, var(--brand-softer) 0%, var(--bg-2) 100%)',
         border: '0.5px solid var(--brand-soft)',

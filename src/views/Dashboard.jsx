@@ -73,7 +73,7 @@ function IdleCashCard({ insight, displayCurrency, now }) {
     <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
         <div>
-          <div className="font-serif" style={{ fontSize: 19 }}>Idle cash is costing you</div>
+          <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>Idle cash is costing you</h2>
           <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{insight.body}</div>
         </div>
         <span className="muted" style={{ fontSize: 10, padding: '3px 8px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', alignSelf: 'flex-start' }}>Reference yield</span>
@@ -246,9 +246,8 @@ function MoverCard({ asset, delay, onClick }) {
       onClick={onClick}
       disabled={!isInteractive}
       aria-label={isInteractive ? `Open ${asset.name} in Assets` : undefined}
-      className={isInteractive ? 'dash-mover-card' : undefined}
+      className={isInteractive ? 'dash-mover-card btn-unstyled' : 'btn-unstyled'}
       style={{
-        all: 'unset',
         boxSizing: 'border-box',
         display: 'block', width: '100%',
         padding: '14px 16px', borderRadius: 'var(--r-md)',
@@ -1007,7 +1006,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               <button onClick={() => setProjMode(v => !v)} className="dash-btn-range" aria-pressed={projMode} style={{
                 padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
                 background: projMode ? 'var(--gold)' : 'var(--gold-soft)',
-                color: projMode ? '#fff' : 'var(--gold-ink)',
+                color: projMode ? 'var(--ink)' : 'var(--gold-ink)',
                 border: 0, fontFamily: 'inherit', fontWeight: 600,
               }}>Project ⤴</button>
             </div>
@@ -1052,8 +1051,8 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           {/* Drill-down sub-stats — each is a real number from the same engine the views use */}
           <div className="row" style={{ gap: 20, marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--line-soft)', flexWrap: 'wrap' }}>
             {subStats.map(st => (
-              <button key={st.label} type="button" className="dash-link" onClick={() => dispatch({ type: 'nav', to: st.to })}
-                style={{ all: 'unset', cursor: 'pointer' }} aria-label={`${st.label}: ${st.value} — open`}>
+              <button key={st.label} type="button" className="dash-link btn-unstyled" onClick={() => dispatch({ type: 'nav', to: st.to })}
+                aria-label={`${st.label}: ${st.value} — open`}>
                 <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{st.label}</div>
                 <div className="num" style={{ fontSize: 15, fontWeight: 700, marginTop: 2, color: st.color || 'var(--ink)' }}>{st.value}</div>
               </button>
@@ -1069,7 +1068,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
 
         {/* Asset Allocation donut */}
         <div className="card" style={{ padding: 22 }}>
-          <div className="font-serif" style={{ fontSize: 17, marginBottom: 16, letterSpacing: '-0.01em' }}>Asset allocation</div>
+          <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 16px', letterSpacing: '-0.01em', fontWeight: 400 }}>Asset allocation</h2>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, position: 'relative' }}>
             <Donut size={114} thickness={15}
               slices={stats.groups.map(g => ({ value: g.value, color: g.color, label: g.group }))}
@@ -1107,7 +1106,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         {/* Financial ratios column */}
         <div className="col" style={{ gap: 12 }}>
           <div className="card" style={{ padding: '18px 20px', flex: 1 }}>
-            <div className="font-serif" style={{ fontSize: 15, marginBottom: 14 }}>Financial ratios</div>
+            <h2 className="font-serif" style={{ fontSize: 15, margin: '0 0 14px', fontWeight: 400 }}>Financial ratios</h2>
             <div className="col" style={{ gap: 14 }}>
               <RatioBar
                 label="Liquidity ratio"
@@ -1193,7 +1192,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           {/* Mini income trend */}
           <div className="card" style={{ padding: '16px 18px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
-              <div className="font-serif" style={{ fontSize: 14 }}>Cash flow (6M)</div>
+              <h2 className="font-serif" style={{ fontSize: 14, margin: 0, fontWeight: 400 }}>Cash flow (6M)</h2>
               {hasCF && (
                 <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}
                   style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 10, color: 'var(--brand)', fontFamily: 'inherit', padding: 0 }}>
@@ -1230,7 +1229,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
             <div>
-              <div className="font-serif" style={{ fontSize: 19 }}>Retirement readiness</div>
+              <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>Retirement readiness</h2>
               <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>RSSB / Ejo Heza · projected to age 60 · modeled</div>
             </div>
           </div>
@@ -1303,7 +1302,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           <div className="card" style={{ padding: '20px 22px' }}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
-                <div className="font-serif" style={{ fontSize: 17 }}>Monthly income</div>
+                <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>Monthly income</h2>
                 <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>By source · recurring + asset income</div>
               </div>
               <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} style={{
@@ -1347,14 +1346,14 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               </div>
             ) : (
               <div className="muted" style={{ fontSize: 12, lineHeight: 1.6, padding: '8px 0' }}>
-                No recurring income recorded yet. Add cashflows or set income generation on assets to see breakdown.
+                No recurring income yet. Add an income entry in Cash Flow, or mark an asset as income-generating, and the breakdown appears here.
               </div>
             )}
           </div>
 
           {/* Liquidity & obligations */}
           <div className="card" style={{ padding: '20px 22px' }}>
-            <div className="font-serif" style={{ fontSize: 17, marginBottom: 14 }}>Liquidity position</div>
+            <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 14px', fontWeight: 400 }}>Liquidity position</h2>
             <div className="col" style={{ gap: 14 }}>
               <div>
                 <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Liquid balance</div>
@@ -1404,7 +1403,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16, gap: 10 }}>
           <div>
-            <div className="font-serif" style={{ fontSize: 19 }}>Where your money goes</div>
+            <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>Where your money goes</h2>
             <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
               This month · {fmtBase(expenseByCategory.total, profile.displayCurrency, { compact: true })} across {expenseByCategory.rows.length} categories
             </div>
@@ -1419,8 +1418,8 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             ariaLabel={`Expenses by category: ${expenseByCategory.rows.slice(0, 5).map(r => `${r.label} ${r.pct.toFixed(0)} percent`).join(', ')}`} />
           <div className="col" style={{ flex: 1, minWidth: 240, gap: 9 }}>
             {expenseByCategory.rows.slice(0, 6).map(r => (
-              <button key={r.id} onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} className="dash-link"
-                style={{ all: 'unset', cursor: 'pointer', display: 'block' }}
+              <button key={r.id} onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} className="dash-link btn-unstyled"
+                style={{ display: 'block' }}
                 aria-label={`${r.label}: ${fmtBase(r.amount, profile.displayCurrency, { compact: true })}, ${r.pct.toFixed(0)}% of spend`}>
                 <div className="row" style={{ justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
                   <div className="row" style={{ gap: 8, minWidth: 0, alignItems: 'center' }}>
@@ -1458,7 +1457,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       const realYoY = m.nominalYoY != null ? m.nominalYoY - m.headlineCpi : null;
       return (
         <div>
-          <div className="font-serif" style={{ fontSize: 19, marginBottom: 4 }}>Your personal macro</div>
+          <h2 className="font-serif" style={{ fontSize: 19, margin: '0 0 4px', fontWeight: 400 }}>Your personal macro</h2>
           <div style={{ fontSize: 12.5, marginBottom: 14, color: 'var(--ink-2)' }}>
             {m.personalized && Math.abs(m.personalCpi - m.headlineCpi) >= 0.3 ? (
               <>Your inflation runs <strong style={{ color: m.personalCpi > m.headlineCpi ? 'var(--down)' : 'var(--up)' }}>{m.personalCpi.toFixed(1)}%</strong> — {m.personalCpi > m.headlineCpi ? 'faster' : 'slower'} than the national {m.headlineCpi}%.</>
@@ -1518,7 +1517,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18 }}>
           <div>
-            <div className="font-serif" style={{ fontSize: 19 }}>Category performance</div>
+            <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>Category performance</h2>
             <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Unrealised gain / loss by asset class</div>
           </div>
           <button onClick={() => dispatch({ type: 'nav', to: 'assets' })} style={{
@@ -1571,7 +1570,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       <div className={activeGoals.length > 0 ? 'dash-grid-2' : ''} style={activeGoals.length > 0 ? undefined : { display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
         <div className="card" style={{ padding: '20px 22px' }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-            <div className="font-serif" style={{ fontSize: 17 }}>vs. Benchmarks</div>
+            <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>vs. Benchmarks</h2>
             <span
               className="pill pill-soft"
               title={`Portfolio bar = your net-worth change over the last ${chartRange}. Benchmarks scaled to the same window where possible.`}
@@ -1596,7 +1595,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         {activeGoals.length > 0 && (
           <div className="card" style={{ padding: '20px 22px' }}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
-              <div className="font-serif" style={{ fontSize: 17 }}>Goals progress</div>
+              <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>Goals progress</h2>
               <button onClick={() => dispatch({ type: 'nav', to: 'goals' })} style={{
                 border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit',
               }}>See all →</button>
@@ -1657,7 +1656,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     markets: (
       <div>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-          <div className="font-serif" style={{ fontSize: 19, letterSpacing: '-0.01em' }}>Markets you watch</div>
+          <h2 className="font-serif" style={{ fontSize: 19, margin: 0, letterSpacing: '-0.01em', fontWeight: 400 }}>Markets you watch</h2>
           <button onClick={() => dispatch({ type: 'nav', to: 'trends' })} style={{
             border: 0, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
           }}>See all trends →</button>
@@ -1697,9 +1696,9 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         <button
           type="button"
           onClick={() => dispatch({ type: 'nav', to: 'advisor' })}
-          className="dash-advisor-strip"
+          className="dash-advisor-strip btn-unstyled"
           style={{
-            all: 'unset', boxSizing: 'border-box', order: 11, display: 'flex', alignItems: 'center', gap: 10,
+            order: 11, display: 'flex', alignItems: 'center', gap: 10,
             width: '100%', padding: '11px 16px', marginBottom: 16, cursor: 'pointer',
             borderRadius: 'var(--r-lg)', background: 'var(--paper)',
             border: '0.5px solid var(--line)', boxShadow: 'var(--shadow-1)',
