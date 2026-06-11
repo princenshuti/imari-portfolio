@@ -1,0 +1,1 @@
+const a={critical:"var(--down)",warning:"var(--gold)",info:"var(--sky)",good:"var(--up)"},i={critical:"⚠",warning:"!",info:"i",good:"✓"},n={critical:"Critical",warning:"Warning",info:"Heads up",good:"On track"},r=o=>a[o]||a.info;export{a as S,i as a,n as b,r as s};
