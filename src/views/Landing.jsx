@@ -88,9 +88,26 @@ const RWANDA = [
   { icon: 'flow', name: 'RSE shares & T-bonds', line: 'Local instruments priced as first-class assets.' },
 ];
 
-// Quiet institutional strip under the hero — the "client logos" of a
-// Rwandan wealth tracker are the rails it is wired into.
+// Marquee strip under the hero — the "client logos" of a Rwandan wealth
+// tracker are the rails it is wired into.
 const RAILS = ['MTN MoMo', 'Airtel Money', 'BNR', 'RRA', 'RSSB', 'Ejo Heza', 'RSE', 'UPI'];
+
+// ── AI Advisor showcase — mirrors the real Advisor view ───────────────────
+const ADVISOR_HEAD = {
+  eyebrow: 'AI-ready advisory',
+  title: 'A deterministic engine. An advisor that speaks.',
+  sub: 'Imari computes every figure — concentration, runway, tax, idle cash — from your data and today\'s BNR market pulse. The AI never invents a number; it explains the ones the engine already proved, and answers what you ask next.',
+};
+const ADVISOR_CHIPS = [
+  'Build a 12-month plan to grow my net worth 25%.',
+  'If I save RWF 200k/month, when do I hit 50M?',
+  'What\'s my approximate annual RRA tax exposure?',
+];
+const PULSE = [
+  { label: 'USD/RWF (BNR)', value: '1,300 / 1,350', sub: 'buy / sell · today', live: true },
+  { label: 'T-bill yield', value: '13.5%', sub: 'BNR · reference', live: false },
+  { label: 'Inflation (CPI)', value: '4.8%', sub: 'NISR · reference', live: false },
+];
 
 // ── Trust & honesty ───────────────────────────────────────────────────────
 const TRUST = [
@@ -110,14 +127,124 @@ const STEPS = [
   { n: '03', title: 'Let Imari watch it', desc: 'Daily snapshots, FX updates, tax estimates and the insight engine run quietly. You check in when you want to know — and Imari taps you when it matters.' },
 ];
 
-// Severity accents are fixed (not theme tokens): the Cost-of-Absence section
-// sits on a deep-green panel that stays dark in both themes, so these pastels
-// are tuned for that surface only (all ≥ 7:1 on #11201A).
+// Severity accents are fixed (not theme tokens): the landing is always a
+// midnight surface, so these pastels are tuned for it (all ≥ 7:1).
 const SEV = {
   critical: { color: '#F2A096', label: 'Critical' },
   warning: { color: '#EAC96E', label: 'Warning' },
   info: { color: '#9CC2EC', label: 'Heads up' },
 };
+
+// Count-up for the mock net-worth figure. Resolves instantly under
+// prefers-reduced-motion — the number must never be unreadable.
+function useCountUp(target, duration = 1400) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setVal(target);
+      return undefined;
+    }
+    let raf;
+    const t0 = performance.now();
+    const tick = (t) => {
+      const p = Math.min((t - t0) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return val;
+}
+
+// Miniature live replica of the real Dashboard (labels match Dashboard.jsx):
+// net worth + delta pill, self-drawing chart with cost basis, KPI tiles.
+const MOCK_LINE = 'M0,128 L24,120 L48,125 L72,106 L96,99 L120,105 L144,90 L168,95 L192,76 L216,83 L240,68 L264,75 L288,60 L312,66 L336,54 L360,60 L384,46 L408,53 L432,38 L456,45 L480,29 L504,37 L528,22 L548,28 L560,20';
+const MOCK_KPIS = [
+  ['Cash in hand', 'RWF 8.4M', '1.8 months of expenses'],
+  ['Tax estimate', 'RWF 412K', 'next deadline in 21 days'],
+  ['Investable', 'RWF 5.1M', 'liquid minus 3-month buffer'],
+];
+
+function DashboardMock() {
+  const nw = useCountUp(204);
+  return (
+    <div className="landing-mock">
+      <div className="landing-mock-head">
+        <div>
+          <div className="landing-mock-label">{'Net worth'}</div>
+          <div className="landing-mock-amount font-serif">RWF {nw}M</div>
+          <span className="landing-mock-delta num">▲ +RWF 30M (+17.7%) past 3M</span>
+        </div>
+        <div className="landing-mock-ranges num">
+          {['1M', '3M', '6M', '1Y'].map(r => (
+            <span key={r} className={r === '3M' ? 'is-active' : ''}>{r}</span>
+          ))}
+        </div>
+      </div>
+      <svg className="landing-mock-chart" viewBox="0 0 560 170" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="lm-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3FB889" stopOpacity="0.30" />
+            <stop offset="100%" stopColor="#3FB889" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path className="landing-mock-area" d={`${MOCK_LINE} L560,170 L0,170 Z`} fill="url(#lm-fill)" />
+        <path className="landing-mock-basis" d="M0,150 L560,116" />
+        <path className="landing-mock-line" pathLength="1" d={MOCK_LINE} />
+        <circle className="landing-mock-peak" cx="528" cy="22" r="3.5" />
+      </svg>
+      <div className="landing-mock-kpis">
+        {MOCK_KPIS.map(([label, val, sub], i) => (
+          <div key={label} className="landing-mock-kpi" style={{ '--reveal-delay': `${900 + i * 110}ms` }}>
+            <div className="landing-mock-kpi-label">{label}</div>
+            <div className="landing-mock-kpi-val num">{val}</div>
+            <div className="landing-mock-kpi-sub">{sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// The Advisor exchange, as it looks in the product: market pulse, a question,
+// an engine-computed answer the AI phrased. The ✦ mark is the product's own
+// AI glyph (see Advisor.jsx) — kept for authenticity.
+function AdvisorMock() {
+  return (
+    <div className="landing-advisor-mock" aria-hidden>
+      <div className="landing-pulse">
+        {PULSE.map((p, i) => (
+          <div key={p.label} className="landing-pulse-card" style={{ '--reveal-delay': `${i * 90}ms` }}>
+            <div className="landing-pulse-top">
+              <span className="landing-pulse-label">{p.label}</span>
+              <span className={`landing-pulse-pill ${p.live ? 'is-live' : ''}`}>{p.live ? 'live' : 'ref'}</span>
+            </div>
+            <div className="landing-pulse-val num">{p.value}</div>
+            <div className="landing-pulse-sub">{p.sub}</div>
+          </div>
+        ))}
+      </div>
+      <div className="landing-advisor-q">
+        Am I too concentrated in any single asset?
+      </div>
+      <div className="landing-advisor-a">
+        <span className="landing-advisor-sev">{'Warning'}</span>
+        <div className="landing-advisor-headline font-serif">42% of your assets sit in one holding</div>
+        <p>
+          Your equity position is 42% of total assets — above the 25% concentration guide.
+          A single shock would move 42% of your wealth at once; diversifying spreads that risk.
+        </p>
+        <div className="landing-advisor-cost num">{'Cost of absence: a 15% drawdown ≈ −RWF 12.8M'}</div>
+        <span className="landing-advisor-action"><span aria-hidden>✦</span>{' Discuss this'}</span>
+      </div>
+      <div className="landing-advisor-note">
+        Every figure computed by the engine — the AI only phrases it. Not professional advice.
+      </div>
+    </div>
+  );
+}
 
 export default function Landing({ onSignIn }) {
   const { t } = useT();
@@ -145,6 +272,7 @@ export default function Landing({ onSignIn }) {
           </a>
           <div className="landing-nav-actions">
             <a href="#cost" className="landing-link">{COST_HEAD.eyebrow}</a>
+            <a href="#advisor" className="landing-link">{'AI Advisor'}</a>
             <a href="#features" className="landing-link">{t('landing.nav.features')}</a>
             <a href="#security" className="landing-link">{t('landing.nav.security')}</a>
             <button onClick={() => goLogin('signin')} className="btn btn-primary landing-cta-sm">{t('landing.nav.signin')}</button>
@@ -177,9 +305,8 @@ export default function Landing({ onSignIn }) {
           </div>
         </div>
 
-        {/* Real product shot in a browser frame — credibility over illustration
-            (design review #21). The floating mini box is gone; the one overlay
-            kept is the thesis: the Cost-of-Absence chip. */}
+        {/* Live miniature of the real dashboard — built in code so it moves:
+            the chart draws, the number counts, the insight chip arrives. */}
         <div className="landing-preview" aria-hidden>
           <div className="landing-frame">
             <div className="landing-frame-bar">
@@ -188,28 +315,30 @@ export default function Landing({ onSignIn }) {
               ))}
               <span className="num landing-frame-url">imali.princenshuti.com</span>
             </div>
-            <img
-              src={`${import.meta.env.BASE_URL}product-hero.png`}
-              alt=""
-              loading="lazy"
-            />
+            <DashboardMock />
           </div>
           <div className="landing-preview-costchip">
             <span className="landing-preview-costglyph">!</span>
-            <span>{'RWF 35k/mo idle — not earning T-bill yield'}</span>
+            <span>{'RWF 5M idle — ~RWF 50K/mo forgone vs T-bills'}</span>
           </div>
         </div>
       </header>
 
-      {/* Rails strip — institutional credibility, before any pitch */}
+      {/* Rails marquee — institutional credibility, before any pitch */}
       <div className="landing-rails">
         <span className="landing-rails-label">{'Wired into the rails you already use'}</span>
         <div className="landing-rails-items">
-          {RAILS.map(r => <span key={r} className="landing-rails-item num">{r}</span>)}
+          <div className="landing-rails-track">
+            {[0, 1].map(dup => (
+              <div key={dup} className="landing-rails-set" aria-hidden={dup === 1}>
+                {RAILS.map(r => <span key={r} className="landing-rails-item num">{r}</span>)}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Cost of Absence — the signature idea, on the page's one dark panel */}
+      {/* Cost of Absence — the signature idea */}
       <section id="cost" className="landing-section landing-section--cost">
         <div className="landing-section-head">
           <span className="landing-section-eyebrow">{COST_HEAD.eyebrow}</span>
@@ -231,6 +360,25 @@ export default function Landing({ onSignIn }) {
               </article>
             );
           })}
+        </div>
+      </section>
+
+      {/* AI Advisor — the brain behind the numbers */}
+      <section id="advisor" className="landing-section landing-section--advisor">
+        <div className="landing-advisor">
+          <div className="landing-advisor-copy">
+            <span className="landing-section-eyebrow">{ADVISOR_HEAD.eyebrow}</span>
+            <h2 className="font-serif landing-section-title">{ADVISOR_HEAD.title}</h2>
+            <p className="landing-section-sub">{ADVISOR_HEAD.sub}</p>
+            <div className="landing-advisor-chiplist">
+              {ADVISOR_CHIPS.map(q => (
+                <span key={q} className="landing-advisor-chip">
+                  <span className="landing-advisor-spark" aria-hidden>✦</span> {q}
+                </span>
+              ))}
+            </div>
+          </div>
+          <AdvisorMock />
         </div>
       </section>
 

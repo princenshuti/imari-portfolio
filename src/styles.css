@@ -887,6 +887,48 @@ input:focus, select:focus, textarea:focus {
 
 /* Ease vars are now defined in :root — Landing inherits them */
 .landing-root {
+  /* The marketing surface is always midnight, independent of the app theme —
+     premium-fintech dark, with the app's own dark-theme palette re-scoped
+     here so every token-driven component (buttons, pills) adapts for free. */
+  --bg:      #0B100D;
+  --bg-2:    #131A15;
+  --paper:   #151C17;
+  --paper-2: #1B231D;
+  --line:        rgba(240, 237, 228, 0.09);
+  --line-soft:   rgba(240, 237, 228, 0.055);
+  --line-strong: rgba(240, 237, 228, 0.16);
+  --ink:   #F0EDE2;
+  --ink-2: #C6C1B1;
+  --ink-3: #ABA799;
+  --ink-4: #918D7E;
+  --brand:        #3FB889;
+  --brand-2:      #56CDAB;
+  --brand-soft:   rgba(63, 184, 137, 0.22);
+  --brand-softer: rgba(63, 184, 137, 0.10);
+  --brand-ink:    #07120D;
+  --gold:        #E5BC55;
+  --gold-ink:    #F0CE70;
+  --gold-2:      #F0CE70;
+  --gold-soft:   rgba(229, 188, 85, 0.18);
+  --gold-softer: rgba(229, 188, 85, 0.09);
+  --up:        #3FB889;
+  --up-ink:    #6BD9A8;
+  --up-soft:   rgba(63, 184, 137, 0.16);
+  --down:      #E07870;
+  --down-ink:  #F0958C;
+  --down-soft: rgba(224, 120, 112, 0.16);
+  --sky:  #7BA8E8;
+  --plum: #B59ACC;
+  --clay: #E0986A;
+  --glass-bg:     rgba(11, 16, 13, 0.74);
+  --glass-border: rgba(240, 237, 228, 0.08);
+  --shadow-0:   0 1px 2px rgba(0,0,0,0.25);
+  --shadow-1:   0 1px 3px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.20);
+  --shadow-2:   0 2px 6px rgba(0,0,0,0.30), 0 6px 24px rgba(0,0,0,0.25);
+  --shadow-3:   0 4px 12px rgba(0,0,0,0.35), 0 16px 48px rgba(0,0,0,0.40);
+  --shadow-pop: 0 8px 24px rgba(0,0,0,0.50), 0 24px 64px rgba(0,0,0,0.45);
+  --shadow-brand: 0 4px 16px rgba(63, 184, 137, 0.25);
+
   min-height: 100vh;
   background: var(--bg);
   color: var(--ink);
@@ -972,7 +1014,7 @@ input:focus, select:focus, textarea:focus {
 /* ── Hero ─────────────────────────────────────────────────────── */
 .landing-hero {
   position: relative;
-  padding: 132px 24px 64px;
+  padding: 132px 24px 72px;
   max-width: 1180px;
   margin: 0 auto;
   display: grid;
@@ -980,7 +1022,36 @@ input:focus, select:focus, textarea:focus {
   gap: 56px;
   align-items: center;
 }
+/* Ambient glow — green and gold auroras drifting very slowly. Decorative,
+   GPU-only (transform/opacity), and frozen by the reduced-motion block. */
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  inset: -22% -12%;
+  background:
+    radial-gradient(560px 420px at 16% 24%, rgba(63, 184, 137, 0.15), transparent 64%),
+    radial-gradient(680px 500px at 86% 8%, rgba(229, 188, 85, 0.09), transparent 64%);
+  animation: landing-drift 16s var(--ease-in-out) infinite alternate;
+  pointer-events: none;
+}
+@keyframes landing-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(2.5%, -2%, 0) scale(1.05); }
+}
+/* Faint dot grid fading out from the headline — quiet "instrument" texture. */
+.landing-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(240, 237, 228, 0.05) 1px, transparent 1.5px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(720px 520px at 28% 32%, #000, transparent 78%);
+  mask-image: radial-gradient(720px 520px at 28% 32%, #000, transparent 78%);
+  pointer-events: none;
+}
 .landing-hero-inner {
+  position: relative;
+  z-index: 1;
   animation: landing-fade-up 600ms var(--ease-out) both;
 }
 .landing-eyebrow {
@@ -1049,9 +1120,10 @@ input:focus, select:focus, textarea:focus {
 }
 .landing-trust svg { width: 16px; height: 16px; color: var(--brand); }
 
-/* ── Hero preview — real product shot in a browser frame ──────── */
+/* ── Hero preview — live dashboard replica in a browser frame ─── */
 .landing-preview {
   position: relative;
+  z-index: 1;
   animation: landing-fade-up 700ms 120ms var(--ease-out) both;
 }
 .landing-frame {
@@ -1059,7 +1131,7 @@ input:focus, select:focus, textarea:focus {
   overflow: hidden;
   background: var(--paper);
   border: 0.5px solid var(--line-strong);
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--shadow-pop), 0 0 80px rgba(63, 184, 137, 0.07);
   transform: rotate(0.6deg);
 }
 .landing-frame-bar {
@@ -1086,6 +1158,110 @@ input:focus, select:focus, textarea:focus {
   height: auto;
 }
 
+/* ── Dashboard mock — a moving miniature of the real Dashboard ───
+   Net worth counts up (JS, reduced-motion aware), the chart draws
+   itself once, KPI tiles arrive staggered. Labels match Dashboard.jsx. */
+.landing-mock {
+  padding: 18px 18px 16px;
+  display: grid;
+  gap: 12px;
+}
+.landing-mock-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.landing-mock-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 5px;
+}
+.landing-mock-amount {
+  font-size: 33px;
+  line-height: 1;
+  color: var(--ink);
+  margin-bottom: 9px;
+}
+.landing-mock-delta {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: var(--up-soft);
+  color: var(--up-ink);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+.landing-mock-ranges {
+  display: flex;
+  gap: 4px;
+  font-size: 9.5px;
+  color: var(--ink-4);
+}
+.landing-mock-ranges span { padding: 4px 8px; border-radius: var(--r-pill); }
+.landing-mock-ranges .is-active { background: var(--brand); color: var(--brand-ink); font-weight: 600; }
+.landing-mock-chart {
+  display: block;
+  width: 100%;
+  height: 148px;
+}
+.landing-mock-line {
+  fill: none;
+  stroke: #3FB889;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;            /* pathLength="1" → unit-normalised draw */
+  stroke-dashoffset: 1;
+  animation: landing-draw 1500ms 300ms var(--ease-out) forwards;
+}
+@keyframes landing-draw { to { stroke-dashoffset: 0; } }
+.landing-mock-area {
+  opacity: 0;
+  animation: landing-appear 700ms 1300ms var(--ease-out) forwards;
+}
+.landing-mock-peak {
+  fill: #3FB889;
+  stroke: var(--paper);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  animation: landing-appear 400ms 1650ms var(--ease-out) forwards;
+}
+@keyframes landing-appear { to { opacity: 1; } }
+.landing-mock-basis {
+  fill: none;
+  stroke: var(--ink-4);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.5;
+}
+.landing-mock-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.landing-mock-kpi {
+  animation: landing-fade-up 460ms var(--ease-out) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+.landing-mock-kpi-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 3px;
+}
+.landing-mock-kpi-val { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.landing-mock-kpi-sub { font-size: 9.5px; color: var(--ink-4); }
+
 /* ── Rails strip — quiet institutional proof under the hero ───────
    The "client logos" of a Rwandan wealth tracker are the rails it is
    wired into: MoMo, BNR, RRA, RSSB… One restrained line, no pitch. */
@@ -1107,12 +1283,28 @@ input:focus, select:focus, textarea:focus {
   color: var(--ink-4);
 }
 .landing-rails-items {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  column-gap: 36px;
-  row-gap: 10px;
+  width: 100%;
   max-width: 1120px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+/* Continuous marquee: two identical sets, track slides one set-width.
+   Frozen (first set visible) under reduced motion; paused on hover. */
+.landing-rails-track {
+  display: flex;
+  width: max-content;
+  animation: landing-marquee 36s linear infinite;
+}
+.landing-rails:hover .landing-rails-track { animation-play-state: paused; }
+@keyframes landing-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.landing-rails-set {
+  display: flex;
+  column-gap: 44px;
+  padding-right: 44px;
 }
 .landing-rails-item {
   font-size: 13px;
@@ -1120,6 +1312,7 @@ input:focus, select:focus, textarea:focus {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-3);
+  white-space: nowrap;
 }
 
 /* ── Sections ─────────────────────────────────────────────────── */
@@ -1604,6 +1797,140 @@ input:focus, select:focus, textarea:focus {
 .landing-cost-label { font-size: 13px; font-weight: 600; color: #FEFCF7; margin-bottom: 8px; }
 .landing-cost-desc  { font-size: 12.5px; line-height: 1.6; color: rgba(254, 252, 247, 0.68); margin: 0; }
 
+/* ── AI Advisor showcase ──────────────────────────────────────────
+   Copy left, a believable Advisor exchange right: market pulse cards,
+   a question bubble, the engine-computed answer the AI phrased. */
+.landing-advisor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 56px;
+  align-items: center;
+}
+.landing-advisor-copy .landing-section-title { font-size: clamp(30px, 3.6vw, 42px); }
+.landing-advisor-chiplist {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 26px;
+}
+.landing-advisor-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--paper);
+  border: 0.5px solid var(--line);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.landing-advisor-spark { color: var(--brand); font-size: 12px; }
+
+.landing-advisor-mock {
+  background: var(--paper);
+  border: 0.5px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-pop), 0 0 70px rgba(63, 184, 137, 0.06);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+.landing-pulse {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.landing-pulse-card {
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 10px 11px;
+  animation: landing-fade-up 460ms var(--ease-out) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+.landing-pulse-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.landing-pulse-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.landing-pulse-pill {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: var(--r-pill);
+  background: var(--gold-soft);
+  color: var(--gold-ink);
+}
+.landing-pulse-pill.is-live { background: var(--up-soft); color: var(--up-ink); }
+.landing-pulse-val { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.landing-pulse-sub { font-size: 9.5px; color: var(--ink-4); }
+
+.landing-advisor-q {
+  justify-self: end;
+  max-width: 85%;
+  padding: 10px 15px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  animation: landing-fade-up 460ms 350ms var(--ease-out) both;
+}
+.landing-advisor-a {
+  padding: 16px 17px;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  display: grid;
+  justify-items: start;
+  gap: 9px;
+  animation: landing-fade-up 460ms 650ms var(--ease-out) both;
+}
+.landing-advisor-sev {
+  display: inline-flex;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: var(--gold-soft);
+  color: var(--gold-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.landing-advisor-headline { font-size: 18px; color: var(--ink); line-height: 1.2; }
+.landing-advisor-a p { font-size: 12.5px; line-height: 1.6; color: var(--ink-3); margin: 0; }
+.landing-advisor-cost { font-size: 11.5px; font-weight: 600; color: var(--ink); }
+.landing-advisor-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: var(--r-pill);
+  background: var(--brand-soft);
+  color: var(--brand-2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.landing-advisor-note {
+  font-size: 10.5px;
+  color: var(--ink-4);
+  text-align: center;
+  animation: landing-fade-up 460ms 850ms var(--ease-out) both;
+}
+
 /* ── Built-for-Rwanda tiles ───────────────────────────────────── */
 .landing-rwanda {
   display: grid;
@@ -1680,6 +2007,7 @@ input:focus, select:focus, textarea:focus {
   .landing-feature--wide { grid-column: span 1; }
   .landing-costs     { grid-template-columns: repeat(2, 1fr); }
   .landing-rwanda    { grid-template-columns: repeat(2, 1fr); }
+  .landing-advisor   { grid-template-columns: 1fr; gap: 40px; }
   .landing-pains     { grid-template-columns: 1fr; gap: 8px; }
   .landing-trust-grid{ grid-template-columns: 1fr; }
   .landing-steps     { grid-template-columns: 1fr; gap: 32px; }
@@ -1710,7 +2038,10 @@ input:focus, select:focus, textarea:focus {
   .landing-cost-desc    { font-size: 13px; line-height: 1.6; }
   .landing-rwanda       { grid-template-columns: 1fr; }
   .landing-rails        { padding: 18px; }
-  .landing-rails-items  { column-gap: 22px; }
+  .landing-mock-amount  { font-size: 28px; }
+  .landing-mock-kpi-sub { display: none; }
+  .landing-pulse-val    { font-size: 12px; }
+  .landing-advisor-mock { padding: 14px; }
 }
 
 /* ── Reduced motion — applies globally (WCAG 2.3.3) ───────────── */
