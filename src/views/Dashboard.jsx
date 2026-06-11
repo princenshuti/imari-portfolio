@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, MotionConfig } from 'motion/react';
+import { motion, MotionConfig, Reorder, useDragControls } from 'motion/react';
 import { Reveal, CountUp, BarFill, staggerParent, staggerItem, SPRING, EASE_OUT } from '../components/motion.jsx';
 import {
   CLASSES, TREND_DOMAINS, valueRWF, costRWF, suggestValue,
@@ -18,7 +18,7 @@ import { goalCurrentRWF, goalProgressPct } from '../engine/goals.js';
 import { staleNetWorthInsight, netWorthAsOf } from '../engine/freshness.js';
 import { REFERENCE } from '../engine/insights/refs.js';
 import { projectPension } from '../engine/retirement/index.js';
-import { projectSeries, DEFAULT_ASSUMPTIONS } from '../engine/projection/index.js';
+import { projectSeries, projectNetWorth, DEFAULT_ASSUMPTIONS } from '../engine/projection/index.js';
 import { budgetStatus } from '../engine/budgets.js';
 import { glossaryFor, GLOSSARY } from '../glossary.js';
 import { severityColor } from '../severity.js';
@@ -319,6 +319,93 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
   );
 }
 
+// ─── ModelPulse — the live "portfolio model" widget ────────────────────────
+// A quant-desk strip computed ONLY from the user's own portfolio plus the
+// same REFERENCE rates the insight engine reasons with. Allocation bars
+// re-spring and outputs re-count whenever underlying state changes — the
+// "model run" is the user's real data, never simulated theatre.
+function ModelPulse({ stats, trueNetWorth, monthlyNet, savingsRate, signalCount, snapshotCount, displayCurrency }) {
+  const groups = stats.groups.slice(0, 6);
+  const maxVal = Math.max(...groups.map(g => g.value), 1);
+  // Engine projection — same math as the Fast Forward view (one source of truth).
+  const oneYear = useMemo(() => {
+    const proj = projectNetWorth({ currentNetWorth: trueNetWorth, monthlySavings: Math.max(0, monthlyNet) });
+    return proj.horizons.find(h => h.key === '1Y') || null;
+  }, [trueNetWorth, monthlyNet]);
+  const fmtC = (v) => fmtBase(v, displayCurrency, { compact: true });
+
+  const outputs = [
+    { label: 'Net flow / month', value: monthlyNet, signed: true, color: monthlyNet >= 0 ? 'var(--up)' : 'var(--down)' },
+    oneYear && { label: `Modeled +1Y · ${DEFAULT_ASSUMPTIONS.expectedAnnualGrowthPct}%/yr`, value: oneYear.expected, sub: `${fmtC(oneYear.low)} – ${fmtC(oneYear.high)} band`, color: 'var(--brand)' },
+    savingsRate != null && { label: 'Savings rate', text: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up)' : 'var(--gold)' },
+  ].filter(Boolean);
+
+  return (
+    <div className="card" style={{ padding: '18px 22px' }}>
+      {/* Status row — live dot + the provenance the model reasons with */}
+      <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+          <motion.span
+            aria-hidden="true"
+            animate={{ scale: [1, 0.65, 1], opacity: [1, 0.45, 1] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--up)', boxShadow: '0 0 0 3px var(--up-soft)', display: 'inline-block' }}
+          />
+          <span className="num" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Portfolio model</span>
+          <span className="pill pill-soft" style={{ fontSize: 10 }}>{signalCount} signal{signalCount === 1 ? '' : 's'}</span>
+        </div>
+        <span className="muted num" style={{ fontSize: 10.5 }}>
+          refs · T-bill {REFERENCE.tBillYieldPct}% · CPI {REFERENCE.cpiYoYPct}% · {snapshotCount} snapshots
+        </span>
+      </div>
+
+      <div className="dash-pulse-grid">
+        {/* Allocation flow — each group's share springs to its current size */}
+        <div className="col" style={{ gap: 9, minWidth: 0 }}>
+          {groups.map((g, i) => {
+            const share = stats.totalValue > 0 ? (g.value / stats.totalValue) * 100 : 0;
+            return (
+              <div key={g.group} className="row" style={{ gap: 10, alignItems: 'center', minWidth: 0 }}>
+                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, width: 110, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.group}</span>
+                <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden' }}>
+                  <motion.div
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: Math.max(g.value / maxVal, 0.02) }}
+                    transition={{ ...SPRING, delay: i * 0.05 }}
+                    style={{ height: '100%', width: '100%', background: g.color, transformOrigin: 'left center', borderRadius: 3 }}
+                  />
+                </div>
+                <span className="num" style={{ fontSize: 11.5, fontWeight: 600, width: 64, textAlign: 'right', flexShrink: 0 }}>
+                  <CountUp value={g.value} duration={0.7} format={fmtC} />
+                </span>
+                <span className="muted num" style={{ fontSize: 10, width: 38, textAlign: 'right', flexShrink: 0 }}>{share.toFixed(1)}%</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Model outputs — engine numbers, re-count on every state change */}
+        <div className="col" style={{ gap: 10 }}>
+          {outputs.map(o => (
+            <div key={o.label} style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--bg-2)' }}>
+              <div className="muted" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{o.label}</div>
+              <div className="num" style={{ fontSize: 17, fontWeight: 700, color: o.color, marginTop: 2 }}>
+                {o.text ?? <>{o.signed && o.value >= 0 ? '+' : ''}<CountUp value={o.value} duration={0.8} format={fmtC} /></>}
+              </div>
+              {o.sub && <div className="muted num" style={{ fontSize: 9.5, marginTop: 2 }}>{o.sub}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="muted" style={{ fontSize: 10, marginTop: 12 }}>
+        Computed from your entries against engine reference rates — modeled, not a guarantee.
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard layout: drag-to-reorder + hideable sections ────────────────
 // Phase-2 design edit: the dashboard tells its story in two screens.
 // Screen 1 — STATE: hero (real net-worth chart, range pills, annotations,
@@ -332,6 +419,7 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
 // Center is the canonical surface; the strip links to it).
 const SECTION_META = {
   hero:       { label: 'Net worth',               canHide: false },
+  pulse:      { label: 'Portfolio Model — Live',  canHide: true  },
   widgets:    { label: 'Key Metrics',             canHide: true  },
   position:   { label: 'Allocation & Ratios',     canHide: true  },
   cashflow:   { label: 'Cash Flow by Category',    canHide: true  },
@@ -344,7 +432,7 @@ const SECTION_META = {
   benchmarks: { label: 'Benchmarks & Goals',      canHide: true  },
   markets:    { label: 'Markets Watchlist',       canHide: true  },
 };
-const DEFAULT_SECTION_ORDER = ['hero','widgets','position','cashflow','alerts','financials','retirement','idlecash','macro','category','benchmarks','markets'];
+const DEFAULT_SECTION_ORDER = ['hero','pulse','widgets','position','cashflow','alerts','financials','retirement','idlecash','macro','category','benchmarks','markets'];
 // Hidden by default — shown via Arrange. The five-section default is the
 // whole "minimal" thesis; power users opt back in per section.
 const DEFAULT_HIDDEN_SECTIONS = ['financials','retirement','idlecash','macro','category','benchmarks','markets'];
@@ -374,17 +462,10 @@ function useDashboardLayout() {
   });
   const [editMode, setEditMode] = useState(false);
 
-  const reorder = useCallback((fromId, toId) => {
-    setOrder(prev => {
-      if (fromId === toId) return prev;
-      const next = [...prev];
-      const fi = next.indexOf(fromId), ti = next.indexOf(toId);
-      if (fi < 0 || ti < 0) return prev;
-      next.splice(fi, 1);
-      next.splice(ti, 0, fromId);
-      localStorage.setItem('imari-dash-order', JSON.stringify(next));
-      return next;
-    });
+  // Reorder.Group hands us the full reordered id array on every drag swap.
+  const applyOrder = useCallback((next) => {
+    setOrder(next);
+    try { localStorage.setItem('imari-dash-order', JSON.stringify(next)); } catch {}
   }, []);
 
   const toggleHide = useCallback((id) => {
@@ -403,45 +484,46 @@ function useDashboardLayout() {
     localStorage.removeItem('imari-dash-hidden');
   }, []);
 
-  return { order, hidden, editMode, setEditMode, reorder, toggleHide, resetLayout };
+  return { order, hidden, editMode, setEditMode, applyOrder, toggleHide, resetLayout };
 }
 
-function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReorder, onToggleHide, mobileOrder, children }) {
-  const [dragOver, setDragOver] = useState(false);
+function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onToggleHide, children }) {
+  // Motion Reorder: real drag physics with FLIP — siblings spring aside while
+  // dragging, the item springs into its slot on release, and it works on touch
+  // (the old HTML5 DnD ghost-image never did). Dragging starts ONLY from the
+  // edit-mode handle strip (dragListener={false}), so content interactions and
+  // page scrolling are never hijacked.
+  const dragControls = useDragControls();
   const collapsed = isHidden || !hasData;
 
   return (
-    <div
-      draggable={editMode}
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('dash-section', id); }}
-      onDragOver={(e) => { if (!editMode) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(true); }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => {
-        if (!editMode) return;
-        e.preventDefault(); setDragOver(false);
-        const fromId = e.dataTransfer.getData('dash-section');
-        if (fromId && fromId !== id) onReorder(fromId, id);
-      }}
-      onDragEnd={() => setDragOver(false)}
+    <Reorder.Item
+      as="div"
+      value={id}
+      dragListener={false}
+      dragControls={dragControls}
+      layout
+      transition={SPRING}
+      whileDrag={{ scale: 1.012, zIndex: 60, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}
       style={{
         marginBottom: 16,
-        outline: dragOver
-          ? '2px solid var(--brand)'
-          : editMode ? '1.5px dashed var(--line-strong)' : 'none',
+        outline: editMode ? '1.5px dashed var(--line-strong)' : 'none',
         outlineOffset: 4,
         borderRadius: 12,
-        transition: 'outline-color 0.1s ease',
-        order: mobileOrder, // only takes effect in the mobile flex column
-        cursor: editMode ? 'grab' : 'default',
+        position: 'relative',
+        listStyle: 'none',
       }}
     >
-      {/* Edit-mode drag handle strip */}
+      {/* Edit-mode drag handle strip — the grab surface */}
       {editMode && (
-        <div style={{
+        <div
+          onPointerDown={(e) => { e.preventDefault(); dragControls.start(e); }}
+          style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '7px 12px', marginBottom: collapsed ? 6 : 8,
           background: 'var(--paper)', border: '1px solid var(--line)',
           borderRadius: 8, userSelect: 'none',
+          cursor: 'grab', touchAction: 'none',
           animation: 'imari-slideUp 0.16s cubic-bezier(0.23,1,0.32,1) both',
         }}>
           {/* 6-dot grip icon */}
@@ -455,6 +537,7 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReord
           {canHide && hasData && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleHide(id); }}
+              onPointerDown={(e) => e.stopPropagation()} /* don't start a drag */
               style={{
                 fontSize: 10, padding: '3px 10px', borderRadius: 6,
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -481,7 +564,7 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReord
       >
         {children}
       </motion.div>
-    </div>
+    </Reorder.Item>
   );
 }
 
@@ -870,12 +953,25 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
   );
 
   // ─── Layout state ──────────────────────────────────────────────
-  const { order, hidden, editMode, setEditMode, reorder, toggleHide, resetLayout } = useDashboardLayout();
+  const { order, hidden, editMode, setEditMode, applyOrder, toggleHide, resetLayout } = useDashboardLayout();
 
   // ─── Render ────────────────────────────────────────────────────
 
   // Section content map — values are null when data conditions not met
   const sectionContent = {
+    // ── Portfolio Model — live infographic from the user's own data ──
+    pulse: assets.length === 0 ? null : (
+      <ModelPulse
+        stats={stats}
+        trueNetWorth={trueNetWorth}
+        monthlyNet={incomeTrend[incomeTrend.length - 1]?.net ?? 0}
+        savingsRate={savingsRate}
+        signalCount={engine.count ?? 0}
+        snapshotCount={snapshots.length}
+        displayCurrency={profile.displayCurrency}
+      />
+    ),
+
     // KPI strip. When debt exists, show Net worth / Gross portfolio / P/L / Savings.
     // When debt is zero, Net worth == Gross portfolio (same number) — collapse the
     // duplicate and promote "Liquid balance" so the strip carries 4 unique signals.
@@ -1815,27 +1911,30 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         </div>
       )}
 
-      {/* ── Sections (order + visibility driven by useDashboardLayout) ── */}
-      {order.map((id, sectionIdx) => {
-        const content = sectionContent[id];
-        if (!editMode && !content) return null; // data-conditional: skip when no data
-        return (
-          <SectionShell
-            key={id}
-            id={id}
-            label={SECTION_META[id].label}
-            canHide={SECTION_META[id].canHide}
-            isHidden={hidden.has(id)}
-            hasData={!!content}
-            editMode={editMode}
-            mobileOrder={10 + sectionIdx * 2}
-            onReorder={reorder}
-            onToggleHide={toggleHide}
-          >
-            <Reveal amount={0.08}>{content}</Reveal>
-          </SectionShell>
-        );
-      })}
+      {/* ── Sections — independent widgets, drag-to-rearrange in edit mode.
+          Reorder.Group owns the order; every swap is persisted immediately.
+          Items not rendered (no data, outside edit mode) can't be dragged,
+          so the values/items mismatch is safe by construction. ── */}
+      <Reorder.Group as="div" axis="y" values={order} onReorder={applyOrder}>
+        {order.map((id) => {
+          const content = sectionContent[id];
+          if (!editMode && !content) return null; // data-conditional: skip when no data
+          return (
+            <SectionShell
+              key={id}
+              id={id}
+              label={SECTION_META[id].label}
+              canHide={SECTION_META[id].canHide}
+              isHidden={hidden.has(id)}
+              hasData={!!content}
+              editMode={editMode}
+              onToggleHide={toggleHide}
+            >
+              <Reveal amount={0.08}>{content}</Reveal>
+            </SectionShell>
+          );
+        })}
+      </Reorder.Group>
     </div>
     </MotionConfig>
   );
