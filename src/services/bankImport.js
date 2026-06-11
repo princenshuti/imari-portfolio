@@ -60,14 +60,9 @@ export function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'));
   if (!lines.length) return { headers: [], rows: [], rawHeaders: [] };
 
-  // First row whose cells look like a recognisable header
-  let headerIdx = 0;
-  for (let i = 0; i < Math.min(8, lines.length); i++) {
-    if (HEADER_HINT.test(lines[i])) {
-      headerIdx = i;
-      break;
-    }
-  }
+  // Best header-shaped row in the opening stretch; row 1 if none qualifies
+  const found = findHeaderIndex(lines);
+  const headerIdx = found === -1 ? 0 : found;
 
   const rawHeaders = parseRow(lines[headerIdx]);
   const headers = rawHeaders.map(h => h.replace(/^["']|["']$/g, '').trim());
@@ -81,12 +76,37 @@ export function parseCSV(text) {
   return { headers, rawHeaders, rows };
 }
 
+// ─── Header-row detection (shared by all parsers) ────────────────────────────
+// Distinct families of column names. A real header row names several at once,
+// while preamble rows ("Statement Date: 10/06/2026", "Account No: …") and
+// transaction rows rarely match more than one — so the best-scoring row in
+// the opening stretch is the header, not the first row with any keyword.
+const HEADER_GROUPS = [
+  /date|time/i,
+  /description|narrat|details|particular|remarks/i,
+  /debit|money out|withdraw|paid out|sent/i,
+  /credit|money in|received|deposit|paid in/i,
+  /amount|amt/i,
+  /balance/i,
+];
+const headerScore = text => HEADER_GROUPS.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0);
+
+// Highest score wins (ties → earliest); a row must hit ≥2 families to qualify.
+// Returns -1 when nothing in the window looks like a header.
+function findHeaderIndex(rowTexts, scan = 30) {
+  let best = -1, bestScore = 1;
+  for (let i = 0; i < Math.min(scan, rowTexts.length); i++) {
+    const s = headerScore(rowTexts[i]);
+    if (s > bestScore) { best = i; bestScore = s; }
+  }
+  return best;
+}
+
 // ─── HTML-table parser ───────────────────────────────────────────────────────
 // Several Rwandan bank portals "export to Excel" by serving an HTML <table>
 // with a .xls filename. Regex extraction (not DOMParser) keeps this testable
 // in the node Vitest environment; bank exports are machine-generated and
 // regular enough for it.
-const HEADER_HINT = /date|amount|debit|credit|description|narrat|money in|money out|received|sent/i;
 
 export function parseHTMLTable(html) {
   const decode = s => s
@@ -100,8 +120,8 @@ export function parseHTMLTable(html) {
     const rowsCells = [...table.matchAll(/<tr[\s\S]*?<\/tr\s*>/gi)]
       .map(([tr]) => cellsOf(tr))
       .filter(cells => cells.length);
-    const headerIdx = rowsCells.findIndex(cells => HEADER_HINT.test(cells.join(' ')));
-    if (headerIdx === -1) continue;
+    const headerIdx = findHeaderIndex(rowsCells.map(cells => cells.join(' | ')));
+    if (headerIdx === -1) continue; // metadata table (account no etc.) — try the next one
 
     const headers = rowsCells[headerIdx];
     const rows = rowsCells.slice(headerIdx + 1).map(cells => {
@@ -129,17 +149,15 @@ export async function parseExcel(file) {
       wb.worksheets[0];
     if (!ws) throw new Error('No usable sheet found in this workbook.');
 
-    // Find the header row: scan first 12 rows for one with recognisable column names.
-    let headerRowNum = 1;
-    for (let r = 1; r <= Math.min(12, ws.rowCount); r++) {
+    // Find the header row: best header-shaped row in the opening stretch.
+    const rowTexts = [];
+    for (let r = 1; r <= Math.min(30, ws.rowCount); r++) {
       const cells = [];
-      ws.getRow(r).eachCell({ includeEmpty: true }, c => cells.push(String(cellText(c.value) || '').toLowerCase()));
-      const joined = cells.join(' | ');
-      if (HEADER_HINT.test(joined)) {
-        headerRowNum = r;
-        break;
-      }
+      ws.getRow(r).eachCell({ includeEmpty: true }, c => cells.push(String(cellText(c.value) || '')));
+      rowTexts.push(cells.join(' | '));
     }
+    const foundRow = findHeaderIndex(rowTexts);
+    const headerRowNum = foundRow === -1 ? 1 : foundRow + 1; // ExcelJS rows are 1-based
 
     const headers = [];
     ws.getRow(headerRowNum).eachCell({ includeEmpty: true }, (c, idx) => {
@@ -193,9 +211,9 @@ async function parseLegacyXls(file) {
   }
   if (!grid.length) throw new Error('No usable sheet found in this workbook.');
 
-  // Same header heuristic as the other parsers: first row in the opening
-  // stretch with recognisable statement columns; otherwise row 1.
-  const found = grid.slice(0, 12).findIndex(cells => HEADER_HINT.test(cells.join(' | ')));
+  // Same header heuristic as the other parsers: best header-shaped row in
+  // the opening stretch; otherwise row 1.
+  const found = findHeaderIndex(grid.map(cells => cells.join(' | ')));
   const headerIdx = found === -1 ? 0 : found;
   const headers = [...grid[headerIdx]];
   while (headers.length && !headers[headers.length - 1]) headers.pop();
@@ -224,27 +242,45 @@ function cellText(v) {
 }
 
 // ─── Column auto-detection ────────────────────────────────────────────────────
+// Three rules learned from real statements (I&M's "Transaction Date | Value
+// Date | Description | Tran Id | … | Debit | Credit | Balance (RWF)" broke
+// the naive version):
+//   1. Keyword priority — earlier keywords are more specific, so "Description"
+//      wins over a header that merely contains "transaction".
+//   2. One field per header — a header claimed by Date can't also be Desc.
+//   3. Date-shaped headers ("Value Date") are off-limits to non-date fields,
+//      so "value" can't map a date column to Amount.
 export function detectColumns(headers) {
   const hl = headers.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim());
+  const claimed = new Set();
+  const dateish = h => /(^|\s)date($|\s)|time/.test(h);
 
-  const find = (...kws) => {
-    const idx = hl.findIndex(h => kws.some(k => h.includes(k)));
-    return idx >= 0 ? headers[idx] : null;
+  const pick = (kws, { allowDateish = false } = {}) => {
+    for (const k of kws) {
+      const idx = hl.findIndex((h, i) => !claimed.has(i) && (allowDateish || !dateish(h)) && h.includes(k));
+      if (idx >= 0) { claimed.add(idx); return headers[idx]; }
+    }
+    return null;
   };
 
-  return {
-    date:    find('date', 'txn date', 'trans date', 'value date', 'posting date', 'time', 'completion time'),
-    desc:    find('description', 'narrative', 'narration', 'details', 'particulars', 'reference', 'remarks', 'transaction', 'trans desc', 'detail'),
-    // MoMo "Money Out" / "Withdrawn" / "Paid Out" → debit
-    debit:   find('debit', 'withdrawal', 'withdrawn', 'dr ', 'paid out', 'money out', 'amount out', 'sent', 'spent'),
-    // MoMo "Money In" / "Received" / "Deposit" → credit
-    credit:  find('credit', 'deposit', 'cr ', 'paid in', 'money in', 'amount in', 'receipt', 'received'),
-    amount:  find('amount', 'amt', 'value', 'transaction amount'),
-    type:    find('type', 'dr/cr', 'txn type', 'cr dr', 'direction', 'transaction type'),
-    balance: find('balance', 'running balance', 'avail'),
-    // MoMo service charge — surfaced as its own utilities expense draft
-    fee:     find('charge', 'fee', 'commission', 'tariff'),
-  };
+  // Claim order matters: Type goes before Debit so a "Dr/Cr" column isn't
+  // eaten by the debit keyword "dr ", and before Desc so "Transaction Type"
+  // isn't eaten by "transaction".
+  // "Transaction Date" beats "Value Date": the value date is the bank's
+  // clearing date, not when the user actually moved the money.
+  const date = pick(['transaction date', 'txn date', 'trans date', 'posting date', 'completion time', 'date', 'time'], { allowDateish: true });
+  const type = pick(['type', 'dr cr', 'cr dr', 'txn type', 'direction', 'transaction type']);
+  const desc = pick(['description', 'narrative', 'narration', 'details', 'particulars', 'remarks', 'reference', 'trans desc', 'detail', 'transaction']);
+  // MoMo "Money Out" / "Withdrawn" / "Paid Out" → debit
+  const debit = pick(['debit', 'withdrawal', 'withdrawn', 'dr ', 'paid out', 'money out', 'amount out', 'sent', 'spent']);
+  // MoMo "Money In" / "Received" / "Deposit" → credit
+  const credit = pick(['credit', 'deposit', 'cr ', 'paid in', 'money in', 'amount in', 'receipt', 'received']);
+  const amount = pick(['amount', 'amt', 'transaction amount', 'value']);
+  const balance = pick(['balance', 'running balance', 'avail']);
+  // MoMo service charge — surfaced as its own utilities expense draft
+  const fee = pick(['charge', 'fee', 'commission', 'tariff']);
+
+  return { date, desc, debit, credit, amount, type, balance, fee };
 }
 
 // ─── Keyword → category (first match wins; specific before generic) ──────────

@@ -3,7 +3,7 @@
 // binary files under a .xls name, which previously hit ExcelJS/JSZip and
 // surfaced "Can't find end of central directory" to the user.
 import { describe, it, expect } from 'vitest';
-import { parseFile, parseCSV, parseHTMLTable } from './bankImport.js';
+import { parseFile, parseCSV, parseHTMLTable, detectColumns } from './bankImport.js';
 
 const file = (content, name) => new File([content], name);
 
@@ -96,6 +96,54 @@ describe('parseHTMLTable', () => {
   it('throws a clear error when no table has transaction columns', () => {
     expect(() => parseHTMLTable('<table><tr><td>hello</td></tr></table>'))
       .toThrow(/without a recognisable transaction table/);
+  });
+});
+
+describe('detectColumns', () => {
+  it('maps the I&M Bank header set correctly', () => {
+    const map = detectColumns(['Transaction Date', 'Value Date', 'Description', 'Tran Id', 'Cheque ID', 'Debit', 'Credit', 'Balance (RWF)']);
+    expect(map).toMatchObject({
+      date: 'Transaction Date', // not Value Date — that's the clearing date
+      desc: 'Description',      // "transaction" keyword must not steal the date column
+      debit: 'Debit',
+      credit: 'Credit',
+      amount: null,             // "value" keyword must not claim Value Date
+      balance: 'Balance (RWF)',
+    });
+  });
+
+  it('maps the MTN MoMo header set correctly', () => {
+    const map = detectColumns(['Receipt No.', 'Completion Time', 'Details', 'Transaction Status', 'Paid In', 'Withdrawn', 'Balance']);
+    expect(map).toMatchObject({
+      date: 'Completion Time',
+      desc: 'Details',
+      debit: 'Withdrawn',
+      credit: 'Paid In', // keyword priority: "paid in" before the generic "receipt"
+      balance: 'Balance',
+    });
+  });
+
+  it('still maps simple single-amount statements', () => {
+    const map = detectColumns(['Date', 'Description', 'Amount', 'Dr/Cr']);
+    expect(map).toMatchObject({ date: 'Date', desc: 'Description', amount: 'Amount', type: 'Dr/Cr' });
+  });
+});
+
+describe('header-row detection with preamble', () => {
+  it('does not mistake a "Statement Date:" preamble line for the header row', async () => {
+    const csv = [
+      'I&M Bank Rwanda,,,,,,,',
+      'Account Number:,25030012345,,,,,,',
+      'Statement Date:,10/06/2026,,,,,,',
+      'Transaction Date,Value Date,Description,Tran Id,Cheque ID,Debit,Credit,Balance (RWF)',
+      '02/06/2026,02/06/2026,POS PURCHASE SIMBA,T123,,15000,,1200000',
+      '03/06/2026,04/06/2026,SALARY JUNE,T124,,,850000,2050000',
+    ].join('\n');
+    const { headers, rows } = await parseFile(file(csv, 'statement.csv'));
+    expect(headers[0]).toBe('Transaction Date');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].Description).toBe('POS PURCHASE SIMBA');
+    expect(detectColumns(headers).desc).toBe('Description');
   });
 });
 
