@@ -318,17 +318,36 @@ function SplineShowcase() {
 export default function Landing({ onSignIn }) {
   const { t, locale, setLocale } = useT();
   const [scrolled, setScrolled] = useState(false);
-  // Landing carries its own theme, separate from the in-app preference
-  // (imari:theme) — midnight is the marketing default, white one tap away.
+  // Theme: the SAME key as the rest of the app (imari:theme), so a choice
+  // made here follows the user through #login and every signed-in page.
+  // With no explicit choice saved, the OS preference decides.
   const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem('imari:landing-theme') || 'dark'; }
-    catch { return 'dark'; }
+    try {
+      const pref = localStorage.getItem('imari:theme');
+      if (pref === 'light' || pref === 'dark') return pref;
+    } catch { /* private mode */ }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    try { localStorage.setItem('imari:landing-theme', next); } catch { /* private mode */ }
+    try { localStorage.setItem('imari:theme', next); } catch { /* private mode */ }
   };
+  // Track live OS theme changes until the user makes an explicit choice;
+  // also retire the old landing-only key from earlier builds.
+  useEffect(() => {
+    try { localStorage.removeItem('imari:landing-theme'); } catch { /* ignore */ }
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => {
+      try {
+        const pref = localStorage.getItem('imari:theme');
+        if (pref === 'light' || pref === 'dark') return;
+      } catch { /* fall through to OS value */ }
+      setTheme(mq.matches ? 'dark' : 'light');
+    };
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);

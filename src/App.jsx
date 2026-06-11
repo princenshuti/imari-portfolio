@@ -180,16 +180,22 @@ export default function App() {
   // ─ Theme ──────────────────────────────────────────────────────
   const [themePref, setThemePref] = useState(getThemePref);
   useEffect(() => {
-    // Signed-out screens (Login/Signup) follow the landing-page theme choice
-    // (imari:landing-theme, midnight default) so the landing → sign-in flow
-    // doesn't flip themes mid-way. The in-app preference takes over on login.
+    // One preference key everywhere (imari:theme; 'auto' → OS preference).
+    // The landing toggle writes it directly, so the choice made there carries
+    // through #login and into every signed-in page with no flip mid-flow.
     if (session === null) {
-      let landingTheme = 'dark';
-      try { landingTheme = localStorage.getItem('imari:landing-theme') || 'dark'; } catch { /* private mode */ }
-      document.body.setAttribute('data-theme', landingTheme);
+      const pref = getThemePref();
+      const resolved = pref === 'auto'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : pref;
+      document.body.setAttribute('data-theme', resolved);
       document.body.style.removeProperty('background');
       return;
     }
+    // Re-adopt anything chosen while signed out — the landing toggle writes
+    // localStorage without going through this component's state.
+    const stored = getThemePref();
+    if (stored !== themePref) { setThemePref(stored); return; }
     applyTheme(themePref);
     if (themePref === 'auto') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -198,6 +204,23 @@ export default function App() {
       return () => mq.removeEventListener('change', handler);
     }
   }, [themePref, session, authPage]);
+
+  // Language picked while signed out (landing nav selector) is recorded as
+  // pending by onChangeLocale; promote it into the profile once the portfolio
+  // loads, so the choice survives sign-in instead of being overridden by an
+  // older profile.locale synced from the cloud.
+  useEffect(() => {
+    if (!session || !stateReady) return;
+    try {
+      const pending = localStorage.getItem('imari:locale-pending');
+      if (!pending) return;
+      localStorage.removeItem('imari:locale-pending');
+      if (pending !== state.profile.locale) {
+        dispatch({ type: 'setProfile', patch: { locale: pending } });
+      }
+    } catch { /* storage unavailable */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, stateReady]);
 
   const handleThemeChange = (pref) => {
     localStorage.setItem('imari:theme', pref);
@@ -516,7 +539,14 @@ export default function App() {
   const i18nWrap = (children) => (
     <I18nProvider
       profile={state.profile}
-      onChangeLocale={loc => dispatch({ type: 'setProfile', patch: { locale: loc } })}
+      onChangeLocale={loc => {
+        // Signed-out picks are marked pending so the post-login profile sync
+        // can't silently revert them (see the locale-pending effect above).
+        if (!session) {
+          try { localStorage.setItem('imari:locale-pending', loc); } catch { /* private mode */ }
+        }
+        dispatch({ type: 'setProfile', patch: { locale: loc } });
+      }}
     >
       {children}
     </I18nProvider>

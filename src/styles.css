@@ -928,10 +928,10 @@ input:focus, select:focus, textarea:focus {
   color: var(--ink);
   overflow-x: hidden;
 }
-/* The marketing surface carries its own theme, independent of the app
-   (toggle in the landing nav, persisted at imari:landing-theme; default
-   midnight). Both blocks set the full token set explicitly so the choice
-   wins regardless of body[data-theme] / system preference. */
+/* The landing resolves the same preference as the app (imari:theme; no
+   explicit choice -> OS prefers-color-scheme), so the nav-toggle choice
+   carries through sign-in. Both blocks set the full token set explicitly
+   so the resolved choice wins regardless of body[data-theme]. */
 .landing-root--dark {
   --bg:      #0B100D;
   --bg-2:    #131A15;

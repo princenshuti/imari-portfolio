@@ -54,8 +54,10 @@
           var signedIn = Object.keys(localStorage).some(function (k) {
             return k.indexOf('sb-') === 0 && k.indexOf('-auth-token') !== -1;
           });
-          var landingTheme = localStorage.getItem('imari:landing-theme') || 'dark';
-          if (!signedIn && landingTheme === 'dark') {
+          var pref = localStorage.getItem('imari:theme');
+          var dark = pref === 'dark' ||
+            (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (!signedIn && dark) {
             document.body.style.background = '#0B100D';
           }
         } catch (e) { /* storage unavailable — keep default */ }
