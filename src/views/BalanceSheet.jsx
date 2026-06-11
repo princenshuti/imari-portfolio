@@ -4,6 +4,7 @@ import {
 } from '../data.js';
 import { downloadCSV } from '../services/download.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
+import { Reveal } from '../components/motion.jsx';
 
 // B18 — Personal balance sheet. The net-worth total here MUST equal the
 // dashboard figure (single source of truth): same valueRWF/costRWF/toBase math.
@@ -75,7 +76,7 @@ export default function BalanceSheetView({ state }) {
         </div>
       </div>
 
-      <div className="card" style={{ padding: '24px 28px', maxWidth: 820 }}>
+      <Reveal className="card" style={{ padding: '24px 28px', maxWidth: 820 }}>
         {/* Print header */}
         <div style={{ marginBottom: 20 }}>
           <div className="font-serif" style={{ fontSize: 22 }}>Statement of Net Worth</div>
@@ -136,7 +137,7 @@ export default function BalanceSheetView({ state }) {
             {data.estimatedCount} asset{data.estimatedCount === 1 ? '' : 's'} marked <em>est.</em> use Imari's modeled valuation rather than a figure you entered — a lender should treat these as estimates, not appraised values. Cost basis total: {show(data.totalCost)}.
           </div>
         )}
-      </div>
+      </Reveal>
     </div>
   );
 }

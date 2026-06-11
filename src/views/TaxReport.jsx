@@ -3,12 +3,13 @@ import {
   CLASSES, TAX_RULES, FIXED_ASSET_TAX, VEHICLE_CATEGORIES, PROPERTY_CATEGORIES,
   fixedAssetTax, toBase, valueRWF, costRWF, fmtBase, fmt,
 } from '../data.js';
+import { Reveal, Stagger, StaggerItem } from '../components/motion.jsx';
 
 // ─── Helpers ──────────────────────────────────────────────────
 
 function Section({ title, sub, children, accent = 'var(--brand)', printBreak = false }) {
   return (
-    <div style={{
+    <Reveal style={{
       marginBottom: 28,
       ...(printBreak ? { pageBreakBefore: 'always', breakBefore: 'always', paddingTop: 8 } : {}),
     }}>
@@ -20,7 +21,7 @@ function Section({ title, sub, children, accent = 'var(--brand)', printBreak = f
         </div>
       </div>
       {children}
-    </div>
+    </Reveal>
   );
 }
 
@@ -340,35 +341,43 @@ export default function TaxReportView({ state, dispatch }) {
       })()}
 
       {/* ── Summary KPIs ──────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 28 }}>
-        <KpiCard
-          label="Fixed asset tax (annual)"
-          value={fmtBase(totalPropertyTax, c, { compact: true })}
-          sub="Real estate · due 31 March"
-          color="var(--down)"
-          highlight={totalPropertyTax > 0}
-        />
-        <KpiCard
-          label="Vehicle road levy (annual)"
-          value={fmtBase(totalVehicleLevy, c, { compact: true })}
-          sub="Per vehicle · due 31 December"
-          color="var(--clay)"
-          highlight={totalVehicleLevy > 0}
-        />
-        <KpiCard
-          label="Total annual obligations"
-          value={fmtBase(totalAnnual, c, { compact: true })}
-          sub="Fixed recurring tax per year"
-          color="var(--down)"
-          highlight
-        />
-        <KpiCard
-          label="Est. CGT if you sold everything today"
-          value={fmtBase(totalCGTAll, c, { compact: true })}
-          sub="Hypothetical — CGT only fires on actual sale"
-          color="var(--ink-3)"
-        />
-      </div>
+      <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 28 }}>
+        <StaggerItem>
+          <KpiCard
+            label="Fixed asset tax (annual)"
+            value={fmtBase(totalPropertyTax, c, { compact: true })}
+            sub="Real estate · due 31 March"
+            color="var(--down)"
+            highlight={totalPropertyTax > 0}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <KpiCard
+            label="Vehicle road levy (annual)"
+            value={fmtBase(totalVehicleLevy, c, { compact: true })}
+            sub="Per vehicle · due 31 December"
+            color="var(--clay)"
+            highlight={totalVehicleLevy > 0}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <KpiCard
+            label="Total annual obligations"
+            value={fmtBase(totalAnnual, c, { compact: true })}
+            sub="Fixed recurring tax per year"
+            color="var(--down)"
+            highlight
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <KpiCard
+            label="Est. CGT if you sold everything today"
+            value={fmtBase(totalCGTAll, c, { compact: true })}
+            sub="Hypothetical — CGT only fires on actual sale"
+            color="var(--ink-3)"
+          />
+        </StaggerItem>
+      </Stagger>
 
       {/* ══════════════════════════════════════════════════════════
           SECTION A: FIXED ASSET TAX

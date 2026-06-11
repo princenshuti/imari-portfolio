@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { fmtBase } from '../data.js';
 import { buildYearReview } from '../engine/yearReview.js';
 import { AreaChart } from '../components/charts.jsx';
+import { Reveal, Stagger, StaggerItem, CountUp } from '../components/motion.jsx';
 
 // Surfaces src/engine/yearReview.js — the trailing 12 months of daily
 // snapshots, distilled into a reflection. Honesty rules: synthetic seed
@@ -49,11 +50,11 @@ export default function YearReviewView({ state }) {
       )}
 
       {/* Hero — the year in one number */}
-      <div className="card" style={{ padding: '24px 26px', marginBottom: 14 }}>
+      <Reveal className="card" style={{ padding: '24px 26px', marginBottom: 14 }}>
         <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Net worth this year</div>
         <div className="row" style={{ gap: 14, alignItems: 'baseline', flexWrap: 'wrap', marginTop: 6 }}>
           <div className="num" style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-0.02em' }}>
-            {fmtBase(review.end.netWorth, ccy, { compact: true })}
+            <CountUp value={review.end.netWorth} format={v => fmtBase(v, ccy, { compact: true })} />
           </div>
           <div className="num" style={{ fontSize: 16, fontWeight: 700, color: accent }}>
             {up ? '▲' : '▼'} {fmtBase(Math.abs(review.change), ccy, { compact: true })}
@@ -63,28 +64,28 @@ export default function YearReviewView({ state }) {
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
           from {fmtBase(review.start.netWorth, ccy, { compact: true })} on {longDate(review.start.date)}
         </div>
-      </div>
+      </Reveal>
 
       {/* Watermarks + best/worst months */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 14 }}>
+      <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 14 }}>
         {[
           { label: 'Highest point', value: review.high.netWorth, sub: shortDate(review.high.date), color: 'var(--up)' },
           { label: 'Lowest point', value: review.low.netWorth, sub: shortDate(review.low.date), color: 'var(--down)' },
           review.bestMonth && { label: 'Best month', value: review.bestMonth.change, sub: review.bestMonth.label, color: 'var(--up)', signed: true },
           review.worstMonth && { label: 'Toughest month', value: review.worstMonth.change, sub: review.worstMonth.label, color: review.worstMonth.change < 0 ? 'var(--down)' : 'var(--ink-3)', signed: true },
         ].filter(Boolean).map(c => (
-          <div key={c.label} className="card" style={{ padding: '14px 16px' }}>
+          <StaggerItem key={c.label} className="card" style={{ padding: '14px 16px' }}>
             <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{c.label}</div>
             <div className="num" style={{ fontSize: 18, fontWeight: 700, color: c.color, marginTop: 4 }}>
               {c.signed && c.value >= 0 ? '+' : ''}{fmtBase(c.value, ccy, { compact: true })}
             </div>
             <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{c.sub}</div>
-          </div>
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
 
       {/* Month-by-month change bars */}
-      <div className="card" style={{ padding: '18px 22px', marginBottom: 14 }}>
+      <Reveal className="card" style={{ padding: '18px 22px', marginBottom: 14 }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Month by month</div>
         <div
           role="img"
@@ -110,10 +111,10 @@ export default function YearReviewView({ state }) {
         <div className="muted" style={{ fontSize: 10, marginTop: 10 }}>
           Each bar is the change in net worth across that month's recorded snapshots. Hover for exact values.
         </div>
-      </div>
+      </Reveal>
 
       {/* The full-year line */}
-      <div className="card" style={{ padding: '18px 22px' }}>
+      <Reveal className="card" style={{ padding: '18px 22px' }}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>The whole year</div>
         <AreaChart
           data={review.months.map(m => m.endNetWorth)}
@@ -123,7 +124,7 @@ export default function YearReviewView({ state }) {
           formatValue={(v) => fmtBase(v, ccy, { compact: true })}
           ariaLabel={`Net worth month-end values over the past year, ${up ? 'up' : 'down'} ${fmtBase(Math.abs(review.change), ccy, { compact: true })} overall.`}
         />
-      </div>
+      </Reveal>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { searchPortfolio } from '../services/search.js';
 import { useT } from '../contexts/I18nContext.jsx';
 
@@ -75,16 +76,20 @@ export default function GlobalSearch({ state, onNav }) {
           fontSize: 12, fontFamily: 'inherit', color: 'var(--ink)', width: 170,
         }}
       />
+      <AnimatePresence>
       {showPanel && (
-        <div
+        <motion.div
           id="global-search-results"
           role="listbox"
           aria-label={t('search.label')}
+          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 420, damping: 30 } }}
+          exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.12, ease: 'easeIn' } }}
           style={{
             position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 320, maxWidth: '90vw',
             background: 'var(--paper)', border: '0.5px solid var(--line-strong)',
             borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-2)', zIndex: 60,
-            overflow: 'hidden',
+            overflow: 'hidden', transformOrigin: 'top right',
           }}
         >
           {results.length === 0 ? (
@@ -109,8 +114,9 @@ export default function GlobalSearch({ state, onNav }) {
               </div>
             </div>
           ))}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

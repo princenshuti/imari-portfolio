@@ -7,6 +7,7 @@
  * buttons open it via the `imari:advisor:ask` event. This is THE chat surface.
  */
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { getApiKey, completeChat } from '../ai.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { useInsights } from '../contexts/InsightsContext.jsx';
@@ -194,10 +195,6 @@ You are a financial advisor. Only answer financial questions grounded in the dat
 
       {/* Keyframes */}
       <style>{`
-        @keyframes fa-panel-in {
-          from { opacity: 0; transform: scale(0.92); }
-          to   { opacity: 1; transform: scale(1);    }
-        }
         @keyframes fa-dot-alive {
           0%,100% { opacity: 1; transform: scale(1);   }
           50%     { opacity: 0.4; transform: scale(0.7); }
@@ -214,8 +211,13 @@ You are a financial advisor. Only answer financial questions grounded in the dat
       `}</style>
 
       {/* ── Chat panel ─────────────────────────────────────────────────────── */}
+      <AnimatePresence>
       {open && (
-        <div style={{
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 380, damping: 28 } }}
+          exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14, ease: 'easeIn' } }}
+          style={{
           position: 'absolute',
           ...panelVert,
           ...panelHoriz,
@@ -229,7 +231,6 @@ You are a financial advisor. Only answer financial questions grounded in the dat
           flexDirection: 'column',
           overflow: 'hidden',
           transformOrigin: PANEL_ORIGIN[corner],
-          animation: 'fa-panel-in 0.2s cubic-bezier(0.23,1,0.32,1) both',
         }}>
 
           {/* Header */}
@@ -400,8 +401,9 @@ You are a financial advisor. Only answer financial questions grounded in the dat
               <strong style={{ color: 'var(--gold)' }}>!</strong> Not professional financial advice — for big decisions, consult a licensed advisor.
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ── FAB trigger button ──────────────────────────────────────────────── */}
       <button

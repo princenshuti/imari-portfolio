@@ -3,6 +3,7 @@ import { fmtBase } from '../data.js';
 import { projectNetWorth, DEFAULT_ASSUMPTIONS } from '../engine/projection/index.js';
 import { netWorthRWF, monthlyFlowsRWF } from '../engine/insights/_shared.js';
 import { getApiKey, completeText } from '../ai.js';
+import { Reveal, Stagger, StaggerItem, CountUp } from '../components/motion.jsx';
 
 // B12a/b — Fast Forward: deterministic projection + scenario controls, with an
 // optional AI narration grounded ONLY in the engine output. Modeled, never a guarantee.
@@ -57,7 +58,7 @@ Write 2 short paragraphs in plain English explaining what this trajectory means 
       {/* Page title + subtitle live in the TopBar (App.jsx) — repeating them
           here doubled the heading (same fix as Goals, review #12). */}
       {/* Scenario controls */}
-      <div className="card" style={{ padding: '18px 20px', marginBottom: 18 }}>
+      <Reveal className="card" style={{ padding: '18px 20px', marginBottom: 18 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
           <label className="col" style={{ gap: 5 }}>
             <span className="muted" style={{ fontSize: 11 }}>Add monthly saving ({ccy})</span>
@@ -74,28 +75,30 @@ Write 2 short paragraphs in plain English explaining what this trajectory means 
             <span className="muted" style={{ fontSize: 10 }}>Modeled · ±{DEFAULT_ASSUMPTIONS.bandSpreadPct}% band</span>
           </label>
         </div>
-      </div>
+      </Reveal>
 
-      {/* Horizon cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
+      {/* Horizon cards — expected values re-count when the scenario changes */}
+      <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
         {proj.horizons.map(h => {
           const delta = scenarioChanged ? h.expected - base.horizons.find(b => b.key === h.key).expected : 0;
           return (
-            <div key={h.key} className="card" style={{ padding: '16px 18px' }}>
+            <StaggerItem key={h.key} className="card" style={{ padding: '16px 18px' }}>
               <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{h.label}</div>
-              <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', marginTop: 4 }}>{fmtBase(h.expected, ccy, { compact: true })}</div>
+              <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', marginTop: 4 }}>
+                <CountUp value={h.expected} duration={0.7} format={v => fmtBase(v, ccy, { compact: true })} />
+              </div>
               <div className="muted" style={{ fontSize: 10.5, marginTop: 3 }}>{fmtBase(h.low, ccy, { compact: true })} – {fmtBase(h.high, ccy, { compact: true })}</div>
               <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>≈ {fmtBase(h.realExpected, ccy, { compact: true })} in today's money</div>
               {scenarioChanged && delta > 0 && (
                 <div style={{ fontSize: 11, marginTop: 6, color: 'var(--up)', fontWeight: 600 }}>+{fmtBase(delta, ccy, { compact: true })} vs current pace</div>
               )}
-            </div>
+            </StaggerItem>
           );
         })}
-      </div>
+      </Stagger>
 
       {/* AI advisory narration */}
-      <div className="card" style={{ padding: '18px 20px' }}>
+      <Reveal delay={0.1} className="card" style={{ padding: '18px 20px' }}>
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: aiText || aiErr ? 12 : 0 }}>
           <h2 className="font-serif" style={{ fontSize: 16, margin: 0, fontWeight: 400 }}>What this means</h2>
           <button onClick={narrate} disabled={aiPending} className="btn btn-primary btn-sm">{aiPending ? 'Thinking…' : '✦ Explain scenario'}</button>
@@ -105,7 +108,7 @@ Write 2 short paragraphs in plain English explaining what this trajectory means 
         <div className="muted" style={{ fontSize: 10.5, marginTop: 12, lineHeight: 1.5 }}>
           Projections are modeled estimates based on your assumptions — actual returns vary and this is not professional financial advice.
         </div>
-      </div>
+      </Reveal>
     </div>
   );
 }

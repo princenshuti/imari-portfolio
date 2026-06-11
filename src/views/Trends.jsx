@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { TREND_DOMAINS, KIGALI_NEIGHBOURHOODS, fmt } from '../data.js';
 import { TrendCard } from '../components/Field.jsx';
 import { useMarket } from '../contexts/MarketContext.jsx';
+import { Stagger, StaggerItem, Reveal } from '../components/motion.jsx';
 
 /** Count live domains from a given overrides map */
 function countLive(overrides) {
@@ -140,25 +141,27 @@ export default function TrendsView({ state, dispatch }) {
             <div className="font-serif" style={{ fontSize: 20 }}>{groupName}</div>
             <span className="muted" style={{ fontSize: 11 }}>{domains.length} indicator{domains.length !== 1 ? 's' : ''}</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+          {/* layout on each item: watching/unwatching re-sorts the grid with a FLIP animation */}
+          <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
             {[...domains]
               .sort((a, b) => Number(watchlist.includes(b.id)) - Number(watchlist.includes(a.id)))
               .map(d => (
-                <TrendCard
-                  key={d.id}
-                  d={d}
-                  big
-                  override={overrides[d.id] ?? null}
-                  isWatched={watchlist.includes(d.id)}
-                  onToggleWatch={toggleWatch}
-                />
+                <StaggerItem key={d.id} layout>
+                  <TrendCard
+                    d={d}
+                    big
+                    override={overrides[d.id] ?? null}
+                    isWatched={watchlist.includes(d.id)}
+                    onToggleWatch={toggleWatch}
+                  />
+                </StaggerItem>
               ))}
-          </div>
+          </Stagger>
         </div>
       ))}
 
       {/* ── Kigali neighbourhoods ─────────────────────────────────── */}
-      <div className="card" style={{ padding: 22, marginTop: 8 }}>
+      <Reveal className="card" style={{ padding: 22, marginTop: 8 }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
             <div className="font-serif" style={{ fontSize: 20 }}>Kigali real estate · by neighbourhood</div>
@@ -195,7 +198,7 @@ export default function TrendsView({ state, dispatch }) {
             </div>
           ))}
         </div>
-      </div>
+      </Reveal>
 
       {/* ── Keyframe for live dot pulse ───────────────────────────── */}
       <style>{`

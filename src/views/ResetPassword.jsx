@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase.js';
 import { MaxventuresWordmark } from '../components/ImariMark.jsx';
+import { Reveal } from '../components/motion.jsx';
 
 export default function ResetPassword({ onDone, session }) {
   const [password, setPassword] = useState('');
@@ -49,7 +50,7 @@ export default function ResetPassword({ onDone, session }) {
       position: 'fixed', inset: 0, background: 'var(--bg)', display: 'flex',
       alignItems: 'center', justifyContent: 'center', padding: 20,
     }}>
-      <div className="card" style={{ padding: 36, width: '100%', maxWidth: 460 }}>
+      <Reveal y={16} className="card" style={{ padding: 36, width: '100%', maxWidth: 460 }}>
         <div style={{
           width: 48, height: 48, borderRadius: 12, background: 'var(--brand)', color: 'var(--brand-ink)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -103,7 +104,7 @@ export default function ResetPassword({ onDone, session }) {
           </div>
           <MaxventuresWordmark />
         </div>
-      </div>
+      </Reveal>
     </div>
   );
 }

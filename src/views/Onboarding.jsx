@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { id, fmt } from '../data.js';
 import AssetEditor from '../components/AssetEditor.jsx';
 import { useT } from '../contexts/I18nContext.jsx';
+import { Reveal, Stagger, StaggerItem } from '../components/motion.jsx';
 
 // Each template seeds the AssetEditor with sensible Rwanda defaults. Values are
 // suggestions — the user adjusts before saving.
@@ -101,7 +102,7 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
       <div style={{ maxWidth: 880, width: '100%', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* Header */}
-        <div style={{ textAlign: 'center' }}>
+        <Reveal y={16} style={{ textAlign: 'center' }}>
           <div aria-hidden="true" style={{
             width: 56, height: 56, borderRadius: 14, background: 'var(--brand)', color: 'var(--brand-ink)',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -113,17 +114,17 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.5, maxWidth: 520, margin: '0 auto' }}>
             {t('onboarding.sub')}
           </p>
-        </div>
+        </Reveal>
 
         {/* Templates grid */}
-        <div style={{
+        <Stagger style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: 12,
         }}>
           {TEMPLATES.map(tpl => (
+            <StaggerItem key={tpl.id} style={{ display: 'flex' }}>
             <button
-              key={tpl.id}
               type="button"
               onClick={() => launchTemplate(tpl)}
               className="card hover-lift"
@@ -134,7 +135,7 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
                 border: '0.5px solid var(--line)',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                display: 'flex', alignItems: 'flex-start', gap: 12,
+                display: 'flex', alignItems: 'flex-start', gap: 12, width: '100%',
               }}
             >
               <div aria-hidden="true" style={{
@@ -153,8 +154,9 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
                 </div>
               </div>
             </button>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
 
         {/* Footer actions */}
         <div style={{

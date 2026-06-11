@@ -18,6 +18,8 @@
  *   loading       — disables the confirm button while an async op is in flight
  */
 import { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import { SPRING } from './motion.jsx';
 
 export function ConfirmDestructive({
   open,
@@ -89,10 +91,13 @@ export function ConfirmDestructive({
         animation: 'imari-fade-in 0.15s ease-out',
       }}
     >
-      <div
+      <motion.div
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
         className="card"
+        initial={{ opacity: 0, scale: 0.96, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={SPRING}
         style={{
           maxWidth: 440, width: '100%',
           padding: 28,
@@ -177,7 +182,7 @@ export function ConfirmDestructive({
             {loading ? 'Working…' : confirmLabel}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

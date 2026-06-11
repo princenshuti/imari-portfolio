@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { fmtBase } from '../data.js';
 import { projectPension, RETIREMENT_CONFIG, RSSB_RATE_SCHEDULE, statutoryRate } from '../engine/retirement/index.js';
+import { Reveal, Stagger, StaggerItem, CountUp } from '../components/motion.jsx';
 
 // Surfaces src/engine/retirement/index.js. Inputs persist to profile.retirement
 // so re-opening the view shows the user's last setup. Modeled, never a guarantee.
@@ -63,7 +64,7 @@ export default function RetirementView({ state, dispatch }) {
       <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>A modeled projection grounded in the statutory schedule — never a guarantee.</div>
 
       {/* Statutory context strip */}
-      <div className="card" style={{ padding: '12px 16px', marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'baseline' }}>
+      <Reveal className="card" style={{ padding: '12px 16px', marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'baseline' }}>
         <div>
           <div className="muted" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>Statutory rate {thisYear}</div>
           <div className="num" style={{ fontSize: 18, fontWeight: 700, color: 'var(--brand)' }}>{currentStatRate}%</div>
@@ -77,10 +78,10 @@ export default function RetirementView({ state, dispatch }) {
         <div className="muted" style={{ fontSize: 11, marginLeft: 'auto', maxWidth: 340 }}>
           Source: {RETIREMENT_CONFIG.asOf}. Replacement target: {RETIREMENT_CONFIG.replacementTargetPct}%. Drawdown over {RETIREMENT_CONFIG.yearsInRetirement} years.
         </div>
-      </div>
+      </Reveal>
 
       {/* Inputs */}
-      <div className="card" style={{ padding: '18px 20px', marginBottom: 18 }}>
+      <Reveal delay={0.06} className="card" style={{ padding: '18px 20px', marginBottom: 18 }}>
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14, gap: 10 }}>
           <div className="font-serif" style={{ fontSize: 16 }}>Your situation</div>
           <button onClick={persist} className="btn btn-ghost btn-sm" type="button" aria-label="Save retirement inputs to your profile">Save inputs</button>
@@ -120,7 +121,7 @@ export default function RetirementView({ state, dispatch }) {
             <span className="muted" style={{ fontSize: 10 }}>Above-inflation pension growth</span>
           </label>
         </div>
-      </div>
+      </Reveal>
 
       {/* Results */}
       {result && input.currentAge ? (
@@ -141,36 +142,40 @@ export default function RetirementView({ state, dispatch }) {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
-            <div className="card" style={{ padding: '16px 18px' }}>
+          <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
+            <StaggerItem className="card" style={{ padding: '16px 18px' }}>
               <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Years to retirement</div>
               <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', marginTop: 4 }}>{result.years}</div>
-            </div>
-            <div className="card" style={{ padding: '16px 18px' }}>
+            </StaggerItem>
+            <StaggerItem className="card" style={{ padding: '16px 18px' }}>
               <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Projected pot at {input.retirementAge}</div>
-              <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--brand)', marginTop: 4 }}>{fmtBase(result.projectedPot, ccy, { compact: true })}</div>
+              <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--brand)', marginTop: 4 }}>
+                <CountUp value={result.projectedPot} duration={0.7} format={v => fmtBase(v, ccy, { compact: true })} />
+              </div>
               <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>In today's purchasing power (real return)</div>
-            </div>
-            <div className="card" style={{ padding: '16px 18px' }}>
+            </StaggerItem>
+            <StaggerItem className="card" style={{ padding: '16px 18px' }}>
               <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Monthly pension</div>
-              <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', marginTop: 4 }}>{fmtBase(result.monthlyPension, ccy, { compact: true })}</div>
+              <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', marginTop: 4 }}>
+                <CountUp value={result.monthlyPension} duration={0.7} format={v => fmtBase(v, ccy, { compact: true })} />
+              </div>
               <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>Annuitised over {RETIREMENT_CONFIG.yearsInRetirement} years</div>
-            </div>
-            <div className="card" style={{ padding: '16px 18px' }}>
+            </StaggerItem>
+            <StaggerItem className="card" style={{ padding: '16px 18px' }}>
               <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Replacement ratio</div>
               <div className="num" style={{ fontSize: 22, fontWeight: 700, color: result.replacementRatio >= RETIREMENT_CONFIG.replacementTargetPct ? 'var(--up)' : 'var(--down)', marginTop: 4 }}>
                 {result.replacementRatio != null ? `${result.replacementRatio.toFixed(0)}%` : '—'}
               </div>
               <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>vs target {RETIREMENT_CONFIG.replacementTargetPct}%</div>
-            </div>
-            <div className="card" style={{ padding: '16px 18px' }}>
+            </StaggerItem>
+            <StaggerItem className="card" style={{ padding: '16px 18px' }}>
               <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Readiness score</div>
               <div className="num" style={{ fontSize: 28, fontWeight: 700, color: readiness >= 80 ? 'var(--up)' : readiness >= 50 ? 'var(--gold)' : 'var(--down)', marginTop: 4 }}>
                 {readiness != null ? `${readiness}` : '—'}<span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink-3)' }}>/100</span>
               </div>
               <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>Floored to never overstate</div>
-            </div>
-          </div>
+            </StaggerItem>
+          </Stagger>
         </>
       ) : (
         <div className="card" style={{ padding: '20px 22px', textAlign: 'center' }}>

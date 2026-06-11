@@ -10,6 +10,7 @@
  */
 import { useMemo, useState } from 'react';
 import { FX, fmtNum, suggestValue } from '../data.js';
+import { Stagger, StaggerItem, Reveal } from '../components/motion.jsx';
 import { useInsights } from '../contexts/InsightsContext.jsx';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { REFERENCE } from '../engine/insights/refs.js';
@@ -98,18 +99,18 @@ export default function AdvisorView({ state, dispatch }) {
       </div>
 
       {/* ── Market pulse the advice is grounded in ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10, marginBottom: 18 }}>
+      <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10, marginBottom: 18 }}>
         {pulse.map(p => (
-          <div key={p.label} className="card" style={{ padding: '12px 16px' }}>
+          <StaggerItem key={p.label} className="card" style={{ padding: '12px 16px' }}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{p.label}</span>
               <span className="pill pill-soft" style={{ fontSize: 10, color: p.live ? 'var(--up)' : 'var(--gold-ink)' }}>{p.live ? 'live' : 'ref'}</span>
             </div>
             <div className="num" style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{p.value}</div>
             <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{p.sub}</div>
-          </div>
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
 
       {/* ── Recommendations — the product ── */}
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
@@ -132,12 +133,12 @@ export default function AdvisorView({ state, dispatch }) {
           </div>
         </div>
       ) : (
-        <div className="col" style={{ gap: 12, marginBottom: 26 }}>
+        <Stagger className="col" style={{ gap: 12, marginBottom: 26 }}>
           {shown.map(r => {
             const color = severityColor(r.costOfAbsence.severity);
             const terms = glossaryFor(r.id);
             return (
-              <div key={r.id} className="card" style={{ padding: '16px 20px', borderLeft: `3px solid ${color}` }}>
+              <StaggerItem key={r.id} className="card" style={{ padding: '16px 20px', borderLeft: `3px solid ${color}` }}>
                 <div className="row" style={{ gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                   <span className="pill pill-soft" style={{ fontSize: 10, fontWeight: 700, color }}>
                     {SEVERITY_LABEL[r.costOfAbsence.severity] || r.costOfAbsence.severity}
@@ -159,10 +160,10 @@ export default function AdvisorView({ state, dispatch }) {
                   )}
                 </div>
                 {terms.length > 0 && <Explain entries={terms} style={{ marginTop: 12 }} />}
-              </div>
+              </StaggerItem>
             );
           })}
-        </div>
+        </Stagger>
       )}
 
       {/* ── Ask about your portfolio ── */}

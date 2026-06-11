@@ -6,6 +6,7 @@ import { parseFile, detectColumns, rowsToDrafts, aiCategorize } from '../service
 import { hasEnvKey } from '../ai.js';
 import { parseReceiptImage, fileToImage } from '../services/receiptOcr.js';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
+import { Reveal, Stagger, StaggerItem } from '../components/motion.jsx';
 import { Donut, AreaChart } from '../components/charts.jsx';
 import { auditRecurring } from '../engine/insights/recurringAudit.js';
 import { forecastCashflow } from '../engine/forecast.js';
@@ -912,23 +913,23 @@ export default function CashFlowView({ state, dispatch }) {
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
 
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 22 }}>
+      <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 22 }}>
         {[
           { label: 'Monthly income',   value: fmtBase(totInc, profile.displayCurrency, { compact: true }), color: 'var(--up)',   bg: 'var(--up-soft)' },
           { label: 'Monthly expenses', value: fmtBase(totExp, profile.displayCurrency, { compact: true }), color: 'var(--down)', bg: 'var(--down-soft)' },
           { label: 'Net cash flow',    value: `${netFlow >= 0 ? '+' : ''}${fmtBase(netFlow, profile.displayCurrency, { compact: true })}`, color: netFlow >= 0 ? 'var(--up)' : 'var(--down)', bg: netFlow >= 0 ? 'var(--up-soft)' : 'var(--down-soft)' },
           { label: 'Savings rate',     value: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)', bg: 'var(--paper)' },
         ].map((c, i) => (
-          <div key={i} style={{ padding: '14px 18px', borderRadius: 'var(--r-md)', background: c.bg, border: '0.5px solid var(--line)' }}>
+          <StaggerItem key={i} style={{ padding: '14px 18px', borderRadius: 'var(--r-md)', background: c.bg, border: '0.5px solid var(--line)' }}>
             <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{c.label}</div>
             <div className="num" style={{ fontSize: 22, fontWeight: 700, color: c.color, letterSpacing: '-0.02em' }}>{c.value}</div>
-          </div>
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
 
       {/* Trend chart + category breakdown ─────────────────────────────────── */}
       {cashflows.length > 0 && (
-        <div className="card" style={{ padding: '18px 22px', marginBottom: 20, display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 22 }}>
+        <Reveal className="card" style={{ padding: '18px 22px', marginBottom: 20, display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 22 }}>
           {/* Bar chart with axis labels + per-bar tooltips */}
           <div style={{ minWidth: 0 }}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
@@ -1055,7 +1056,7 @@ export default function CashFlowView({ state, dispatch }) {
               </div>
             )}
           </div>
-        </div>
+        </Reveal>
       )}
 
       {/* 30-day forecast — projects the liquid balance forward from recurring
@@ -1083,7 +1084,7 @@ export default function CashFlowView({ state, dispatch }) {
 
       {/* Income section */}
       {incomes.length > 0 && (
-        <div className="card" style={{ padding: 0, marginBottom: 14 }}>
+        <Reveal className="card" style={{ padding: 0, marginBottom: 14 }}>
           <div className="row" style={{ padding: '14px 20px', justifyContent: 'space-between' }}>
             <div className="row" style={{ gap: 8 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--up)', flexShrink: 0 }} />
@@ -1106,12 +1107,12 @@ export default function CashFlowView({ state, dispatch }) {
               ))}
             </div>
           ))}
-        </div>
+        </Reveal>
       )}
 
       {/* Expense section */}
       {expenses.length > 0 && (
-        <div className="card" style={{ padding: 0, marginBottom: 14 }}>
+        <Reveal className="card" style={{ padding: 0, marginBottom: 14 }}>
           <div className="row" style={{ padding: '14px 20px', justifyContent: 'space-between' }}>
             <div className="row" style={{ gap: 8 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--down)', flexShrink: 0 }} />
@@ -1134,7 +1135,7 @@ export default function CashFlowView({ state, dispatch }) {
               ))}
             </div>
           ))}
-        </div>
+        </Reveal>
       )}
 
       {/* Recurring-subscription audit — always-visible roll-up of every non-'once'

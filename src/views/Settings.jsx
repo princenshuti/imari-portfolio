@@ -10,6 +10,7 @@ import { exportJSON, importJSONFile } from '../store.js';
 import { getApiKey, setApiKey, hasEnvKey } from '../ai.js';
 import { listMembers, listInvitations, createInvitation, revokeInvitation, removeMember, updateMemberRole, sendInvitationEmail, isConfigured, MAX_INVITES } from '../cloud.js';
 import PortfolioChat from '../components/PortfolioChat.jsx';
+import { Reveal } from '../components/motion.jsx';
 import { Field, inputStyle } from '../components/Field.jsx';
 import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
 import { RowSkeleton } from '../components/Skeleton.jsx';
@@ -38,11 +39,11 @@ async function resizeAvatar(file, px = 160) {
 
 function Section({ title, subtitle, children }) {
   return (
-    <div style={{ marginBottom: 28 }}>
+    <Reveal style={{ marginBottom: 28 }}>
       <div className="font-serif" style={{ fontSize: 22, marginBottom: subtitle ? 4 : 14 }}>{title}</div>
       {subtitle && <div className="muted" style={{ fontSize: 12, marginBottom: 14, lineHeight: 1.5, maxWidth: 600 }}>{subtitle}</div>}
       <div className="card" style={{ padding: 22 }}>{children}</div>
-    </div>
+    </Reveal>
   );
 }
 

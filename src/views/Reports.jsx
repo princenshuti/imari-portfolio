@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { fmtBase, fromBase } from '../data.js';
 import { buildMonthlyReport } from '../engine/monthlyReport.js';
 import { downloadCSV } from '../services/download.js';
+import { Reveal } from '../components/motion.jsx';
 
 // F7 — auto-generated monthly report, same printable shape as BalanceSheet.
 // Every number is derived from entered data; the month picker walks history.
@@ -55,7 +56,7 @@ export default function ReportsView({ state }) {
         </div>
       </div>
 
-      <div className="card" style={{ padding: '24px 28px', maxWidth: 820 }}>
+      <Reveal className="card" style={{ padding: '24px 28px', maxWidth: 820 }}>
         <div style={{ marginBottom: 20 }}>
           <div className="font-serif" style={{ fontSize: 22 }}>Money report — {monthLabel}</div>
           <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
@@ -149,7 +150,7 @@ export default function ReportsView({ state }) {
             )}
           </>
         )}
-      </div>
+      </Reveal>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { signIn, signUp, resetPassword, isConfigured } from '../cloud.js';
 import { useT } from '../contexts/I18nContext.jsx';
 import { MaxventuresWordmark } from '../components/ImariMark.jsx';
+import { Reveal } from '../components/motion.jsx';
 
 export default function Login({ pendingInvite, initialMode = 'signin' }) {
   const { t } = useT();
@@ -123,7 +124,7 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
       >
         {t('login.back_home')}
       </button>
-      <div className="card" style={{ padding: 36, width:'100%', maxWidth: 460 }}>
+      <Reveal y={16} className="card" style={{ padding: 36, width:'100%', maxWidth: 460 }}>
         <div aria-hidden="true" style={{
           width: 48, height: 48, borderRadius: 12, background:'var(--brand)', color:'var(--brand-ink)',
           display:'flex', alignItems:'center', justifyContent:'center',
@@ -207,7 +208,7 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
               box that clashed with the cream surface (design review #16). */}
           <MaxventuresWordmark />
         </div>
-      </div>
+      </Reveal>
     </div>
   );
 }
