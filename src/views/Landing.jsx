@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useT, SUPPORTED_LOCALES } from '../contexts/I18nContext.jsx';
+import { useMarket } from '../contexts/MarketContext.jsx';
+import { REFERENCE } from '../engine/insights/refs.js';
+import { fmtNum } from '../data.js';
 import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 
 // Inline SVG icon set — Heroicons-style outline at 24x24
@@ -44,10 +47,17 @@ const COST_HEAD = {
   title: 'Your money is doing something today. Imari tells you what.',
   sub: 'Most apps store your numbers. Imari surfaces what ignoring them costs you — in francs, days and risk — drawn only from your own data. Never invented fear, only what is already true.',
 };
+// Illustrative scenarios, but every rate comes from the same REFERENCE the
+// insight engine computes with — so the landing can never drift from the
+// product. (RWF 4.2M × tBillYieldPct / 12 ≈ 35k/mo at the 10% reference.)
+const IDLE_EXAMPLE_RWF = 4_200_000;
+const idlePerMonth = Math.round(IDLE_EXAMPLE_RWF * REFERENCE.tBillYieldPct / 100 / 12 / 1000);
+// Flat nominal net worth after one year of CPI: real ≈ −cpi/(1+cpi).
+const flatRealPct = (REFERENCE.cpiYoYPct / (1 + REFERENCE.cpiYoYPct / 100)).toFixed(1);
 const COSTS = [
   { sev: 'critical', stat: 'RWF 12,000', label: 'Late-levy penalty, avoided', body: 'An RRA deadline you would have missed — surfaced six days early, before the penalty starts.' },
-  { sev: 'warning', stat: 'RWF 47,000 / mo', label: 'Idle cash, not earning', body: 'RWF 4.2M resting in MoMo while BNR T-bills reference ~13.5%. A running counter of what you forgo.' },
-  { sev: 'info', stat: '−2% in real terms', label: 'Net worth "flat" in RWF', body: 'After inflation and the franc\'s slide, standing still is quietly going backwards. Imari shows the real number.' },
+  { sev: 'warning', stat: `RWF ${idlePerMonth},000 / mo`, label: 'Idle cash, not earning', body: `RWF 4.2M resting in MoMo while BNR T-bills reference ~${REFERENCE.tBillYieldPct}%. A running counter of what you forgo.` },
+  { sev: 'info', stat: `−${flatRealPct}% in real terms`, label: 'Net worth "flat" in RWF', body: `Flat in francs still shrinks after ${REFERENCE.cpiYoYPct}% inflation. Imari shows the real number, not the comfortable one.` },
   { sev: 'warning', stat: '38% of income', label: 'Your pension at 60', body: 'Below a comfortable 60% replacement. Imari shows the gap — and what an extra RWF 10k/month to Ejo Heza closes.' },
 ];
 
@@ -104,11 +114,6 @@ const ADVISOR_CHIPS = [
   'Build a 12-month plan to grow my net worth 25%.',
   'If I save RWF 200k/month, when do I hit 50M?',
   'What\'s my approximate annual RRA tax exposure?',
-];
-const PULSE = [
-  { label: 'USD/RWF (BNR)', value: '1,300 / 1,350', sub: 'buy / sell · today', live: true },
-  { label: 'T-bill yield', value: '13.5%', sub: 'BNR · reference', live: false },
-  { label: 'Inflation (CPI)', value: '4.8%', sub: 'NISR · reference', live: false },
 ];
 
 // ── Trust & honesty ───────────────────────────────────────────────────────
@@ -168,8 +173,10 @@ function useCountUp(target, duration = 1400) {
 // Miniature live replica of the real Dashboard (labels match Dashboard.jsx):
 // net worth + delta pill, self-drawing chart with cost basis, KPI tiles.
 const MOCK_LINE = 'M0,128 L24,120 L48,125 L72,106 L96,99 L120,105 L144,90 L168,95 L192,76 L216,83 L240,68 L264,75 L288,60 L312,66 L336,54 L360,60 L384,46 L408,53 L432,38 L456,45 L480,29 L504,37 L528,22 L548,28 L560,20';
+// Tiles reconcile with each other: expenses ≈ RWF 1.1M/mo, so 8.4M cash is
+// 7.6 months of runway and Investable = 8.4M − (3 × 1.1M buffer) ≈ 5.1M.
 const MOCK_KPIS = [
-  ['Cash in hand', 'RWF 8.4M', '1.8 months of expenses'],
+  ['Cash in hand', 'RWF 8.4M', '7.6 months of expenses'],
   ['Tax estimate', 'RWF 412K', 'next deadline in 21 days'],
   ['Investable', 'RWF 5.1M', 'liquid minus 3-month buffer'],
 ];
@@ -182,7 +189,8 @@ function DashboardMock() {
         <div>
           <div className="landing-mock-label">{'Net worth'}</div>
           <div className="landing-mock-amount font-serif">RWF {nw}M</div>
-          <span className="landing-mock-delta num">▲ +RWF 30M (+17.7%) past 3M</span>
+          {/* 30 ÷ (204 − 30) = +17.2% — keep the arithmetic honest even in a mock */}
+          <span className="landing-mock-delta num">▲ +RWF 30M (+17.2%) past 3M</span>
         </div>
         <div className="landing-mock-ranges num">
           {['1M', '3M', '6M', '1Y'].map(r => (
@@ -221,10 +229,21 @@ function DashboardMock() {
 // an engine-computed answer the AI phrased. The ✦ mark is the product's own
 // AI glyph (see Advisor.jsx) — kept for authenticity.
 function AdvisorMock() {
+  // Same provenance as the real Advisor pulse (Advisor.jsx): live BNR buy/sell
+  // when fetched, engine REFERENCE rates otherwise — never a hardcoded "live".
+  const { market } = useMarket();
+  const bnrUSD = market?.bnrRates?.USD;
+  const pulse = [
+    bnrUSD
+      ? { label: 'USD/RWF (BNR)', value: `${fmtNum(bnrUSD.buy, 0)} / ${fmtNum(bnrUSD.sell, 0)}`, sub: `buy / sell · ${bnrUSD.date}`, live: true }
+      : { label: 'USD/RWF', value: `≈ ${fmtNum(market?.usdRwf ?? 1300, 0)}`, sub: 'reference · BNR live loads shortly', live: false },
+    { label: 'T-bill yield', value: `${REFERENCE.tBillYieldPct}%`, sub: 'BNR auction · reference', live: false },
+    { label: 'Inflation (CPI)', value: `${REFERENCE.cpiYoYPct}%`, sub: 'NISR · reference', live: false },
+  ];
   return (
     <div className="landing-advisor-mock" aria-hidden>
       <div className="landing-pulse">
-        {PULSE.map((p, i) => (
+        {pulse.map((p, i) => (
           <div key={p.label} className="landing-pulse-card" style={{ '--reveal-delay': `${i * 90}ms` }}>
             <div className="landing-pulse-top">
               <span className="landing-pulse-label">{p.label}</span>
@@ -355,6 +374,26 @@ export default function Landing({ onSignIn }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Scroll-triggered reveal for [data-reveal] tiles (Cost cards, Rwanda rails).
+  // The CSS animation is gated on .is-in; without an observer it used to play
+  // on mount, below the fold, where nobody saw it. If IO is unavailable the
+  // class is added immediately so content can never strand hidden.
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll('[data-reveal]'));
+    if (!els.length) return undefined;
+    if (typeof IntersectionObserver === 'undefined') {
+      els.forEach(el => el.classList.add('is-in'));
+      return undefined;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    els.forEach(el => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
   // Hash is the single source of truth — App listens on hashchange.
   const goLogin = (mode = 'signin') => { window.location.hash = mode === 'signup' ? 'signup' : 'login'; };
   const goSignup = () => goLogin('signup');
@@ -437,7 +476,8 @@ export default function Landing({ onSignIn }) {
           </div>
           <div className="landing-preview-costchip">
             <span className="landing-preview-costglyph">!</span>
-            <span>{'RWF 5M idle — ~RWF 56K/mo forgone vs T-bills'}</span>
+            {/* 5M × tBillYieldPct / 12 — same reference the engine computes with */}
+            <span>{`RWF 5M idle — ~RWF ${Math.round(5_000_000 * REFERENCE.tBillYieldPct / 100 / 12 / 1000)}K/mo forgone vs T-bills`}</span>
           </div>
         </div>
       </header>
