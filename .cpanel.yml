@@ -24,6 +24,6 @@
 #   /home/princens/public_html/imali.princenshuti.com
 deployment:
   tasks:
-    - export DEPLOYPATH=$HOME/public_html/imali.princenshuti.com/
+    - export DEPLOYPATH=/home/princens/public_html/imali.princenshuti.com/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R dist/. $DEPLOYPATH
