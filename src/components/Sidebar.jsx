@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { SPRING } from './motion.jsx';
 import { fmtBase, toBase } from '../data.js';
 import { signOut } from '../cloud.js';
 import ImariMark from './ImariMark.jsx';
@@ -201,6 +203,18 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
                     aria-label={collapsed ? label : undefined}
                     style={collapsed ? { justifyContent: 'center', padding: '10px 0' } : undefined}
                   >
+                    {/* Active indicator — layoutId makes it slide between items */}
+                    {it.id === active && (
+                      <motion.span
+                        layoutId="nav-active-indicator"
+                        transition={SPRING}
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute', left: 0, top: '22%', bottom: '22%', width: 3,
+                          background: 'var(--brand)', borderRadius: '0 var(--r-pill) var(--r-pill) 0',
+                        }}
+                      />
+                    )}
                     <span aria-hidden="true" style={{ width: 18, textAlign: 'center', fontSize: 13, opacity: it.id === active ? 1 : 0.65 }}>{it.glyph}</span>
                     {!collapsed && <span>{label}</span>}
                     {/* Advice badge — active recommendation count from the engine */}

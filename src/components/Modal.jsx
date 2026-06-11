@@ -8,6 +8,8 @@
  * the chrome and a11y wiring.
  */
 import { useEffect, useId, useRef } from 'react';
+import { motion } from 'motion/react';
+import { SPRING } from './motion.jsx';
 
 const FOCUSABLE = [
   'button:not([disabled])',
@@ -93,16 +95,22 @@ export default function Modal({
   const scrim = scrimVariant === 'image' ? 'var(--scrim-image)' : 'var(--scrim)';
 
   return (
-    <div
+    <motion.div
       onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
       style={{
         position: 'fixed', inset: 0, background: scrim, backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 2147483640, padding: 20,
       }}
     >
-      <div
+      <motion.div
         ref={cardRef}
+        initial={{ opacity: 0, scale: 0.96, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={SPRING}
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -117,8 +125,8 @@ export default function Modal({
       >
         {title && <span id={labelId} style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>{title}</span>}
         {children}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

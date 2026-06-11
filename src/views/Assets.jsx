@@ -5,6 +5,7 @@ import AssetEditor from '../components/AssetEditor.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { downloadAssetTemplate, parseAssetExcel, findExistingByNaturalKey } from '../excel.js';
 import { useRovingFocus } from '../hooks/useRovingFocus.js';
+import { Reveal } from '../components/motion.jsx';
 
 // Canonical group order from CLASSES definition
 const ALL_GROUPS = Array.from(new Set(CLASSES.map(c => c.group)));
@@ -504,7 +505,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
         const gPct   = gCost ? (gGain / gCost) * 100 : 0;
 
         return (
-          <div key={g.group} className="card" style={{ marginBottom: 14, padding: 0 }}>
+          <Reveal key={g.group} className="card" style={{ marginBottom: 14, padding: 0 }}>
             {/* Group header */}
             <div className="row" style={{ padding: '16px 22px', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <div className="row" style={{ gap: 10, alignItems: 'center' }}>
@@ -594,7 +595,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
                 </React.Fragment>
               );
             })}
-          </div>
+          </Reveal>
         );
       })}
       </div>

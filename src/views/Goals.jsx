@@ -7,6 +7,7 @@ import { goalCurrentRWF } from '../engine/goals.js';
 import { netWorthRWF } from '../engine/insights/_shared.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { monthlyFlowsRWF } from '../engine/insights/_shared.js';
+import { Stagger, StaggerItem, Reveal } from '../components/motion.jsx';
 
 const EMPTY_GOAL = {
   category: 'investment', title: '', targetAmount: '', currency: 'RWF',
@@ -453,7 +454,7 @@ export default function GoalsView({ state, dispatch }) {
 
       {/* Goals overview strip */}
       {goals.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}>
+        <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}>
           {[
             { label: 'Active goals', value: active.length, sub: 'in progress' },
             // Goal-specific, not a sidebar duplicate (round-3 #13): the total
@@ -487,22 +488,24 @@ export default function GoalsView({ state, dispatch }) {
               };
             })(),
           ].map((c, i) => (
-            <div key={i} style={{ padding: '14px 18px', borderRadius: 'var(--r-md)', background: 'var(--paper)', border: '0.5px solid var(--line)' }}>
+            <StaggerItem key={i} style={{ padding: '14px 18px', borderRadius: 'var(--r-md)', background: 'var(--paper)', border: '0.5px solid var(--line)' }}>
               <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{c.label}</div>
               <div className={c.isNum ? 'num' : ''} style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)' }}>{c.value}</div>
               <div className="muted" style={{ fontSize: 10 }}>{c.sub}</div>
-            </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       )}
 
       {/* Active goals */}
-      {active.map(g => (
-        <GoalCard key={g.id} goal={g} currentValue={currentValueFor(g)} monthlySaving={monthlySaving} displayCurrency={profile.displayCurrency}
-          onEdit={() => setEditing(g)}
-          onDelete={() => setPendingDelete(g)}
-          onLock={(lock) => dispatch({ type: 'upsertGoal', goal: { ...g, lock } })}
-        />
+      {active.map((g, i) => (
+        <Reveal key={g.id} delay={Math.min(i * 0.06, 0.3)}>
+          <GoalCard goal={g} currentValue={currentValueFor(g)} monthlySaving={monthlySaving} displayCurrency={profile.displayCurrency}
+            onEdit={() => setEditing(g)}
+            onDelete={() => setPendingDelete(g)}
+            onLock={(lock) => dispatch({ type: 'upsertGoal', goal: { ...g, lock } })}
+          />
+        </Reveal>
       ))}
 
       {/* Achieved goals */}
@@ -512,10 +515,12 @@ export default function GoalsView({ state, dispatch }) {
             Achieved ({achieved.length})
           </div>
           {achieved.map(g => (
-            <GoalCard key={g.id} goal={g} currentValue={currentValueFor(g)} monthlySaving={monthlySaving} displayCurrency={profile.displayCurrency}
-              onEdit={() => setEditing(g)}
-              onDelete={() => setPendingDelete(g)}
-            />
+            <Reveal key={g.id}>
+              <GoalCard goal={g} currentValue={currentValueFor(g)} monthlySaving={monthlySaving} displayCurrency={profile.displayCurrency}
+                onEdit={() => setEditing(g)}
+                onDelete={() => setPendingDelete(g)}
+              />
+            </Reveal>
           ))}
         </>
       )}

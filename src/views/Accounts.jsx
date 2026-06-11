@@ -3,6 +3,7 @@ import { CURRENCIES, RWANDA_BANKS, MOMO_PROVIDERS, fmt, fmtBase, toBase, id } fr
 import { Field, Input, inputStyle } from '../components/Field.jsx';
 import Modal from '../components/Modal.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
+import { Stagger, StaggerItem } from '../components/motion.jsx';
 
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
 
@@ -299,9 +300,9 @@ export default function AccountsView({ state, dispatch }) {
         <span className="muted" style={{ fontSize: 11 }}>{banks.length} account{banks.length === 1 ? '' : 's'}</span>
       </div>
       {banks.length > 0 ? (
-        <div className="col" style={{ gap: 10, marginBottom: 22 }}>
-          {banks.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} lastActivity={lastActivityByAccount[a.id]} onEdit={setEditing} onDelete={handleDelete} />)}
-        </div>
+        <Stagger className="col" style={{ gap: 10, marginBottom: 22 }}>
+          {banks.map(a => <StaggerItem key={a.id}><AccountCard acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} lastActivity={lastActivityByAccount[a.id]} onEdit={setEditing} onDelete={handleDelete} /></StaggerItem>)}
+        </Stagger>
       ) : (
         <div className="card" style={{ padding: 28, textAlign:'center', marginBottom: 22 }}>
           <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>No bank accounts yet.</div>
@@ -315,9 +316,9 @@ export default function AccountsView({ state, dispatch }) {
         <span className="muted" style={{ fontSize: 11 }}>{momos.length} wallet{momos.length === 1 ? '' : 's'}</span>
       </div>
       {momos.length > 0 ? (
-        <div className="col" style={{ gap: 10 }}>
-          {momos.map(a => <AccountCard key={a.id} acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} lastActivity={lastActivityByAccount[a.id]} onEdit={setEditing} onDelete={handleDelete} />)}
-        </div>
+        <Stagger className="col" style={{ gap: 10 }}>
+          {momos.map(a => <StaggerItem key={a.id}><AccountCard acc={a} displayCurrency={profile.displayCurrency} cfCount={cashflowCountByAccount[a.id] || 0} lastActivity={lastActivityByAccount[a.id]} onEdit={setEditing} onDelete={handleDelete} /></StaggerItem>)}
+        </Stagger>
       ) : (
         <div className="card" style={{ padding: 28, textAlign:'center' }}>
           <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>No mobile money wallets yet.</div>

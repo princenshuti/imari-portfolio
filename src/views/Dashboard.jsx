@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, MotionConfig } from 'motion/react';
+import { Reveal, CountUp, BarFill, staggerParent, staggerItem, SPRING, EASE_OUT } from '../components/motion.jsx';
 import {
   CLASSES, TREND_DOMAINS, valueRWF, costRWF, suggestValue,
   toBase, fmtBase, fmt, GOAL_CATEGORIES,
@@ -130,10 +132,7 @@ function RatioBar({ label, value, color, hint, thresholds }) {
         <span className="num" style={{ fontSize: 13, fontWeight: 700, color: c }}>{value.toFixed(1)}%</span>
       </div>
       <div style={{ position: 'relative', height: 4, borderRadius: 2, background: 'var(--bg-2)', overflow: 'visible' }}>
-        <div style={{
-          height: '100%', width: capped + '%', background: c, borderRadius: 2,
-          transition: 'width 0.6s cubic-bezier(0.23,1,0.32,1)',
-        }} />
+        <BarFill pct={capped} color={c} />
         {thresholds && thresholds.map(t => (
           <span
             key={t.at}
@@ -174,10 +173,14 @@ function IncomeTrendBars({ months, displayCurrency }) {
         {months.map((m, i) => (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
             <div style={{ width: '100%', display: 'flex', gap: 2, alignItems: 'flex-end', height: 56 }}>
-              <div title={`Income: ${fmtBase(m.inc, displayCurrency, { compact: true })}`}
-                style={{ flex: 1, background: 'var(--up)', borderRadius: '3px 3px 0 0', height: `${(m.inc / maxVal) * 100}%`, minHeight: m.inc > 0 ? 3 : 0, opacity: 0.75 }} />
-              <div title={`Expenses: ${fmtBase(m.exp, displayCurrency, { compact: true })}`}
-                style={{ flex: 1, background: 'var(--down)', borderRadius: '3px 3px 0 0', height: `${(m.exp / maxVal) * 100}%`, minHeight: m.exp > 0 ? 3 : 0, opacity: 0.75 }} />
+              <motion.div title={`Income: ${fmtBase(m.inc, displayCurrency, { compact: true })}`}
+                initial={{ scaleY: 0 }} whileInView={{ scaleY: 1 }} viewport={{ once: true, amount: 0.6 }}
+                transition={{ duration: 0.7, delay: i * 0.06, ease: EASE_OUT }}
+                style={{ flex: 1, background: 'var(--up)', borderRadius: '3px 3px 0 0', height: `${(m.inc / maxVal) * 100}%`, minHeight: m.inc > 0 ? 3 : 0, opacity: 0.75, transformOrigin: 'bottom center' }} />
+              <motion.div title={`Expenses: ${fmtBase(m.exp, displayCurrency, { compact: true })}`}
+                initial={{ scaleY: 0 }} whileInView={{ scaleY: 1 }} viewport={{ once: true, amount: 0.6 }}
+                transition={{ duration: 0.7, delay: 0.05 + i * 0.06, ease: EASE_OUT }}
+                style={{ flex: 1, background: 'var(--down)', borderRadius: '3px 3px 0 0', height: `${(m.exp / maxVal) * 100}%`, minHeight: m.exp > 0 ? 3 : 0, opacity: 0.75, transformOrigin: 'bottom center' }} />
             </div>
             <div style={{ fontSize: 10, color: 'var(--ink-4)', letterSpacing: '0.02em' }}>{m.label}</div>
           </div>
@@ -199,16 +202,14 @@ function IncomeTrendBars({ months, displayCurrency }) {
 function CategoryBars({ groups, totalValue }) {
   const maxAbs = Math.max(...groups.map(g => Math.abs(g.gainPct)), 0.1);
   return (
-    <div className="col" style={{ gap: 13 }}>
-      {groups.map((g, i) => {
+    <motion.div className="col" style={{ gap: 13 }}
+      variants={staggerParent} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }}>
+      {groups.map((g) => {
         const isUp = g.gainPct >= 0;
-        const barW = (Math.abs(g.gainPct) / maxAbs * 100).toFixed(1);
+        const barW = (Math.abs(g.gainPct) / maxAbs * 100);
         const alloc = totalValue > 0 ? (g.value / totalValue * 100).toFixed(0) : '0';
         return (
-          <div key={g.group} style={{
-            animation: 'imari-slideUp 260ms cubic-bezier(0.23,1,0.32,1) both',
-            animationDelay: `${i * 55}ms`,
-          }}>
+          <motion.div key={g.group} variants={staggerItem}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0, flex: 1 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0 }} />
@@ -222,16 +223,12 @@ function CategoryBars({ groups, totalValue }) {
               </div>
             </div>
             <div style={{ height: 5, background: 'var(--bg-2)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: barW + '%',
-                background: isUp ? g.color : 'var(--down)', borderRadius: 3,
-                transition: 'width 0.6s cubic-bezier(0.23,1,0.32,1)',
-              }} />
+              <BarFill pct={barW} color={isUp ? g.color : 'var(--down)'} radius={3} />
             </div>
-          </div>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
 
@@ -241,20 +238,24 @@ function MoverCard({ asset, delay, onClick }) {
   const isUp = asset._pct >= 0;
   const isInteractive = !!onClick;
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       disabled={!isInteractive}
       aria-label={isInteractive ? `Open ${asset.name} in Assets` : undefined}
       className={isInteractive ? 'dash-mover-card btn-unstyled' : 'btn-unstyled'}
+      initial={{ opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0, transition: { ...SPRING, delay: delay / 1000 } }}
+      viewport={{ once: true, amount: 0.3 }}
+      whileHover={isInteractive ? { y: -4 } : undefined}
+      whileTap={isInteractive ? { scale: 0.97 } : undefined}
+      transition={SPRING}
       style={{
         boxSizing: 'border-box',
         display: 'block', width: '100%',
         padding: '14px 16px', borderRadius: 'var(--r-md)',
         background: isUp ? 'color-mix(in oklab, var(--up) 6%, var(--bg-2))' : 'color-mix(in oklab, var(--down) 6%, var(--bg-2))',
         border: `0.5px solid ${isUp ? 'color-mix(in oklab, var(--up) 18%, transparent)' : 'color-mix(in oklab, var(--down) 18%, transparent)'}`,
-        animation: 'imari-slideUp 260ms cubic-bezier(0.23,1,0.32,1) both',
-        animationDelay: `${delay}ms`,
         cursor: isInteractive ? 'pointer' : 'default',
       }}
     >
@@ -269,7 +270,7 @@ function MoverCard({ asset, delay, onClick }) {
       <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>
         {isUp ? '+' : ''}{fmt(asset._gain, asset.currency, { compact: true })} · {cls.label}
       </div>
-    </button>
+    </motion.button>
   );
 }
 
@@ -294,14 +295,13 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
           <span style={{ color: 'var(--up)', marginRight: 6 }}>✓</span>No issues detected
         </div>
       ) : (
-        <div className="col" style={{ gap: 9 }}>
+        <motion.div className="col" style={{ gap: 9 }}
+          variants={staggerParent} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.25 }}>
           {items.map((item, i) => (
-            <div key={i} style={{
+            <motion.div key={i} variants={staggerItem} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
               paddingBottom: i < items.length - 1 ? 9 : 0,
               borderBottom: i < items.length - 1 ? '0.5px solid var(--line-soft)' : 'none',
-              animation: 'imari-slideUp 240ms cubic-bezier(0.23,1,0.32,1) both',
-              animationDelay: `${i * 45}ms`,
             }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0, flex: 1 }}>
                 <AssetIcon kind={item.kind} size={20} color={accentColor} />
@@ -311,9 +311,9 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
                 </div>
               </div>
               <span style={{ fontSize: 11, fontWeight: 600, color: accentColor, flexShrink: 0, marginLeft: 8 }}>{item.badge}</span>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -472,16 +472,15 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onReord
         </div>
       )}
 
-      {/* Section content — animated collapse */}
-      <div style={{
-        overflow: 'hidden',
-        maxHeight: collapsed ? 0 : 4000,
-        opacity: collapsed ? 0 : 1,
-        transition: 'max-height 0.3s cubic-bezier(0.23,1,0.32,1), opacity 0.22s ease-out',
-        pointerEvents: collapsed ? 'none' : 'auto',
-      }}>
+      {/* Section content — animated collapse (true height:auto, no max-height cap) */}
+      <motion.div
+        initial={false}
+        animate={{ height: collapsed ? 0 : 'auto', opacity: collapsed ? 0 : 1 }}
+        transition={{ duration: 0.45, ease: EASE_OUT }}
+        style={{ overflow: 'hidden', pointerEvents: collapsed ? 'none' : 'auto' }}
+      >
         {children}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -966,25 +965,32 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         savingsRate !== null && { label: 'Savings rate', value: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up-ink)' : 'var(--gold-ink)', to: 'cashflow' },
       ].filter(Boolean);
       return (
-        <div className="card-hero dash-hero-card" style={{ position: 'relative' }}>
-          <div style={{
-            position: 'absolute', top: -40, right: -40,
-            width: 160, height: 160, borderRadius: '50%',
-            background: 'radial-gradient(circle, var(--brand-softer) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }} />
+        <div className="card-hero dash-hero-card beam-border" style={{ position: 'relative' }}>
+          <motion.div
+            aria-hidden="true"
+            animate={{ scale: [1, 1.18, 1], opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              position: 'absolute', top: -40, right: -40,
+              width: 160, height: 160, borderRadius: '50%',
+              background: 'radial-gradient(circle, var(--brand-softer) 0%, transparent 70%)',
+              pointerEvents: 'none',
+            }} />
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
             <div>
               <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Net worth</div>
               <div className="font-serif dash-hero-amount" style={{ lineHeight: 1, letterSpacing: '-0.025em' }}>
-                {fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })}
+                <CountUp value={trueNetWorth} duration={1.3}
+                  format={v => fmtBase(v, profile.displayCurrency, { compact: true })} />
               </div>
               <div className="row" style={{ gap: 10, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 {chartSnaps.length >= 2 && (
-                  <span className={`pill ${rangeDelta >= 0 ? 'pill-up' : 'pill-down'}`}>
+                  <motion.span key={chartRange} className={`pill ${rangeDelta >= 0 ? 'pill-up' : 'pill-down'}`}
+                    initial={{ opacity: 0, scale: 0.85, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ ...SPRING, delay: 0.25 }}>
                     {rangeDelta >= 0 ? '▲' : '▼'} {rangeDelta >= 0 ? '+' : ''}{fmtBase(rangeDelta, profile.displayCurrency, { compact: true })}
                     {Number.isFinite(rangeReturn) && rangeReturn !== 0 ? ` (${rangeReturn >= 0 ? '+' : ''}${rangeReturn.toFixed(1)}%)` : ''} {chartRange === 'ALL' ? 'all time' : `past ${chartRange}`}
-                  </span>
+                  </motion.span>
                 )}
                 {realYoY != null && (
                   <span className="muted num" style={{ fontSize: 11.5 }} title={`Nominal ${yearAgo.pct >= 0 ? '+' : ''}${yearAgo.pct.toFixed(1)}% YoY minus ${REFERENCE.cpiYoYPct}% CPI (NISR reference)`}>
@@ -993,22 +999,18 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 )}
               </div>
             </div>
-            <div className="row" style={{ gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
-                <button key={r} onClick={() => { setProjMode(false); setChartRange(r); }} className="dash-btn-range" style={{
-                  padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
-                  background: !projMode && chartRange === r ? 'var(--brand)' : 'var(--bg-2)',
-                  color: !projMode && chartRange === r ? 'var(--brand-ink)' : 'var(--ink-2)',
-                  border: 0, fontFamily: 'inherit', fontWeight: !projMode && chartRange === r ? 600 : 400,
-                }}>{r}</button>
-              ))}
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+              <div className="seg-tabs" role="group" aria-label="Chart range">
+                {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
+                  <button key={r} onClick={() => { setProjMode(false); setChartRange(r); }}
+                    className={`seg-tab${!projMode && chartRange === r ? ' active' : ''}`}
+                    aria-pressed={!projMode && chartRange === r}>{r}</button>
+                ))}
+              </div>
               {/* Fast Forward lives here now — the same chart, continued past today */}
-              <button onClick={() => setProjMode(v => !v)} className="dash-btn-range" aria-pressed={projMode} style={{
-                padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                background: projMode ? 'var(--gold)' : 'var(--gold-soft)',
-                color: projMode ? 'var(--ink)' : 'var(--gold-ink)',
-                border: 0, fontFamily: 'inherit', fontWeight: 600,
-              }}>Project ⤴</button>
+              <button onClick={() => setProjMode(v => !v)} aria-pressed={projMode}
+                className={`seg-tab seg-tab-gold${projMode ? ' active' : ''}`}
+                style={{ flexShrink: 0 }}>Project ⤴</button>
             </div>
           </div>
           <div style={{ marginTop: 16 }}>
@@ -1049,15 +1051,17 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             </div>
           )}
           {/* Drill-down sub-stats — each is a real number from the same engine the views use */}
-          <div className="row" style={{ gap: 20, marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--line-soft)', flexWrap: 'wrap' }}>
+          <motion.div className="row" style={{ gap: 20, marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--line-soft)', flexWrap: 'wrap' }}
+            variants={staggerParent} initial="hidden" animate="show">
             {subStats.map(st => (
-              <button key={st.label} type="button" className="dash-link btn-unstyled" onClick={() => dispatch({ type: 'nav', to: st.to })}
+              <motion.button key={st.label} type="button" className="dash-link btn-unstyled" onClick={() => dispatch({ type: 'nav', to: st.to })}
+                variants={staggerItem} whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}
                 aria-label={`${st.label}: ${st.value} — open`}>
                 <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{st.label}</div>
                 <div className="num" style={{ fontSize: 15, fontWeight: 700, marginTop: 2, color: st.color || 'var(--ink)' }}>{st.value}</div>
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
         </div>
       );
     })(),
@@ -1329,10 +1333,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                         </div>
                       </div>
                       <div style={{ height: 4, background: 'var(--bg-2)', borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%', width: pct + '%', background: src.color, borderRadius: 2,
-                          transition: 'width 0.6s cubic-bezier(0.23,1,0.32,1)',
-                        }} />
+                        <BarFill pct={pct} color={src.color} delay={i * 0.05} />
                       </div>
                     </div>
                   );
@@ -1624,7 +1625,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                       </div>
                     </div>
                     <div style={{ height: 5, background: 'var(--bg-2)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: pct + '%', background: 'var(--brand)', borderRadius: 3, transition: 'width 0.8s cubic-bezier(0.23,1,0.32,1)' }} />
+                      <BarFill pct={pct} color="var(--brand)" radius={3} />
                     </div>
                     <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>
                       {fmtBase(currentRWF, profile.displayCurrency, { compact: true })} of {fmtBase(targetRWF, profile.displayCurrency, { compact: true })} target
@@ -1669,6 +1670,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
   };
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="dash-page dash-flow">
 
       {/* Keyframes */}
@@ -1693,10 +1695,15 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           else is a calm one-line strip that deep-links to the Advice Center —
           the single canonical surface for recommendations. */}
       {pinnedCost && !bannerIsNew ? (
-        <button
+        <motion.button
           type="button"
           onClick={() => dispatch({ type: 'nav', to: 'advisor' })}
           className="dash-advisor-strip btn-unstyled"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileHover={{ scale: 1.005 }}
+          whileTap={{ scale: 0.99 }}
+          transition={SPRING}
           style={{
             order: 11, display: 'flex', alignItems: 'center', gap: 10,
             width: '100%', padding: '11px 16px', marginBottom: 16, cursor: 'pointer',
@@ -1718,7 +1725,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           <span className="pill pill-brand" style={{ fontSize: 10, flexShrink: 0 }}>
             ✦ {engine.recommendations.length} advice →
           </span>
-        </button>
+        </motion.button>
       ) : pinnedCost ? (
         <CostOfAbsence
           style={{ order: 11 }}
@@ -1825,10 +1832,11 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             onReorder={reorder}
             onToggleHide={toggleHide}
           >
-            {content}
+            <Reveal amount={0.08}>{content}</Reveal>
           </SectionShell>
         );
       })}
     </div>
+    </MotionConfig>
   );
 }

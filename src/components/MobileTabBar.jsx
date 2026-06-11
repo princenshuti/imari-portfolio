@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { MAIN_TABS, MORE_ITEMS } from '../nav.js';
 import { useT } from '../contexts/I18nContext.jsx';
 
@@ -36,8 +37,14 @@ export default function MobileTabBar({ active, onNav, visibleIds = null }) {
 
   return (
     <>
+      <AnimatePresence>
       {moreOpen && (
-        <button
+        <motion.button
+          key="more-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
           onClick={() => setMoreOpen(false)}
           aria-label={t('mobile_nav.close_menu')}
           style={{
@@ -49,7 +56,13 @@ export default function MobileTabBar({ active, onNav, visibleIds = null }) {
       )}
 
       {moreOpen && (
-        <div style={{
+        <motion.div
+          key="more-sheet"
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 24 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 32, mass: 0.9 }}
+          style={{
           position: 'fixed', bottom: 'calc(58px + env(safe-area-inset-bottom, 8px))', left: 0, right: 0, zIndex: 50,
           background: 'var(--paper)', borderTop: '0.5px solid var(--line)',
           borderRadius: '16px 16px 0 0', padding: '16px 12px 8px',
@@ -74,8 +87,9 @@ export default function MobileTabBar({ active, onNav, visibleIds = null }) {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       <nav className="mobile-tab-bar" aria-label={t('mobile_nav.label')}>
         {mainTabs.map(it => (

@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { SPRING } from './motion.jsx';
 
 export function useToast() {
   const [toasts, setToasts] = useState([]);
@@ -36,7 +38,7 @@ const COLOURS = {
 };
 
 export function ToastContainer({ toasts, dismiss }) {
-  if (!toasts.length) return null;
+  // Always mounted (even when empty) so AnimatePresence can play exits.
   return (
     <div
       aria-live="polite"
@@ -48,12 +50,17 @@ export function ToastContainer({ toasts, dismiss }) {
         pointerEvents: 'none',
       }}
     >
+      <AnimatePresence>
       {toasts.map(t => {
         const c = COLOURS[t.type] || COLOURS.info;
         const isAlert = t.type === 'error' || t.type === 'warning';
         return (
-          <div
+          <motion.div
             key={t.id}
+            layout
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: SPRING }}
+            exit={{ opacity: 0, y: 8, scale: 0.95, transition: { duration: 0.18, ease: 'easeIn' } }}
             role={isAlert ? 'alert' : 'status'}
             className="toast-item row"
             style={{
@@ -88,9 +95,10 @@ export function ToastContainer({ toasts, dismiss }) {
             >
               <span aria-hidden="true">×</span>
             </button>
-          </div>
+          </motion.div>
         );
       })}
+      </AnimatePresence>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useMarket } from '../contexts/MarketContext.jsx';
 import Modal from '../components/Modal.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import LoanAnalysis from '../components/LoanAnalysis.jsx';
+import { Stagger, StaggerItem, Reveal } from '../components/motion.jsx';
 
 const EMPTY_LIABILITY = {
   kind: 'personal-loan', name: '', currency: 'RWF',
@@ -148,19 +149,19 @@ export default function LiabilitiesView({ state, dispatch }) {
     <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
 
       {/* ── Summary strip ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}>
+      <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}>
         {[
           { label: 'Total liabilities', value: fmtBase(totalDebt, profile.displayCurrency, { compact: true }), sub: `${liabilities.length} debt${liabilities.length === 1 ? '' : 's'}`, color: 'var(--down)', bg: 'var(--down-soft)' },
           { label: 'Total assets', value: fmtBase(totalAssets, profile.displayCurrency, { compact: true }), sub: 'gross', color: 'var(--brand)', bg: 'var(--paper)' },
           { label: 'True net worth', value: fmtBase(trueNetWorth, profile.displayCurrency, { compact: true }), sub: 'assets minus debts', color: trueNetWorth >= 0 ? 'var(--up)' : 'var(--down)', bg: trueNetWorth >= 0 ? 'var(--up-soft)' : 'var(--down-soft)' },
         ].map((c, i) => (
-          <div key={i} style={{ padding: '16px 20px', borderRadius: 'var(--r-md)', background: c.bg, border: '0.5px solid var(--line)' }}>
+          <StaggerItem key={i} style={{ padding: '16px 20px', borderRadius: 'var(--r-md)', background: c.bg, border: '0.5px solid var(--line)' }}>
             <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{c.label}</div>
             <div className="num" style={{ fontSize: 24, fontWeight: 700, color: c.color, letterSpacing: '-0.02em' }}>{c.value}</div>
             <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{c.sub}</div>
-          </div>
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
 
       {/* ── Actions ── */}
       <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
@@ -169,7 +170,7 @@ export default function LiabilitiesView({ state, dispatch }) {
 
       {/* ── Liability groups ── */}
       {grouped.map(g => (
-        <div key={g.group} className="card" style={{ marginBottom: 14, padding: 0 }}>
+        <Reveal key={g.group} className="card" style={{ marginBottom: 14, padding: 0 }}>
           <div className="row" style={{ padding: '14px 20px', justifyContent: 'space-between' }}>
             <div className="row" style={{ gap: 10 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--down)', flexShrink: 0 }} />
@@ -241,7 +242,7 @@ export default function LiabilitiesView({ state, dispatch }) {
               </div>
             );
           })}
-        </div>
+        </Reveal>
       ))}
 
       {liabilities.length === 0 && (

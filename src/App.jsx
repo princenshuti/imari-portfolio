@@ -1,4 +1,6 @@
 import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense, Component } from 'react';
+import { motion, MotionConfig } from 'motion/react';
+import { EASE_OUT } from './components/motion.jsx';
 import { FX, valueRWF, costRWF, toBase, fmtBase, MILESTONES } from './data.js';
 import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, fetchPortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
@@ -548,7 +550,11 @@ export default function App() {
         dispatch({ type: 'setProfile', patch: { locale: loc } });
       }}
     >
-      {children}
+      {/* reducedMotion="user": every motion/react animation in the tree
+          automatically respects the OS prefers-reduced-motion setting. */}
+      <MotionConfig reducedMotion="user">
+        {children}
+      </MotionConfig>
     </I18nProvider>
   );
 
@@ -678,11 +684,16 @@ export default function App() {
               />
             </div>
           )}
-          <main id="main-content" key={nav} className="page-view" tabIndex={-1}>
+          <motion.main
+            id="main-content" key={nav} className="page-view" tabIndex={-1}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE_OUT }}
+          >
             <Suspense fallback={<ViewSkeleton />}>
               {view}
             </Suspense>
-          </main>
+          </motion.main>
         </div>
         <MobileTabBar active={nav} onNav={navigateTo} visibleIds={visibleIds} />
         <div data-noprint><ToastContainer toasts={toasts} dismiss={dismiss} /></div>
