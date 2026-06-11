@@ -108,6 +108,8 @@ function applyTheme(pref) {
     ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     : pref;
   document.body.setAttribute('data-theme', resolved);
+  // Clear the pre-React paint guard from index.html (anti-flash inline bg).
+  document.body.style.removeProperty('background');
 }
 
 // Strip the invite token from the URL once handled.
@@ -178,6 +180,16 @@ export default function App() {
   // ─ Theme ──────────────────────────────────────────────────────
   const [themePref, setThemePref] = useState(getThemePref);
   useEffect(() => {
+    // Signed-out screens (Login/Signup) follow the landing-page theme choice
+    // (imari:landing-theme, midnight default) so the landing → sign-in flow
+    // doesn't flip themes mid-way. The in-app preference takes over on login.
+    if (session === null) {
+      let landingTheme = 'dark';
+      try { landingTheme = localStorage.getItem('imari:landing-theme') || 'dark'; } catch { /* private mode */ }
+      document.body.setAttribute('data-theme', landingTheme);
+      document.body.style.removeProperty('background');
+      return;
+    }
     applyTheme(themePref);
     if (themePref === 'auto') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -185,7 +197,7 @@ export default function App() {
       mq.addEventListener('change', handler);
       return () => mq.removeEventListener('change', handler);
     }
-  }, [themePref]);
+  }, [themePref, session, authPage]);
 
   const handleThemeChange = (pref) => {
     localStorage.setItem('imari:theme', pref);
