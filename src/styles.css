@@ -1610,6 +1610,12 @@ input:focus, select:focus, textarea:focus {
 }
 .loan-analysis[open] > summary .loan-analysis-toggle { transform: rotate(90deg); }
 
+/* Wide trust card — spans the grid but keeps the default surface. Used for
+   the AI-privacy card so five cards still close into clean rows. */
+.landing-trust-card--wide {
+  grid-column: 1 / -1;
+}
+
 /* Featured trust card — spans full grid width, gold accent for emphasis.
    Used for the valuation-honesty card: legally important, deserves weight. */
 .landing-trust-card--featured {

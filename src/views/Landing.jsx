@@ -54,7 +54,7 @@ const COSTS = [
 // ── Feature set — everything Imari now does ───────────────────────────────
 const FEATURES = [
   { icon: 'spark', accent: 'var(--brand)', title: 'An insight engine, not a ledger',
-    desc: 'Runway, idle cash, concentration, tax exposure, real-vs-nominal drift — computed from your data and ranked by what it costs you to ignore. Deterministic and tested, then phrased by AI.' },
+    desc: 'Runway, idle cash, concentration, tax exposure, real-vs-nominal drift — computed from your data and ranked by what it costs you to ignore. Deterministic and tested, to the franc.' },
   { icon: 'sheet', accent: 'var(--gold)', title: 'MoMo & bank statements, imported',
     desc: 'Upload your MTN MoMo or Airtel Money statement — or a bank CSV from BK, Equity, I&M — and Imari parses every line, auto-categorises and lets you confirm in seconds.' },
   { icon: 'umbrella', accent: 'var(--brand)', title: 'Your pension, finally counted',
@@ -112,15 +112,20 @@ const PULSE = [
 ];
 
 // ── Trust & honesty ───────────────────────────────────────────────────────
+// Security copy describes outcomes, never mechanisms — no stack, vendor or
+// architecture names here; that is both marketing policy and attack-surface
+// hygiene.
 const TRUST = [
+  { icon: 'key-off', title: 'No bank passwords. Not ever.',
+    desc: 'Imari never asks for your bank or MoMo login. There are no banking credentials here to phish, leak or steal — the most secure password is the one we never have.' },
+  { icon: 'lock', title: 'Encrypted, end to end of its journey',
+    desc: 'Your data is encrypted in transit and at rest, and isolated to your account alone. Nobody — not other users, not our team — browses your portfolio.' },
   { icon: 'refresh', title: 'Every number is dated',
     desc: 'Imari shows how fresh each figure is and flags what has gone stale. A confidently-wrong number erodes trust faster than no number — so we never hide the date.' },
-  { icon: 'lock', title: 'Encrypted in transit and at rest',
-    desc: 'Every connection runs over TLS. Your portfolio lives in Postgres, encrypted on disk and isolated by row-level security — reachable only through your signed-in account.' },
-  { icon: 'key-off', title: 'No bank passwords. Not ever.',
-    desc: 'Imari never asks for your bank or MoMo login. You hold the data; the app does the math. There are no banking credentials here to phish, leak or steal.' },
-  { icon: 'eye', title: 'Read-only when you share',
-    desc: 'Invite a spouse, family member or accountant as a viewer. They see the numbers; they cannot change them. Revoke access in a single click, any time.' },
+  { icon: 'eye', title: 'You share on your terms',
+    desc: 'Invite a spouse, family member or accountant as a read-only viewer. They see the numbers; they cannot change them. Revoke access in a single click, any time.' },
+  { icon: 'chat', wide: true, title: 'AI with a closed door',
+    desc: 'Conversations with your advisor stay between you and Imari. Your financial data is never used to train AI models, and never sold. Full stop.' },
 ];
 
 const STEPS = [
@@ -459,7 +464,7 @@ export default function Landing({ onSignIn }) {
         </div>
         <div className="landing-trust-grid">
           {TRUST.map(tr => (
-            <article key={tr.title} className="landing-trust-card">
+            <article key={tr.title} className={`landing-trust-card${tr.wide ? ' landing-trust-card--wide' : ''}`}>
               <div className="landing-trust-icon"><Icon name={tr.icon} /></div>
               <div>
                 <h3 className="landing-trust-title">{tr.title}</h3>
