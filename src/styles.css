@@ -1113,25 +1113,38 @@ input:focus, select:focus, textarea:focus {
   z-index: 1;
   animation: landing-fade-up 600ms var(--ease-out) both;
 }
+/* Hero badge — the AI positioning line. Sized to be read first, before the
+   headline: it carries the "AI-powered" claim, so it must not whisper. */
 .landing-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: 10px;
+  padding: 9px 18px;
   border-radius: var(--r-pill);
   background: var(--brand-softer);
   color: var(--brand);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.005em;
-  margin-bottom: 22px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-bottom: 26px;
   border: 1px solid var(--brand-soft);
+  box-shadow: 0 0 28px var(--brand-softer);
 }
 .landing-dot {
-  width: 6px; height: 6px;
+  width: 7px; height: 7px;
   border-radius: 50%;
   background: var(--brand);
   box-shadow: 0 0 0 4px var(--brand-softer);
+  animation: landing-dot-pulse 2.4s ease-in-out infinite;
+}
+@keyframes landing-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--brand-softer); }
+  50%      { box-shadow: 0 0 0 8px var(--brand-softer); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-dot { animation: none; }
 }
 .landing-headline {
   font-size: clamp(44px, 6.4vw, 78px);
