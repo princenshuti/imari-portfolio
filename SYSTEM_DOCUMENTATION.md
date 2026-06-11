@@ -3,7 +3,7 @@
 **Repository:** [princenshuti/imari-portfolio](https://github.com/princenshuti/imari-portfolio)
 **Live:** https://imali.princenshuti.com/ (cPanel, deployed via Git Version Control)
 **Staging preview:** https://princenshuti.github.io/imari-portfolio/ (local build pushed to verify before promoting)
-**Last updated:** 2026-06-09
+**Last updated:** 2026-06-11
 
 ---
 
@@ -123,13 +123,23 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 - Auto-creates an empty portfolio on first login — [cloud.js:72](src/cloud.js)
 - Invite links (`?invite=...`) auto-accepted post-login — [App.jsx:314](src/App.jsx)
 
-### Dashboard
-- Net worth (gross assets − liabilities), cost basis, gain/loss
-- Composition donut by asset class
-- Monthly income projection from yield-bearing assets
+### Dashboard — independent widget system (2026-06)
+- **17 independent widgets**, each individually movable and hideable: Net worth hero, Portfolio Model (live), Key Metrics, Asset Allocation, Financial Ratios, Cash Flow (6M), Cash Flow by Category, Alerts, Monthly Income, Liquidity Position, Retirement Readiness, Idle Cash, Personal Macro, Category Performance, vs. Benchmarks, Goals Progress, Markets Watchlist.
+- **Arrange mode** collapses every widget to a labeled handle strip; drag-to-reorder runs on Motion `Reorder` spring physics (FLIP — other widgets move aside live), works on touch, and persists per swap. Saved layouts from the pre-split scheme migrate automatically via legacy-id expansion.
+- **Portfolio Model — Live**: a quant-desk widget computed only from the user's own data — allocation bars that re-spring as values change, counting group values, net monthly flow, the engine's +1Y projection with low–high band (same `projectNetWorth` math as Fast Forward), savings rate, active signal count, and a provenance line (T-bill / CPI reference rates).
+- Net worth (gross assets − liabilities), cost basis, gain/loss; composition donut by asset class
 - AI insight card — sends portfolio snapshot to Claude, renders markdown
 - 60-day synthetic history seeded on first run for chart continuity
 - Milestone celebrations when net worth crosses thresholds
+
+### Motion & interaction design (2026-06)
+- One shared motion vocabulary ([components/motion.jsx](src/components/motion.jsx)): a single easing curve + spring (stiffness 300, damping 26) across the entire app — `Reveal`, `Stagger`/`StaggerItem`, `CountUp`, `BarFill`.
+- App-wide coverage: spring modal/dialog entrances, toast enter/exit/stack-reflow (`AnimatePresence`), Motion-driven page transitions, sliding sidebar active indicator (`layoutId`), mobile sheet springs, staggered list entrances in every data view, FLIP re-sort on the Trends watchlist, tactile button press.
+- Accessibility: a root `MotionConfig reducedMotion="user"` makes every animation respect the OS prefers-reduced-motion setting automatically; counters render final values instantly for reduced-motion users.
+
+### Landing page (pre-auth brand surface)
+- Every displayed figure derives from the same engine `REFERENCE` rates the product computes with (T-bill, CPI) — the marketing page cannot drift from the app. The FX pulse card shows the genuinely live BNR rate and only earns its "live" badge when real data has arrived.
+- Scroll-triggered reveals (IntersectionObserver), count-up hero dashboard mock, lazy 3D advisor scene (skipped under reduced-motion / data-saver / 2G), EN/FR/RW language switcher, theme toggle shared with the app.
 
 ### Assets
 - 25+ asset classes: cash, equities (RSE & foreign), bonds, real estate, vehicles, crypto, livestock, collectibles, etc.
@@ -331,7 +341,7 @@ Until all three are done, email-based auth and the invitation flow silently brea
 
 ## 7. Known limits & next steps
 
-- **UI flows have no automated tests.** 196 vitest tests cover every calculation engine, the reducer, services, and content integrity — but rendering/routing regressions are caught visually (a hooks-order crash once shipped to staging with all tests green). A headless smoke test in CI is the known gap.
+- **UI flows have no automated tests.** 220 vitest tests cover every calculation engine, the reducer, services, and content integrity — but rendering/routing regressions are caught visually (a hooks-order crash once shipped to staging with all tests green). A headless smoke test in CI is the known gap.
 - **Single Postgres row per portfolio.** Portfolio state is one JSON blob; large portfolios will eventually need a normalised schema for query efficiency.
 - **No audit log.** Member edits overwrite silently — there's no per-field history beyond snapshots.
 - **Anthropic rate limits are global to the function**, not per user; abuse mitigation is basic.
@@ -350,7 +360,28 @@ The `whatsapp_links` table (`supabase-migration-004.sql`) is **preserved in the 
 
 ---
 
-## 8. Pointers
+## 8. Product snapshot — investor-facing summary
+
+A factual one-page digest for pitch material. Every claim below is verifiable in this repo or the live product; nothing is aspirational.
+
+**What Imari is.** Rwanda's personal wealth tracker: the full net worth — Kigali plots (UPI-anchored), RSE shares, T-bonds, MoMo wallets, 16 banks, livestock, crypto, pensions — in one honest dashboard, with an insight engine that prices what ignoring your money costs you.
+
+**The thesis (loss aversion, "Cost of Absence").** Every advisory insight is ranked by what inaction costs — in francs, days, and risk — computed deterministically from the user's own data. 16 individually-tested rules; the AI only phrases what the math already proved. Honesty discipline is a feature: figures are dated, sourced, floored (never rounded up), and rules go silent when data is thin.
+
+**Built for Rwanda's rails, not adapted to them.** BNR official FX (daily, self-healing scraper), RRA tax estimates (Fixed Asset Tax, vehicle levy, CGT, EBM VAT credit), RSSB + Ejo Heza pension projection on the statutory schedule, UPI land-title anchoring, MTN MoMo / Airtel statement import with AI categorisation, EN/FR/Kinyarwanda. This is the moat a global app can't reach.
+
+**Product maturity.**
+- ~20 views, 17 movable dashboard widgets, PWA installable + offline, realtime multi-device sync, role-based sharing (owner/editor/viewer — diaspora trustee use-case), 25+ asset classes.
+- App-wide motion design system on a single physical vocabulary; OS-level reduced-motion compliance.
+- 220 automated tests over all money math; i18n completeness gated in CI; build failure blocks deploy.
+
+**Security model (privacy as positioning).** No bank passwords — ever (statement upload, not credential scraping; nothing to phish). Anthropic key lives server-side only (JWT-validated edge function proxy). Postgres row-level security on every row. Compare-and-swap concurrency so devices never silently overwrite each other. Financial data never used to train AI models.
+
+**Monetisation surface (illustrative tiers on the landing page).** Free core (know your number) → Plus (insight engine, statement import, AI advisor, tax pack) → Family & Diaspora (multi-member, trustee access, multi-currency statements).
+
+---
+
+## 9. Pointers
 
 - Live site: https://imali.princenshuti.com/
 - Staging preview: https://princenshuti.github.io/imari-portfolio/
