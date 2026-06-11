@@ -80,10 +80,17 @@ const RWANDA_HEAD = {
   sub: 'Imari speaks to the institutions you actually use. That is the moat — and why the numbers are right.',
 };
 const RWANDA = [
-  'MTN MoMo & Airtel Money', 'BNR live FX rates', 'RRA tax rules (Rw law)',
-  'RSSB & Ejo Heza pensions', 'UPI land titles', 'RSE shares & T-bonds',
-  'Kinyarwanda', 'Français', 'English',
+  { icon: 'sms', name: 'MTN MoMo & Airtel Money', line: 'Statements parsed line by line and auto-categorised.' },
+  { icon: 'refresh', name: 'BNR reference rates', line: 'Official FX, refreshed daily — never a guessed rate.' },
+  { icon: 'doc', name: 'RRA tax rules', line: 'Levies, capital gains and withholding under Rwandan law.' },
+  { icon: 'umbrella', name: 'RSSB & Ejo Heza', line: 'Both pensions counted inside your net worth.' },
+  { icon: 'map', name: 'UPI land titles', line: 'Every plot anchored to its Unique Parcel Identifier.' },
+  { icon: 'flow', name: 'RSE shares & T-bonds', line: 'Local instruments priced as first-class assets.' },
 ];
+
+// Quiet institutional strip under the hero — the "client logos" of a
+// Rwandan wealth tracker are the rails it is wired into.
+const RAILS = ['MTN MoMo', 'Airtel Money', 'BNR', 'RRA', 'RSSB', 'Ejo Heza', 'RSE', 'UPI'];
 
 // ── Trust & honesty ───────────────────────────────────────────────────────
 const TRUST = [
@@ -103,10 +110,13 @@ const STEPS = [
   { n: '03', title: 'Let Imari watch it', desc: 'Daily snapshots, FX updates, tax estimates and the insight engine run quietly. You check in when you want to know — and Imari taps you when it matters.' },
 ];
 
+// Severity accents are fixed (not theme tokens): the Cost-of-Absence section
+// sits on a deep-green panel that stays dark in both themes, so these pastels
+// are tuned for that surface only (all ≥ 7:1 on #11201A).
 const SEV = {
-  critical: { color: 'var(--down)', glyph: '⚠', label: 'Critical' },
-  warning: { color: 'var(--gold)', glyph: '!', label: 'Warning' },
-  info: { color: 'var(--sky)', glyph: 'i', label: 'Heads up' },
+  critical: { color: '#F2A096', label: 'Critical' },
+  warning: { color: '#EAC96E', label: 'Warning' },
+  info: { color: '#9CC2EC', label: 'Heads up' },
 };
 
 export default function Landing({ onSignIn }) {
@@ -170,34 +180,37 @@ export default function Landing({ onSignIn }) {
         {/* Real product shot in a browser frame — credibility over illustration
             (design review #21). The floating mini box is gone; the one overlay
             kept is the thesis: the Cost-of-Absence chip. */}
-        <div className="landing-preview" aria-hidden style={{ position: 'relative' }}>
-          <div style={{
-            borderRadius: 14, overflow: 'hidden', background: 'var(--paper)',
-            border: '0.5px solid var(--line-strong)', boxShadow: 'var(--shadow-pop)',
-            transform: 'rotate(0.6deg)',
-          }}>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '9px 12px', background: 'var(--bg-2)', borderBottom: '0.5px solid var(--line)' }}>
+        <div className="landing-preview" aria-hidden>
+          <div className="landing-frame">
+            <div className="landing-frame-bar">
               {['#E0635C', '#E5BC55', '#3FB889'].map(c => (
-                <span key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.85 }} />
+                <span key={c} className="landing-frame-dot" style={{ background: c }} />
               ))}
-              <span className="num" style={{ fontSize: 9.5, color: 'var(--ink-4)', marginLeft: 8 }}>imali.princenshuti.com</span>
+              <span className="num landing-frame-url">imali.princenshuti.com</span>
             </div>
             <img
               src={`${import.meta.env.BASE_URL}product-hero.png`}
               alt=""
               loading="lazy"
-              style={{ display: 'block', width: '100%', height: 'auto' }}
             />
           </div>
-          <div className="landing-preview-costchip" style={{ position: 'absolute', bottom: -14, left: 18 }}>
+          <div className="landing-preview-costchip">
             <span className="landing-preview-costglyph">!</span>
             <span>{'RWF 35k/mo idle — not earning T-bill yield'}</span>
           </div>
         </div>
       </header>
 
-      {/* Cost of Absence — the signature idea */}
-      <section id="cost" className="landing-section">
+      {/* Rails strip — institutional credibility, before any pitch */}
+      <div className="landing-rails">
+        <span className="landing-rails-label">{'Wired into the rails you already use'}</span>
+        <div className="landing-rails-items">
+          {RAILS.map(r => <span key={r} className="landing-rails-item num">{r}</span>)}
+        </div>
+      </div>
+
+      {/* Cost of Absence — the signature idea, on the page's one dark panel */}
+      <section id="cost" className="landing-section landing-section--cost">
         <div className="landing-section-head">
           <span className="landing-section-eyebrow">{COST_HEAD.eyebrow}</span>
           <h2 className="font-serif landing-section-title">{COST_HEAD.title}</h2>
@@ -208,7 +221,10 @@ export default function Landing({ onSignIn }) {
             const s = SEV[c.sev];
             return (
               <article key={c.label} data-reveal className="landing-cost landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 60, 220)}ms`, '--cost-accent': s.color }}>
-                <div className="landing-cost-badge" aria-hidden style={{ background: s.color }}>{s.glyph}</div>
+                <span className="landing-cost-sev">
+                  <span className="landing-cost-sev-dot" aria-hidden />
+                  {s.label}
+                </span>
                 <div className="landing-cost-stat num">{c.stat}</div>
                 <div className="landing-cost-label">{c.label}</div>
                 <p className="landing-cost-desc">{c.body}</p>
@@ -226,13 +242,17 @@ export default function Landing({ onSignIn }) {
           <p className="landing-section-sub">{t('landing.solution.sub')}</p>
         </div>
         <div className="landing-features">
-          {FEATURES.map((f, i) => (
-            <article key={f.title} className="landing-feature" style={{ '--feature-accent': f.accent, '--feature-delay': `${Math.min(i * 30, 210)}ms` }}>
-              <div className="landing-feature-icon" style={{ color: f.accent }}><Icon name={f.icon} /></div>
-              <h3 className="landing-feature-title">{f.title}</h3>
-              <p className="landing-feature-desc">{f.desc}</p>
-            </article>
-          ))}
+          {FEATURES.map((f, i) => {
+            // Bento rhythm: the two flagships open wide, the last two close wide.
+            const wide = i <= 1 || i >= FEATURES.length - 2;
+            return (
+              <article key={f.title} className={`landing-feature${wide ? ' landing-feature--wide' : ''}`} style={{ '--feature-accent': f.accent, '--feature-delay': `${Math.min(i * 30, 210)}ms` }}>
+                <div className="landing-feature-icon" style={{ color: f.accent }}><Icon name={f.icon} /></div>
+                <h3 className="landing-feature-title">{f.title}</h3>
+                <p className="landing-feature-desc">{f.desc}</p>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -245,9 +265,18 @@ export default function Landing({ onSignIn }) {
         </div>
         <div className="landing-rwanda">
           {RWANDA.map((r, i) => (
-            <span key={r} data-reveal className="landing-rwanda-pill landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 35, 200)}ms` }}>{r}</span>
+            <article key={r.name} data-reveal className="landing-rwanda-tile landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 35, 200)}ms` }}>
+              <div className="landing-rwanda-icon"><Icon name={r.icon} /></div>
+              <div>
+                <h3 className="landing-rwanda-name">{r.name}</h3>
+                <p className="landing-rwanda-line">{r.line}</p>
+              </div>
+            </article>
           ))}
         </div>
+        <p className="landing-rwanda-langs">
+          {'Kinyarwanda · Français · English — the whole app, in your language.'}
+        </p>
       </section>
 
       {/* Security & honesty */}
