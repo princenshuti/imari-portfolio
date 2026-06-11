@@ -84,6 +84,7 @@ export default {
       features: 'Fonctionnalités',
       security: 'Sécurité',
       signin:   'Se connecter',
+      language: 'Langue',
     },
     hero: {
       eyebrow:        'Intelligence patrimoniale propulsée par l\'IA · Conçue pour le Rwanda',

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useT } from '../contexts/I18nContext.jsx';
+import { useT, SUPPORTED_LOCALES } from '../contexts/I18nContext.jsx';
 import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 
 // Inline SVG icon set — Heroicons-style outline at 24x24
@@ -256,7 +256,7 @@ function AdvisorMock() {
 }
 
 export default function Landing({ onSignIn }) {
-  const { t } = useT();
+  const { t, locale, setLocale } = useT();
   const [scrolled, setScrolled] = useState(false);
   // Landing carries its own theme, separate from the in-app preference
   // (imari:theme) — midnight is the marketing default, white one tap away.
@@ -295,6 +295,17 @@ export default function Landing({ onSignIn }) {
             <a href="#advisor" className="landing-link">{'AI Advisor'}</a>
             <a href="#features" className="landing-link">{t('landing.nav.features')}</a>
             <a href="#security" className="landing-link">{t('landing.nav.security')}</a>
+            <select
+              value={locale}
+              onChange={e => setLocale(e.target.value)}
+              className="landing-lang"
+              aria-label={t('landing.nav.language')}
+              title={t('landing.nav.language')}
+            >
+              {SUPPORTED_LOCALES.map(loc => (
+                <option key={loc.code} value={loc.code}>{loc.nativeName}</option>
+              ))}
+            </select>
             <button
               onClick={toggleTheme}
               className="landing-theme-toggle"

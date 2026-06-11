@@ -97,6 +97,7 @@ export default {
       features: 'Features',
       security: 'Security',
       signin:   'Sign in',
+      language: 'Language',
     },
     hero: {
       eyebrow:        'AI-powered wealth intelligence · Built for Rwanda',

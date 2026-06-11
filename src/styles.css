@@ -1060,6 +1060,23 @@ input:focus, select:focus, textarea:focus {
 .landing-theme-toggle:hover { color: var(--ink); background: var(--bg-2); border-color: var(--line); }
 .landing-theme-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .landing-theme-toggle svg { width: 18px; height: 18px; }
+.landing-lang {
+  height: 40px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color 160ms var(--ease-out), background 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.landing-lang:hover { color: var(--ink); background: var(--bg-2); border-color: var(--line); }
+.landing-lang:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.landing-lang option { color: initial; background: initial; }
 
 /* Buttons get tactile press feedback */
 .landing-cta:active,
@@ -2096,6 +2113,7 @@ input:focus, select:focus, textarea:focus {
   .landing-link { display: none; }
   /* Touch target ≥ 44×44 (WCAG 2.5.5) — nav Sign-in is small at desktop sizes. */
   .landing-theme-toggle { width: 44px; height: 44px; }
+  .landing-lang { height: 44px; }
   .landing-cta-sm {
     min-height: 44px;
     padding-top: 0;

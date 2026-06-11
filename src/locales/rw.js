@@ -92,6 +92,7 @@ export default {
       features: 'Ibikorwa',
       security: 'Umutekano',
       signin:   'Injira',
+      language: 'Ururimi',
     },
     hero: {
       eyebrow:        'Ubutunzi bucungwa hifashishijwe AI · Cyakorewe u Rwanda',
