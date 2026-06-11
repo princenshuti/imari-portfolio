@@ -887,9 +887,16 @@ input:focus, select:focus, textarea:focus {
 
 /* Ease vars are now defined in :root — Landing inherits them */
 .landing-root {
-  /* The marketing surface is always midnight, independent of the app theme —
-     premium-fintech dark, with the app's own dark-theme palette re-scoped
-     here so every token-driven component (buttons, pills) adapts for free. */
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  overflow-x: hidden;
+}
+/* The marketing surface carries its own theme, independent of the app
+   (toggle in the landing nav, persisted at imari:landing-theme; default
+   midnight). Both blocks set the full token set explicitly so the choice
+   wins regardless of body[data-theme] / system preference. */
+.landing-root--dark {
   --bg:      #0B100D;
   --bg-2:    #131A15;
   --paper:   #151C17;
@@ -928,11 +935,48 @@ input:focus, select:focus, textarea:focus {
   --shadow-3:   0 4px 12px rgba(0,0,0,0.35), 0 16px 48px rgba(0,0,0,0.40);
   --shadow-pop: 0 8px 24px rgba(0,0,0,0.50), 0 24px 64px rgba(0,0,0,0.45);
   --shadow-brand: 0 4px 16px rgba(63, 184, 137, 0.25);
-
-  min-height: 100vh;
-  background: var(--bg);
-  color: var(--ink);
-  overflow-x: hidden;
+  --landing-dot: rgba(240, 237, 228, 0.05);
+}
+.landing-root--light {
+  --bg:      #F2EDE2;
+  --bg-2:    #E8E2D4;
+  --paper:   #FEFCF7;
+  --paper-2: #FFFFFF;
+  --line:        rgba(26, 22, 14, 0.09);
+  --line-soft:   rgba(26, 22, 14, 0.05);
+  --line-strong: rgba(26, 22, 14, 0.15);
+  --ink:   #1A170E;
+  --ink-2: #3D3826;
+  --ink-3: #5C5644;
+  --ink-4: #6B6452;
+  --brand:        #0D4B3A;
+  --brand-2:      #1A6E4F;
+  --brand-soft:   #CCE0D8;
+  --brand-softer: #E5F0EC;
+  --brand-ink:    #FEFCF7;
+  --gold:        #C4932A;
+  --gold-ink:    #8A6818;
+  --gold-2:      #A67C1E;
+  --gold-soft:   #EFE2BC;
+  --gold-softer: #FAF4E2;
+  --up:        #1A7A52;
+  --up-ink:    #0F5A3B;
+  --up-soft:   #D0E9DD;
+  --down:      #B03428;
+  --down-ink:  #8B2820;
+  --down-soft: #EDD4D0;
+  --sky:  #4274B8;
+  --plum: #6B4B7A;
+  --clay: #C07040;
+  --glass-bg:     rgba(254, 252, 247, 0.78);
+  --glass-border: rgba(26, 22, 14, 0.07);
+  --shadow-0:   0 1px 2px rgba(26,22,14,0.04);
+  --shadow-1:   0 1px 3px rgba(26,22,14,0.04), 0 2px 8px rgba(26,22,14,0.04);
+  --shadow-2:   0 2px 6px rgba(26,22,14,0.05), 0 6px 24px rgba(26,22,14,0.07);
+  --shadow-3:   0 4px 12px rgba(26,22,14,0.07), 0 16px 48px rgba(26,22,14,0.10);
+  --shadow-pop: 0 8px 24px rgba(26,22,14,0.12), 0 24px 64px rgba(26,22,14,0.12);
+  --shadow-brand: 0 4px 16px rgba(13, 75, 58, 0.22);
+  --landing-dot: rgba(26, 22, 14, 0.07);
 }
 
 /* ── Nav ──────────────────────────────────────────────────────── */
@@ -1001,6 +1045,21 @@ input:focus, select:focus, textarea:focus {
 }
 .landing-link:hover { color: var(--ink); background: var(--bg-2); }
 .landing-cta-sm { padding: 8px 14px; font-size: 12.5px; }
+.landing-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color 160ms var(--ease-out), background 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.landing-theme-toggle:hover { color: var(--ink); background: var(--bg-2); border-color: var(--line); }
+.landing-theme-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.landing-theme-toggle svg { width: 18px; height: 18px; }
 
 /* Buttons get tactile press feedback */
 .landing-cta:active,
@@ -1043,7 +1102,7 @@ input:focus, select:focus, textarea:focus {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(240, 237, 228, 0.05) 1px, transparent 1.5px);
+  background-image: radial-gradient(var(--landing-dot) 1px, transparent 1.5px);
   background-size: 26px 26px;
   -webkit-mask-image: radial-gradient(720px 520px at 28% 32%, #000, transparent 78%);
   mask-image: radial-gradient(720px 520px at 28% 32%, #000, transparent 78%);
@@ -1211,7 +1270,7 @@ input:focus, select:focus, textarea:focus {
 }
 .landing-mock-line {
   fill: none;
-  stroke: #3FB889;
+  stroke: var(--brand);
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
   stroke-dasharray: 1;            /* pathLength="1" → unit-normalised draw */
@@ -1224,7 +1283,7 @@ input:focus, select:focus, textarea:focus {
   animation: landing-appear 700ms 1300ms var(--ease-out) forwards;
 }
 .landing-mock-peak {
-  fill: #3FB889;
+  fill: var(--brand);
   stroke: var(--paper);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
@@ -2017,6 +2076,7 @@ input:focus, select:focus, textarea:focus {
   .landing-nav-inner { padding: 8px 10px 8px 14px; }
   .landing-link { display: none; }
   /* Touch target ≥ 44×44 (WCAG 2.5.5) — nav Sign-in is small at desktop sizes. */
+  .landing-theme-toggle { width: 44px; height: 44px; }
   .landing-cta-sm {
     min-height: 44px;
     padding-top: 0;

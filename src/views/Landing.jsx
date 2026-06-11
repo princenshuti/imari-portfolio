@@ -32,6 +32,8 @@ function Icon({ name }) {
     case 'globe': return (<svg {...common}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg>);
     case 'refresh': return (<svg {...common}><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>);
     case 'sheet': return (<svg {...common}><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 3v18"/></svg>);
+    case 'sun': return (<svg {...common}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>);
+    case 'moon': return (<svg {...common}><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>);
     default: return null;
   }
 }
@@ -186,8 +188,10 @@ function DashboardMock() {
       <svg className="landing-mock-chart" viewBox="0 0 560 170" preserveAspectRatio="none">
         <defs>
           <linearGradient id="lm-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#3FB889" stopOpacity="0.30" />
-            <stop offset="100%" stopColor="#3FB889" stopOpacity="0" />
+            {/* stop-color can't take var() as an attribute — set it via style
+                so the fill follows the landing theme's brand green. */}
+            <stop offset="0%" style={{ stopColor: 'var(--brand)', stopOpacity: 0.30 }} />
+            <stop offset="100%" style={{ stopColor: 'var(--brand)', stopOpacity: 0 }} />
           </linearGradient>
         </defs>
         <path className="landing-mock-area" d={`${MOCK_LINE} L560,170 L0,170 Z`} fill="url(#lm-fill)" />
@@ -249,6 +253,17 @@ function AdvisorMock() {
 export default function Landing({ onSignIn }) {
   const { t } = useT();
   const [scrolled, setScrolled] = useState(false);
+  // Landing carries its own theme, separate from the in-app preference
+  // (imari:theme) — midnight is the marketing default, white one tap away.
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('imari:landing-theme') || 'dark'; }
+    catch { return 'dark'; }
+  });
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    try { localStorage.setItem('imari:landing-theme', next); } catch { /* private mode */ }
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -262,7 +277,7 @@ export default function Landing({ onSignIn }) {
   const goTop = (e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return (
-    <div className="landing-root">
+    <div className={`landing-root landing-root--${theme}`}>
       {/* Nav */}
       <nav className={`landing-nav ${scrolled ? 'is-scrolled' : ''}`} data-noprint>
         <div className="landing-nav-inner">
@@ -275,6 +290,14 @@ export default function Landing({ onSignIn }) {
             <a href="#advisor" className="landing-link">{'AI Advisor'}</a>
             <a href="#features" className="landing-link">{t('landing.nav.features')}</a>
             <a href="#security" className="landing-link">{t('landing.nav.security')}</a>
+            <button
+              onClick={toggleTheme}
+              className="landing-theme-toggle"
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              title={theme === 'dark' ? 'Light theme' : 'Dark theme'}
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+            </button>
             <button onClick={() => goLogin('signin')} className="btn btn-primary landing-cta-sm">{t('landing.nav.signin')}</button>
           </div>
         </div>
