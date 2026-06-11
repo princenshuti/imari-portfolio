@@ -417,33 +417,55 @@ function ModelPulse({ stats, trueNetWorth, monthlyNet, savingsRate, signalCount,
 // the duplicate Net-worth timeline (its real data IS the hero now), Top
 // movers (Return by asset class covers it), and the AI digest (the Advice
 // Center is the canonical surface; the strip links to it).
+// Every entry is ONE independent, movable widget — one card each. Former
+// composites (position, financials, benchmarks) are split so a user can move
+// e.g. "Cash Flow (6M)" without dragging the allocation donut along with it.
 const SECTION_META = {
   hero:       { label: 'Net worth',               canHide: false },
   pulse:      { label: 'Portfolio Model — Live',  canHide: true  },
   widgets:    { label: 'Key Metrics',             canHide: true  },
-  position:   { label: 'Allocation & Ratios',     canHide: true  },
+  allocation: { label: 'Asset Allocation',        canHide: true  },
+  ratios:     { label: 'Financial Ratios',        canHide: true  },
+  cashmini:   { label: 'Cash Flow (6M)',          canHide: true  },
   cashflow:   { label: 'Cash Flow by Category',    canHide: true  },
-  financials: { label: 'Income & Returns',        canHide: true  },
+  alerts:     { label: 'Alerts',                  canHide: true  },
+  income:     { label: 'Monthly Income',          canHide: true  },
+  liquidity:  { label: 'Liquidity Position',      canHide: true  },
   retirement: { label: 'Retirement Readiness',     canHide: true  },
   idlecash:   { label: 'Idle Cash / T-Bill',       canHide: true  },
   macro:      { label: 'Personal Macro Overlay',   canHide: true  },
   category:   { label: 'Category Performance',    canHide: true  },
-  alerts:     { label: 'Alerts',                  canHide: true  },
-  benchmarks: { label: 'Benchmarks & Goals',      canHide: true  },
+  benchmarks: { label: 'vs. Benchmarks',          canHide: true  },
+  goals:      { label: 'Goals Progress',          canHide: true  },
   markets:    { label: 'Markets Watchlist',       canHide: true  },
 };
-const DEFAULT_SECTION_ORDER = ['hero','pulse','widgets','position','cashflow','alerts','financials','retirement','idlecash','macro','category','benchmarks','markets'];
-// Hidden by default — shown via Arrange. The five-section default is the
-// whole "minimal" thesis; power users opt back in per section.
-const DEFAULT_HIDDEN_SECTIONS = ['financials','retirement','idlecash','macro','category','benchmarks','markets'];
+const DEFAULT_SECTION_ORDER = ['hero','pulse','widgets','allocation','ratios','cashmini','cashflow','alerts','income','liquidity','retirement','idlecash','macro','category','benchmarks','goals','markets'];
+// Hidden by default — shown via Arrange. The lean default is the whole
+// "minimal" thesis; power users opt back in per widget.
+const DEFAULT_HIDDEN_SECTIONS = ['income','liquidity','retirement','idlecash','macro','category','benchmarks','goals','markets'];
+// Saved layouts predating the split may reference the old composite ids —
+// expand them so a hidden 'position' stays hidden as its three children.
+const LEGACY_SECTION_SPLIT = {
+  position:   ['allocation', 'ratios', 'cashmini'],
+  financials: ['income', 'liquidity'],
+  benchmarks: ['benchmarks', 'goals'],
+};
+
+// Expand pre-split composite ids in a saved id list, preserving position.
+// Deduped ('benchmarks' exists in both schemes — without this, a post-split
+// save would expand to a duplicate 'goals' and break keys/Reorder values).
+function expandLegacyIds(ids) {
+  return [...new Set(ids.flatMap(x => LEGACY_SECTION_SPLIT[x] || [x]))];
+}
 
 function useDashboardLayout() {
   const [order, setOrder] = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem('imari-dash-order') || 'null');
-      if (Array.isArray(s) && s.every(x => DEFAULT_SECTION_ORDER.includes(x))) {
+      const raw = JSON.parse(localStorage.getItem('imari-dash-order') || 'null');
+      const s = Array.isArray(raw) ? expandLegacyIds(raw) : null;
+      if (s && s.every(x => DEFAULT_SECTION_ORDER.includes(x))) {
         // Append any sections added since this layout was saved so new features
-        // (widgets, cashflow, macro…) appear instead of silently vanishing.
+        // (pulse, cashflow, macro…) appear instead of silently vanishing.
         const missing = DEFAULT_SECTION_ORDER.filter(x => !s.includes(x));
         return [...s, ...missing];
       }
@@ -453,10 +475,10 @@ function useDashboardLayout() {
   const [hidden, setHidden] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('imari-dash-hidden'));
-      if (Array.isArray(s)) return new Set(s);
+      if (Array.isArray(s)) return new Set(expandLegacyIds(s));
     } catch {}
-    // Round-3 design edit: the dashboard ships a five-section story (state →
-    // metrics → position → spending → alerts). Everything else is one
+    // Round-3 design edit: the dashboard ships a lean default story (state →
+    // model → metrics → position → spending → alerts). Everything else is one
     // "Arrange" tap away — opt-in, not default noise.
     return new Set(DEFAULT_HIDDEN_SECTIONS);
   });
@@ -494,7 +516,10 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onToggl
   // edit-mode handle strip (dragListener={false}), so content interactions and
   // page scrolling are never hijacked.
   const dragControls = useDragControls();
-  const collapsed = isHidden || !hasData;
+  // In Arrange mode every widget collapses to its labeled handle strip — a
+  // compact list where dragging #9 above #2 is one short gesture instead of
+  // hauling a card across several screens of content.
+  const collapsed = isHidden || !hasData || editMode;
 
   return (
     <Reorder.Item
@@ -1162,14 +1187,13 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       );
     })(),
 
-    // ── POSITION — allocation + the single canonical ratios card + cash-flow mini ──
-    position: (
-      <div className="dash-grid-3" style={{ gridTemplateColumns: 'minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr)' }}>
-
-        {/* Asset Allocation donut */}
-        <div className="card" style={{ padding: 22 }}>
-          <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 16px', letterSpacing: '-0.01em', fontWeight: 400 }}>Asset allocation</h2>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, position: 'relative' }}>
+    // ── ALLOCATION — independent widget (was 1/3 of the old 'position' composite).
+    // Full-width layout: donut beside a multi-column legend.
+    allocation: (
+      <div className="card" style={{ padding: 22 }}>
+        <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 16px', letterSpacing: '-0.01em', fontWeight: 400 }}>Asset allocation</h2>
+        <div style={{ display: 'flex', gap: 26, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
             <Donut size={114} thickness={15}
               slices={stats.groups.map(g => ({ value: g.value, color: g.color, label: g.group }))}
               ariaLabel={`Asset allocation: ${stats.groups.map(g => `${g.group} ${stats.totalValue > 0 ? (g.value / stats.totalValue * 100).toFixed(0) : 0} percent`).join(', ')}`} />
@@ -1185,7 +1209,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               </div>
             </div>
           </div>
-          <div className="col" style={{ gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 200, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '8px 18px' }}>
             {stats.groups.slice(0, 6).map(g => (
               <div key={g.group} className="row" style={{ gap: 8, fontSize: 12, justifyContent: 'space-between' }}>
                 <div className="row" style={{ gap: 8, minWidth: 0 }}>
@@ -1198,16 +1222,18 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               </div>
             ))}
             {stats.groups.length > 6 && (
-              <div className="muted" style={{ fontSize: 10, textAlign: 'center' }}>+{stats.groups.length - 6} more group{stats.groups.length - 6 > 1 ? 's' : ''}</div>
+              <div className="muted" style={{ fontSize: 10 }}>+{stats.groups.length - 6} more group{stats.groups.length - 6 > 1 ? 's' : ''}</div>
             )}
           </div>
         </div>
+      </div>
+    ),
 
-        {/* Financial ratios column */}
-        <div className="col" style={{ gap: 12 }}>
-          <div className="card" style={{ padding: '18px 20px', flex: 1 }}>
+    // ── RATIOS — independent widget (was 1/3 of the old 'position' composite).
+    ratios: (
+      <div className="card" style={{ padding: '18px 20px' }}>
             <h2 className="font-serif" style={{ fontSize: 15, margin: '0 0 14px', fontWeight: 400 }}>Financial ratios</h2>
-            <div className="col" style={{ gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '14px 26px' }}>
               <RatioBar
                 label="Liquidity ratio"
                 value={stats.liquidityRatio}
@@ -1287,22 +1313,22 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 );
               })()}
             </div>
-          </div>
+      </div>
+    ),
 
-          {/* Mini income trend */}
-          <div className="card" style={{ padding: '16px 18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
-              <h2 className="font-serif" style={{ fontSize: 14, margin: 0, fontWeight: 400 }}>Cash flow (6M)</h2>
-              {hasCF && (
-                <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}
-                  style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 10, color: 'var(--brand)', fontFamily: 'inherit', padding: 0 }}>
-                  Details →
-                </button>
-              )}
-            </div>
-            <IncomeTrendBars months={incomeTrend} displayCurrency={profile.displayCurrency} />
-          </div>
+    // ── CASH FLOW (6M) — independent widget (was 1/3 of the old 'position' composite).
+    cashmini: (
+      <div className="card" style={{ padding: '16px 18px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
+          <h2 className="font-serif" style={{ fontSize: 14, margin: 0, fontWeight: 400 }}>Cash flow (6M)</h2>
+          {hasCF && (
+            <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}
+              style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 10, color: 'var(--brand)', fontFamily: 'inherit', padding: 0 }}>
+              Details →
+            </button>
+          )}
         </div>
+        <IncomeTrendBars months={incomeTrend} displayCurrency={profile.displayCurrency} />
       </div>
     ),
 
@@ -1372,7 +1398,8 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       );
     })(),
 
-    financials: (assets.length > 0 || cashflows.length > 0) ? (() => {
+    // ── MONTHLY INCOME — independent widget (was half of the old 'financials' composite).
+    income: (assets.length > 0 || cashflows.length > 0) ? (() => {
       const fs = financialStats;
       const INCOME_LABEL = {
         salary:    'Salary / Wages', rental:   'Rental income',
@@ -1396,9 +1423,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       ].sort((a, b) => b.monthly - a.monthly);
       const hasIncome = fs.totalMonthlyIncome > 0;
       return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-
-          {/* Income by source */}
           <div className="card" style={{ padding: '20px 22px' }}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
@@ -1447,8 +1471,13 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               </div>
             )}
           </div>
+      );
+    })() : null,
 
-          {/* Liquidity & obligations */}
+    // ── LIQUIDITY — independent widget (was half of the old 'financials' composite).
+    liquidity: (assets.length > 0 || cashflows.length > 0) ? (() => {
+      const fs = financialStats;
+      return (
           <div className="card" style={{ padding: '20px 22px' }}>
             <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 14px', fontWeight: 400 }}>Liquidity position</h2>
             <div className="col" style={{ gap: 14 }}>
@@ -1490,8 +1519,6 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               )}
             </div>
           </div>
-
-        </div>
       );
     })() : null,
 
@@ -1663,8 +1690,9 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       );
     })(),
 
+    // ── BENCHMARKS — independent widget (the old composite also carried Goals;
+    // its "True net worth" filler card is gone — hero + sidebar already show it).
     benchmarks: (
-      <div className={activeGoals.length > 0 ? 'dash-grid-2' : ''} style={activeGoals.length > 0 ? undefined : { display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
         <div className="card" style={{ padding: '20px 22px' }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
             <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>vs. Benchmarks</h2>
@@ -1689,7 +1717,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             (USD/RWF, CPI, RSE ASI, T-bond) are illustrative and scaled to the selected range.
           </div>
         </div>
-        {activeGoals.length > 0 && (
+    ),
+
+    // ── GOALS PROGRESS — independent widget (was bundled with Benchmarks).
+    goals: activeGoals.length > 0 ? (
           <div className="card" style={{ padding: '20px 22px' }}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
               <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>Goals progress</h2>
@@ -1734,21 +1765,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>+{goals.length - 3} more goal{goals.length - 3 === 1 ? '' : 's'}</div>
             )}
           </div>
-        )}
-        {liabilities.length > 0 && activeGoals.length === 0 && (
-          <div className="card" style={{ padding: '20px 22px' }}>
-            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>True net worth</div>
-            <div className="font-serif" style={{ fontSize: 36, marginBottom: 8 }}>{fmtBase(trueNetWorth, profile.displayCurrency, { compact: true })}</div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              {fmtBase(stats.totalValue, profile.displayCurrency, { compact: true })} assets − {fmtBase(totalDebt, profile.displayCurrency, { compact: true })} debt
-            </div>
-            <button onClick={() => dispatch({ type: 'nav', to: 'liabilities' })} style={{
-              marginTop: 16, border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
-            }}>Manage liabilities →</button>
-          </div>
-        )}
-      </div>
-    ),
+    ) : null,
 
     markets: (
       <div>
@@ -1900,7 +1917,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             ))}
           </svg>
           <span style={{ fontSize: 11.5, color: 'var(--ink-2)', flex: 1 }}>
-            <strong>Drag</strong> a section to reorder · <strong>Hide</strong> to collapse from view
+            <strong>Drag</strong> a widget up or down to reorder · <strong>Hide</strong> to remove it from view · tap <strong>Done</strong> to see the result
           </span>
           <button onClick={resetLayout} style={{
             fontSize: 11, padding: '4px 10px', borderRadius: 6,
