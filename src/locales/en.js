@@ -17,6 +17,7 @@ export default {
     group_money:    'Money & Markets',
     group_reports:  'Reports',
     group_tools:    'Tools',
+    group_family:   'Family',
     dashboard:   'Dashboard',
     assets:      'Assets',
     liabilities: 'Liabilities',
@@ -47,6 +48,9 @@ export default {
     tabs_pension:  'Pension',
     tabs_review:   'Review',
     tabs_report:   'Report',
+    tabs_family:   'Family',
+    family:        'Family Home',
+    scorecard:     'Scorecard',
   },
 
   // TopBar — role pill + avatar fallback

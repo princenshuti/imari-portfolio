@@ -2,7 +2,7 @@ import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense, Compo
 import { motion, MotionConfig } from 'motion/react';
 import { EASE_OUT } from './components/motion.jsx';
 import { FX, valueRWF, costRWF, toBase, fmtBase, MILESTONES } from './data.js';
-import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, fetchPortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
+import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, fetchPortfolio, subscribePortfolio, peekInvitation, acceptInvitation, getEntitlements } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
 import { seedHistory } from './services/snapshots.js';
 import { reducer } from './reducer.js';
@@ -40,6 +40,9 @@ const ProjectionsView = lazy(() => import('./views/Projections.jsx'));
 const RetirementView  = lazy(() => import('./views/Retirement.jsx'));
 const YearReviewView  = lazy(() => import('./views/YearReview.jsx'));
 const ReportsView     = lazy(() => import('./views/Reports.jsx'));
+// Family module — gated by entitlement; chunks only download when opened.
+const FamilyView      = lazy(() => import('./views/Family.jsx'));
+const ScorecardView   = lazy(() => import('./views/FamilyScorecard.jsx'));
 
 // ─ Shared UI primitives ───────────────────────────────────────
 function FullScreenLoader({ message = 'Loading…' }) {
@@ -164,6 +167,9 @@ export default function App() {
   const [authPage, setAuthPage] = useState(readAuthHash);
   const [portfolioId, setPortfolioId] = useState(null);
   const [role, setRole] = useState('owner');
+  // §10 entitlements (read-only, server-set). Gates the Family module's menu;
+  // the tables behind it enforce the same feature in RLS.
+  const [entitlements, setEntitlements] = useState(null);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   // true once the authoritative state (cloud or confirmed-local) has been loaded.
   // Milestone alerts are gated on this so they never fire before reachedMilestones
@@ -241,10 +247,10 @@ export default function App() {
   // The current view is always included so a hidden-but-visited feature
   // (deep link, search result) still shows an oriented, active menu item.
   const visibleIds = useMemo(() => {
-    const ids = visibleNavIds(state);
+    const ids = visibleNavIds(state, { entitlements });
     ids.add(nav);
     return ids;
-  }, [state, nav]);
+  }, [state, nav, entitlements]);
 
   // ─ Hash-based navigation (survives reload & enables back/fwd)
   function navigateTo(view) {
@@ -351,6 +357,13 @@ export default function App() {
       });
     return () => { aborted = true; };
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!portfolioId) { setEntitlements(null); return; }
+    let aborted = false;
+    getEntitlements(portfolioId).then(e => { if (!aborted) setEntitlements(e); });
+    return () => { aborted = true; };
+  }, [portfolioId]);
 
   // Live FX / market data is owned by MarketProvider in main.jsx — it fetches
   // on app mount, primes LIVE_FX so converters use BNR rates, and exposes
@@ -634,6 +647,8 @@ export default function App() {
     retirement:  { title: 'Retirement readiness', subtitle: 'RSSB / Ejo Heza pension projection' },
     yearreview:  { title: 'Year in Review', subtitle: 'Your net worth, month by month' },
     reports:     { title: 'Monthly Report', subtitle: 'Auto-generated from your entries' },
+    family:      { title: 'Family Home', subtitle: 'Money · this week · milestones · shared plan' },
+    scorecard:   { title: 'Weekly scorecard', subtitle: '33 habits · 7 areas · shared with your members' },
   };
 
   const view = (() => {
@@ -652,6 +667,8 @@ export default function App() {
       case 'retirement':  return <RetirementView   state={state} dispatch={guardedDispatch} />;
       case 'yearreview':  return <YearReviewView   state={state} />;
       case 'reports':     return <ReportsView      state={state} />;
+      case 'family':      return <FamilyView       state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} />;
+      case 'scorecard':   return <ScorecardView    portfolioId={portfolioId} role={role} showToast={showToast} />;
       default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} netWorth={netWorth} totalCost={totalCost} />;
     }
   })();

@@ -46,3 +46,18 @@ describe('feature modules', () => {
     expect(visibleNavIds(base({ assets: [{ id: 'a', kind: 'realestate-land' }] })).has('accounts')).toBe(false);
   });
 });
+
+describe('gated family module', () => {
+  const s = base({ profile: { features: { family: true } } });
+  it('stays hidden without the entitlement, even when forced on in Settings', () => {
+    expect(isFeatureEnabled(s, 'family')).toBe(false);
+    expect(visibleNavIds(s).has('family')).toBe(false);
+    expect(visibleNavIds(s, { entitlements: { tier: 'free', features: ['doc_vault'] } }).has('scorecard')).toBe(false);
+  });
+  it('switches on with the family feature or the diaspora tier', () => {
+    const ids = visibleNavIds(base(), { entitlements: { tier: 'free', features: ['family'] } });
+    expect(ids.has('family')).toBe(true);
+    expect(ids.has('scorecard')).toBe(true);
+    expect(visibleNavIds(base(), { entitlements: { tier: 'diaspora', features: [] } }).has('family')).toBe(true);
+  });
+});

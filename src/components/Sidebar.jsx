@@ -28,6 +28,8 @@ const NAV_KEY = {
   retirement:  'nav.retirement',
   advisor:     'nav.advisor',
   settings:    'nav.settings',
+  family:      'nav.family',
+  scorecard:   'nav.scorecard',
 };
 // Map English group label → i18n key (matches NAV_GROUPS in nav.js).
 const GROUP_KEY = {
@@ -36,6 +38,7 @@ const GROUP_KEY = {
   'Money & Markets': 'nav.group_money',
   'Reports':         'nav.group_reports',
   'Tools':           'nav.group_tools',
+  'Family':          'nav.group_family',
 };
 
 export default function Sidebar({ active, onNav, profile, netWorth, totalCost, displayCurrency, session, role, liabilities = [], visibleIds = null, momChange = null }) {

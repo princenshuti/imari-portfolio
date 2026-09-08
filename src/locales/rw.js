@@ -18,6 +18,7 @@ export default {
     group_money:    'Amafaranga & Isoko',
     group_reports:  'Raporo',
     group_tools:    'Ibikoresho',
+    group_family:   'Umuryango',
     dashboard:   'Imbonerahamwe',
     assets:      'Ibyo utunze',
     liabilities: 'Imyenda',
@@ -47,6 +48,9 @@ export default {
     tabs_pension:  'Izabukuru',
     tabs_review:   'Incamake',
     tabs_report:   'Raporo',
+    tabs_family:   'Umuryango',
+    family:        'Urugo rwacu',
+    scorecard:     'Urutonde rwa buri cyumweru',
   },
 
   search: {

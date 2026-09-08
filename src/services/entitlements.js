@@ -9,6 +9,7 @@ export const FEATURES = {
   DOC_VAULT: 'doc_vault',
   TRUSTEE: 'trustee',
   MULTI_CURRENCY: 'multi_currency',
+  FAMILY: 'family',            // Family module (migration 006) — household planning shared by members
 };
 
 export function isEntitled(entitlements, feature) {

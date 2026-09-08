@@ -105,6 +105,7 @@ Core Postgres tables (RLS enforced on every row):
 - **`portfolios`** — one row per portfolio. Holds the full state JSON (assets, liabilities, goals, cashflows, snapshots, chat).
 - **`portfolio_members`** — many-to-many between users and portfolios; carries role (`owner` | `editor` | `viewer`).
 - **`portfolio_invitations`** — tokenized invites, 14-day expiry, consumed on first sign-in after click.
+- **`family_habit_logs`** / **`family_notes`** (migration 006) — the Family module's row-level tables: one row per (week, habit) tick and one row per note key. Kept *out* of the portfolio JSON blob on purpose so two members editing the same week never clobber each other through the compare-and-swap save. RLS = membership **and** the `family` entitlement feature; `updated_by` is forced to `auth.uid()`.
 
 RLS policy `user_has_portfolio_access()` gates all reads/writes by membership. Foreign keys cascade on portfolio delete.
 
@@ -208,6 +209,15 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 ### Progressive features
 - The menu starts at four core items (Dashboard, Assets, Advisor, Settings) and grows with the user's data: first expense reveals Cash Flow + Reports, first debt reveals Liabilities, a salary/pension reveals Retirement, etc. — [features.js](src/features.js)
 - Settings → Features: explicit force-on/off per module with an "auto" indicator and reset. Hidden is never blocked — routes, search, and deep links still resolve.
+- Gated modules (`gated: <feature>` in `FEATURE_MODULES`) read the portfolio's entitlement instead of data, ignore the Settings toggle, and are hidden from the Settings list. First user: the Family module.
+
+### Family module (Sprint 1, 2026-09)
+Household planning shared by every member of a portfolio — the 2026 standalone family dashboard folded into Imari as a nav group.
+- **Family Home** ([Family.jsx](src/views/Family.jsx)) — money cockpit read from the engine (net worth, runway, debt remaining, largest loan end date), this week's score, the 17 annual milestones (tick = done-date), five shared planning notes with debounced autosave, and the top-5 active goals with progress.
+- **Scorecard** ([FamilyScorecard.jsx](src/views/FamilyScorecard.jsx)) — 33 habits in 7 areas per week (Monday-keyed, local dates), rating + streak, month cards with week drill-down, yearly heatmap and per-area averages, weekly reflection note, and a one-off importer for the old dashboard's localStorage JSON.
+- Engine: [family/habits.js](src/family/habits.js) — stable habit ids, week math, scoring, roll-ups and the legacy mapper (unit-tested). Data: [family/cloud.js](src/family/cloud.js) (scoped upserts, chunked import, realtime channel) and [family/useFamily.js](src/family/useFamily.js) (optimistic writes with rollback, live rows from the other member).
+- Gate: entitlement feature `family` (service-role insert — snippet at the foot of `supabase-migration-006.sql`). Both views are lazy chunks; nothing family-related loads for non-entitled users beyond one `entitlements` read.
+- Viewers see everything read-only (inputs disabled) and RLS refuses their writes regardless.
 
 ### Trends & market data
 - Live crypto prices (CoinGecko) and FX (open.er-api.com fallback)
@@ -347,7 +357,7 @@ Until all three are done, email-based auth and the invitation flow silently brea
 - **Anthropic rate limits are global to the function**, not per user; abuse mitigation is basic.
 - **Tax report is hard-coded to 2024 RRA bands.** Needs yearly maintenance.
 - ~~Advisor context truncation, session-local dismissals, per-consumer engine runs~~ — *resolved 2026-06*: a budgeted serializer ([advisorContext.js](src/services/advisorContext.js)) guarantees complete JSON inside the 8000-char cap; dismissals persist on `profile.dismissedInsights` with a 7-day TTL; [InsightsContext](src/contexts/InsightsContext.jsx) runs the engine once per state change for all consumers. The engine remains in the main bundle by design (the sidebar badge needs it at startup).
-- **Supabase schema must be at migration 005** (`portfolios.catrules/budgets` columns). The client degrades gracefully when behind, but rules/budgets won't cloud-sync until it's applied.
+- **Supabase schema must be at migration 006** (005 = `portfolios.catrules/budgets`; 006 = Family tables + `portfolio_has_feature()`). Family views show a load error until 006 is applied and the portfolio holds the `family` entitlement.
 
 ### Deferred to the Imari mobile app (2026-06)
 

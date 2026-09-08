@@ -415,7 +415,7 @@ function FeaturesSection({ state, dispatch }) {
   return (
     <Section title="Features" subtitle="Imari starts simple and switches features on when you add related data. Force any of them on or off here — hidden features stay reachable via search and links.">
       <div className="col" style={{ gap: 8 }}>
-        {FEATURE_MODULES.map(m => {
+        {FEATURE_MODULES.filter(m => !m.gated).map(m => {
           const explicit = features[m.key];
           const on = isFeatureEnabled(state, m.key);
           return (

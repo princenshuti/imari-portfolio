@@ -9,6 +9,7 @@
 // is intent, not an error.
 
 import { LIQUID_KINDS } from './engine/insights/_shared.js';
+import { FEATURES, isEntitled } from './services/entitlements.js';
 
 export const CORE_NAV_IDS = ['dashboard', 'assets', 'advisor', 'settings'];
 
@@ -65,21 +66,33 @@ export const FEATURE_MODULES = [
     auto: (s) => Boolean((s.profile || {}).retirement?.currentAge)
       || (s.cashflows || []).some(cf => cf.type === 'income' && cf.category === 'salary'),
   },
+  {
+    key: 'family',
+    label: 'Family',
+    hint: 'Household planning shared with your members: weekly scorecard, milestones and shared notes.',
+    navIds: ['family', 'scorecard'],
+    // Gated: only portfolios holding this entitlement see it. The explicit
+    // Settings toggle cannot switch a gated module on (entitlements are
+    // server-side), so `auto` is the only path and it reads the entitlement.
+    gated: FEATURES.FAMILY,
+    auto: (s, ctx) => isEntitled(ctx?.entitlements, FEATURES.FAMILY),
+  },
 ];
 
 /** Effective on/off for one module: explicit setting wins, else data decides. */
-export function isFeatureEnabled(state, key) {
+export function isFeatureEnabled(state, key, ctx = null) {
+  const mod = FEATURE_MODULES.find(m => m.key === key);
+  if (mod?.gated) return mod.auto(state, ctx);
   const explicit = (state.profile || {}).features?.[key];
   if (typeof explicit === 'boolean') return explicit;
-  const mod = FEATURE_MODULES.find(m => m.key === key);
-  return mod ? mod.auto(state) : true;
+  return mod ? mod.auto(state, ctx) : true;
 }
 
 /** Set of nav ids the menus should show for this state. */
-export function visibleNavIds(state) {
+export function visibleNavIds(state, ctx = null) {
   const ids = new Set(CORE_NAV_IDS);
   for (const mod of FEATURE_MODULES) {
-    if (isFeatureEnabled(state, mod.key)) mod.navIds.forEach(id => ids.add(id));
+    if (isFeatureEnabled(state, mod.key, ctx)) mod.navIds.forEach(id => ids.add(id));
   }
   return ids;
 }

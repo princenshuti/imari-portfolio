@@ -22,6 +22,8 @@ const TAB_KEY = {
   retirement:   'nav.tabs_pension',
   advisor:      'nav.advisor',
   settings:     'nav.settings',
+  family:       'nav.tabs_family',
+  scorecard:    'nav.scorecard',
 };
 
 export default function MobileTabBar({ active, onNav, visibleIds = null }) {

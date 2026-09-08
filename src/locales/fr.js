@@ -10,6 +10,7 @@ export default {
     group_money:    'Argent & Marchés',
     group_reports:  'Rapports',
     group_tools:    'Outils',
+    group_family:   'Famille',
     dashboard:   'Tableau de bord',
     assets:      'Actifs',
     liabilities: 'Dettes',
@@ -39,6 +40,9 @@ export default {
     tabs_pension:  'Retraite',
     tabs_review:   'Bilan',
     tabs_report:   'Rapport',
+    tabs_family:   'Famille',
+    family:        'Espace famille',
+    scorecard:     'Tableau hebdo',
   },
 
   search: {
