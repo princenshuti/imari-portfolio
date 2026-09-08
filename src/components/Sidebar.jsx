@@ -30,6 +30,11 @@ const NAV_KEY = {
   settings:    'nav.settings',
   family:      'nav.family',
   scorecard:   'nav.scorecard',
+  calendar:    'nav.calendar',
+  household:   'nav.household',
+  insurance:   'nav.insurance',
+  documents:   'nav.documents',
+  wishlist:    'nav.wishlist',
 };
 // Map English group label → i18n key (matches NAV_GROUPS in nav.js).
 const GROUP_KEY = {

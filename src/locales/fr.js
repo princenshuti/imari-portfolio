@@ -43,6 +43,12 @@ export default {
     tabs_family:   'Famille',
     family:        'Espace famille',
     scorecard:     'Tableau hebdo',
+    calendar:      'Calendrier',
+    household:     'Maison',
+    insurance:     'Assurances',
+    documents:     'Documents',
+    wishlist:      'Liste d’envies',
+    tabs_wishes:   'Envies',
   },
 
   search: {

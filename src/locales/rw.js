@@ -51,6 +51,12 @@ export default {
     tabs_family:   'Umuryango',
     family:        'Urugo rwacu',
     scorecard:     'Urutonde rwa buri cyumweru',
+    calendar:      'Kalendari',
+    household:     'Imirimo yo mu rugo',
+    insurance:     'Ubwishingizi',
+    documents:     'Inyandiko',
+    wishlist:      'Ibyifuzo',
+    tabs_wishes:   'Ibyifuzo',
   },
 
   search: {

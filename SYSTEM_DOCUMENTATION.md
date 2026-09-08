@@ -219,6 +219,15 @@ Household planning shared by every member of a portfolio — the 2026 standalone
 - Gate: entitlement feature `family` (service-role insert — snippet at the foot of `supabase-migration-006.sql`). Both views are lazy chunks; nothing family-related loads for non-entitled users beyond one `entitlements` read.
 - Viewers see everything read-only (inputs disabled) and RLS refuses their writes regardless.
 
+### Family module — Sprint 2 (2026-09): calendar, household, insurance, documents, wish list
+- **Data**: one generic row-level table `family_items` (migration 007; kinds `event | task | policy | document | wish`, typed columns kind/title/due_date/amount/status + ≤8 KB jsonb `data`). Field specs, validation (`normalizeItem`), the derived calendar, wish affordability and insurance-gap detection are pure and tested in [family/planning.js](src/family/planning.js). Access: [family/items.js](src/family/items.js) + [family/useItems.js](src/family/useItems.js) (optimistic, realtime). Shared editor/chrome: [family/ui.jsx](src/family/ui.jsx).
+- **Calendar** ([FamilyCalendar.jsx](src/views/FamilyCalendar.jsx)) — derived, not maintained: family events (yearly repeats), open tasks, policy renewals, document expiries, wish targets, goal deadlines, loan end dates, next occurrence of recurring expense cashflows, and Rwanda statutory dates that follow from owned assets (RRA fixed-asset tax 31 Mar, vehicle road levy 31 Dec). ICS feed via edge function `family-ics` (`--no-verify-jwt`): a 256-bit capability token per portfolio in `family_calendar_tokens` (editors create/rotate/disable in the app), service-role read, entitlement re-checked, RFC 5545 escaping, per-token rate limit.
+- **Household** ([Household.jsx](src/views/Household.jsx)) — shared tasks with owner + repeat (completing a repeating task schedules the next one) and the recurring bills already in Cash Flow with next due date.
+- **Insurance** ([Insurance.jsx](src/views/Insurance.jsx)) — policies with premium/frequency/cover/renewal/linked asset; uninsured vehicles/houses surfaced as a cost-of-absence card; one-click push of the premium into Cash Flow as a recurring expense (idempotent via `data.cashflow_id`).
+- **Documents** ([Documents.jsx](src/views/Documents.jsx)) — metadata in `family_items`, files in the PRIVATE bucket `family-docs` (10 MB, PDF/JPG/PNG/WebP) under `<portfolio>/<item>/<file>`; storage policies resolve the portfolio from the path through `family_doc_access()` (safe cast, never errors into allow); files open via 60-second signed URLs; only a 4-character reference hint may be stored, never a full ID number.
+- **Wish list** ([Wishlist.jsx](src/views/Wishlist.jsx)) — priority-ranked wishes with an affordability verdict (liquid − 3-month buffer vs cost; months-to-afford from the 6-month savings pace) and “Make it a goal” (creates a liquid-funded Goal, idempotent via `data.goal_id`).
+- Family Home gained a “Next two weeks” card from the same derived calendar.
+
 ### Trends & market data
 - Live crypto prices (CoinGecko) and FX (open.er-api.com fallback)
 - BNR official rates (buy/avg/sell per currency) from the `bnr-rates` Edge Function, scheduled daily by pg_cron **and self-healing**: if the newest stored rate is older than 24h, any client visit re-triggers the function (idempotent 10-day upsert) — a dead cron can no longer cause silent indefinite staleness ([market.js](src/services/market.js))
@@ -357,7 +366,7 @@ Until all three are done, email-based auth and the invitation flow silently brea
 - **Anthropic rate limits are global to the function**, not per user; abuse mitigation is basic.
 - **Tax report is hard-coded to 2024 RRA bands.** Needs yearly maintenance.
 - ~~Advisor context truncation, session-local dismissals, per-consumer engine runs~~ — *resolved 2026-06*: a budgeted serializer ([advisorContext.js](src/services/advisorContext.js)) guarantees complete JSON inside the 8000-char cap; dismissals persist on `profile.dismissedInsights` with a 7-day TTL; [InsightsContext](src/contexts/InsightsContext.jsx) runs the engine once per state change for all consumers. The engine remains in the main bundle by design (the sidebar badge needs it at startup).
-- **Supabase schema must be at migration 006** (005 = `portfolios.catrules/budgets`; 006 = Family tables + `portfolio_has_feature()`). Family views show a load error until 006 is applied and the portfolio holds the `family` entitlement.
+- **Supabase schema must be at migration 007** (005 = `portfolios.catrules/budgets`; 006 = Family scorecard tables + `portfolio_has_feature()`; 007 = `family_items`, `family_calendar_tokens`, `family-docs` bucket + storage policies). Family views show a load error until applied and the portfolio holds the `family` entitlement. Edge function `family-ics` must be deployed with `--no-verify-jwt`.
 
 ### Deferred to the Imari mobile app (2026-06)
 

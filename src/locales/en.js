@@ -51,6 +51,12 @@ export default {
     tabs_family:   'Family',
     family:        'Family Home',
     scorecard:     'Scorecard',
+    calendar:      'Calendar',
+    household:     'Household',
+    insurance:     'Insurance',
+    documents:     'Documents',
+    wishlist:      'Wish list',
+    tabs_wishes:   'Wishes',
   },
 
   // TopBar — role pill + avatar fallback

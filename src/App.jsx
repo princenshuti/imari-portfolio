@@ -43,6 +43,11 @@ const ReportsView     = lazy(() => import('./views/Reports.jsx'));
 // Family module — gated by entitlement; chunks only download when opened.
 const FamilyView      = lazy(() => import('./views/Family.jsx'));
 const ScorecardView   = lazy(() => import('./views/FamilyScorecard.jsx'));
+const CalendarView    = lazy(() => import('./views/FamilyCalendar.jsx'));
+const HouseholdView   = lazy(() => import('./views/Household.jsx'));
+const InsuranceView   = lazy(() => import('./views/Insurance.jsx'));
+const DocumentsView   = lazy(() => import('./views/Documents.jsx'));
+const WishlistView    = lazy(() => import('./views/Wishlist.jsx'));
 
 // ─ Shared UI primitives ───────────────────────────────────────
 function FullScreenLoader({ message = 'Loading…' }) {
@@ -649,6 +654,11 @@ export default function App() {
     reports:     { title: 'Monthly Report', subtitle: 'Auto-generated from your entries' },
     family:      { title: 'Family Home', subtitle: 'Money · this week · milestones · shared plan' },
     scorecard:   { title: 'Weekly scorecard', subtitle: '33 habits · 7 areas · shared with your members' },
+    calendar:    { title: 'Family calendar', subtitle: 'Events · renewals · bills · deadlines · statutory dates' },
+    household:   { title: 'Household', subtitle: 'Tasks and recurring bills' },
+    insurance:   { title: 'Insurance', subtitle: 'Policies · cover · renewals · gaps' },
+    documents:   { title: 'Documents vault', subtitle: 'IDs, titles, contracts · private files · expiry dates' },
+    wishlist:    { title: 'Wish list', subtitle: 'What you want, and when it fits' },
   };
 
   const view = (() => {
@@ -669,6 +679,11 @@ export default function App() {
       case 'reports':     return <ReportsView      state={state} />;
       case 'family':      return <FamilyView       state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} />;
       case 'scorecard':   return <ScorecardView    portfolioId={portfolioId} role={role} showToast={showToast} />;
+      case 'calendar':    return <CalendarView     state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} showToast={showToast} />;
+      case 'household':   return <HouseholdView    state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} />;
+      case 'insurance':   return <InsuranceView    state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} showToast={showToast} />;
+      case 'documents':   return <DocumentsView    portfolioId={portfolioId} role={role} showToast={showToast} />;
+      case 'wishlist':    return <WishlistView     state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} showToast={showToast} />;
       default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} netWorth={netWorth} totalCost={totalCost} />;
     }
   })();

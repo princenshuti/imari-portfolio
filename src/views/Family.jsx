@@ -9,12 +9,16 @@ import { goalProgressPct } from '../engine/goals.js';
 import { KPI, inputStyle } from '../components/Field.jsx';
 import { BarFill } from '../components/motion.jsx';
 import { useFamily, useDebouncedNote } from '../family/useFamily.js';
+import { useItems } from '../family/useItems.js';
+import { deriveEvents } from '../family/planning.js';
+import { Due } from '../family/ui.jsx';
 import { MILESTONES, PLAN_FIELDS, NOTE_KEY, MAX_SCORE, weekStart, weekScore, rating, toLocalISO } from '../family/habits.js';
 
 const textareaStyle = { ...inputStyle, minHeight: 88, resize: 'vertical', lineHeight: 1.5 };
 
 export default function Family({ state, dispatch, portfolioId, role }) {
   const { logs, notes, error, canEdit, saveNote } = useFamily(portfolioId, role);
+  const { items } = useItems(portfolioId, role);
   const cur = state.profile.displayCurrency || 'RWF';
   const now = useMemo(() => new Date(), []);
   const week = weekStart(now);
@@ -37,6 +41,7 @@ export default function Family({ state, dispatch, portfolioId, role }) {
     .sort((a, b) => (a.deadline || '9999') < (b.deadline || '9999') ? -1 : 1)
     .slice(0, 5), [state, now]);
 
+  const upcoming = useMemo(() => deriveEvents(state, items || [], { now, days: 14 }).filter(e => e.in >= -7).slice(0, 8), [state, items, now]);
   const score = logs ? weekScore(logs, week) : null;
   const r = rating(score || 0);
   const msDone = MILESTONES.filter(m => notes[NOTE_KEY.milestone(m.id)]).length;
@@ -103,6 +108,21 @@ export default function Family({ state, dispatch, portfolioId, role }) {
               );
             })}
           </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 18 }}>
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div className="font-serif" style={{ fontSize: 18 }}>Next two weeks</div>
+          <button className="btn btn-ghost btn-xs" onClick={() => go('calendar')}>Full calendar →</button>
+        </div>
+        {upcoming.length === 0 && <div className="muted" style={{ marginTop: 10, fontSize: 13 }}>Nothing due in the next two weeks.</div>}
+        <div className="col" style={{ gap: 2, marginTop: 8 }}>
+          {upcoming.map(e => (
+            <button key={`${e.source}-${e.id}-${e.date}`} className="btn-unstyled row" onClick={() => go(e.to)} style={{ width: '100%', gap: 10, padding: '6px 0', borderTop: '1px solid var(--line-soft)', textAlign: 'left', cursor: 'pointer', fontSize: 13 }}>
+              <span className="muted num" style={{ minWidth: 84, fontSize: 12 }}>{e.date.slice(5)}</span><span style={{ flex: 1 }}>{e.title}</span><Due days={e.in} />
+            </button>
+          ))}
         </div>
       </div>
 

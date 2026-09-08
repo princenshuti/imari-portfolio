@@ -70,7 +70,7 @@ export const FEATURE_MODULES = [
     key: 'family',
     label: 'Family',
     hint: 'Household planning shared with your members: weekly scorecard, milestones and shared notes.',
-    navIds: ['family', 'scorecard'],
+    navIds: ['family', 'scorecard', 'calendar', 'household', 'insurance', 'documents', 'wishlist'],
     // Gated: only portfolios holding this entitlement see it. The explicit
     // Settings toggle cannot switch a gated module on (entitlements are
     // server-side), so `auto` is the only path and it reads the entitlement.
