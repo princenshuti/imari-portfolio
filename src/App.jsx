@@ -12,7 +12,6 @@ import GlobalSearch from './components/GlobalSearch.jsx';
 import { NAV_ITEMS } from './nav.js';
 import { visibleNavIds } from './features.js';
 import { isEntitled, FEATURES } from './services/entitlements.js';
-import { useFamilyBundle } from './family/useFamilyBundle.js';
 import { InsightsProvider } from './contexts/InsightsContext.jsx';
 import { useMarket } from './contexts/MarketContext.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
@@ -50,6 +49,9 @@ const HouseholdView   = lazy(() => import('./views/Household.jsx'));
 const InsuranceView   = lazy(() => import('./views/Insurance.jsx'));
 const DocumentsView   = lazy(() => import('./views/Documents.jsx'));
 const WishlistView    = lazy(() => import('./views/Wishlist.jsx'));
+// Family data layer for the engine + advisor — a lazy, render-nothing bridge so
+// nothing under src/family ships to households without the entitlement.
+const FamilyBridge    = lazy(() => import('./family/FamilyBridge.jsx'));
 
 // ─ Shared UI primitives ───────────────────────────────────────
 function FullScreenLoader({ message = 'Loading…' }) {
@@ -365,8 +367,9 @@ export default function App() {
     return () => { aborted = true; };
   }, [session?.user?.id]);
 
-  // Family data for the insight engine + advisor — only fetched for entitled households.
-  const family = useFamilyBundle(portfolioId, role, Boolean(portfolioId) && isEntitled(entitlements, FEATURES.FAMILY));
+  // Family data for the insight engine + advisor — set by FamilyBridge (entitled households only).
+  const [family, setFamily] = useState(null);
+  const familyEnabled = Boolean(portfolioId) && isEntitled(entitlements, FEATURES.FAMILY);
 
   useEffect(() => {
     if (!portfolioId) { setEntitlements(null); return; }
@@ -699,6 +702,7 @@ export default function App() {
   return i18nWrap(
     <ErrorBoundary>
       <InsightsProvider state={state} dispatch={guardedDispatch} family={family}>
+      {familyEnabled && <Suspense fallback={null}><FamilyBridge portfolioId={portfolioId} role={role} onChange={setFamily} /></Suspense>}
       <a href="#main-content" className="skip-to-main">Skip to main content</a>
       <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
         <Sidebar

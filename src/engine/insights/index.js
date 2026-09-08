@@ -25,8 +25,8 @@ import fxExposureMismatch from './fxExposureMismatch.js';
 import rentalYieldGap from './rentalYieldGap.js';
 import receivableOverdue from './receivableOverdue.js';
 import pensionContributionGap from './pensionContributionGap.js';
-// Family module rules run only when ctx.family is supplied (entitled households).
-import { FAMILY_RULES, familyIdSet } from '../../family/context.js';
+// Family module rules arrive on ctx.family (rules, idSet) for entitled households —
+// supplied by the lazily-loaded family bundle, so the module stays out of the main chunk.
 
 // Registration order = stable tiebreak for equal-severity, equal-magnitude items.
 export const RULES = [
@@ -72,12 +72,12 @@ export function runInsights(state, ctx = {}) {
   const refs = ctx.refs || REFERENCE;
   const dismissed = ctx.dismissed instanceof Set ? ctx.dismissed : new Set(ctx.dismissed || []);
   const limit = ctx.limit ?? 6;
-  const family = ctx.family || null;
+  const family = ctx.family && Array.isArray(ctx.family.rules) ? ctx.family : null;
   const valid = validIdSet(state);
-  if (family) for (const id of familyIdSet(family)) valid.add(id);
+  if (family && typeof family.idSet === 'function') for (const id of family.idSet(family)) valid.add(id);
 
   const out = [];
-  for (const rule of family ? [...RULES, ...FAMILY_RULES] : RULES) {
+  for (const rule of family ? [...RULES, ...family.rules] : RULES) {
     let insight = null;
     try {
       insight = rule(state, { now, refs, family });
