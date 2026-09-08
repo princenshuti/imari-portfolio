@@ -55,7 +55,7 @@ export default defineConfig({
             // cached copy only when offline or the network stalls > 3 s.
             urlPattern: ({ request }) => request.mode === 'navigate',
             handler: 'NetworkFirst',
-            options: { cacheName: 'app-shell', networkTimeoutSeconds: 3, expiration: { maxEntries: 4 } },
+            options: { cacheName: 'app-shell', networkTimeoutSeconds: 3, expiration: { maxEntries: 4 }, fetchOptions: { cache: 'no-cache' } },
           },
           {
             urlPattern: /^https:\/\/api\.coingecko\.com\/.*/i,

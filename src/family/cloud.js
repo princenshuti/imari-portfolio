@@ -87,7 +87,8 @@ export async function importLegacy(portfolioId, { logs, notes }) {
 export function subscribeFamily(portfolioId, onChange) {
   if (!supabase || !portfolioId) return () => {};
   const filter = `portfolio_id=eq.${portfolioId}`;
-  const channel = supabase.channel(`family:${portfolioId}`)
+  // One channel per subscriber: a repeated topic would return the already-subscribed channel and throw.
+  const channel = supabase.channel(`family:${portfolioId}:${Math.random().toString(36).slice(2, 10)}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'family_habit_logs', filter }, p => onChange('habit', p))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'family_notes', filter }, p => onChange('note', p))
     .subscribe();

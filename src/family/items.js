@@ -115,7 +115,7 @@ export function calendarFeedUrl(token) {
 
 export function subscribeItems(portfolioId, onChange) {
   if (!supabase || !portfolioId) return () => {};
-  const channel = supabase.channel(`family-items:${portfolioId}`)
+  const channel = supabase.channel(`family-items:${portfolioId}:${Math.random().toString(36).slice(2, 10)}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'family_items', filter: `portfolio_id=eq.${portfolioId}` }, onChange)
     .subscribe();
   return () => supabase.removeChannel(channel);
