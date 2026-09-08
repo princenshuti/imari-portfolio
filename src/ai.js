@@ -155,7 +155,7 @@ export async function completeChatTools(systemPrompt, messages, userQuestion, { 
     const res = await invokeProxy(body);
     lastText = res.text || lastText;
     const uses = Array.isArray(res.toolUses) ? res.toolUses : [];
-    if (!uses.length) return { text: res.text || '', actions };
+    if (!uses.length) return { text: res.text || (actions.length ? '' : 'I could not produce an answer — please try again.'), actions };
     const results = [];
     for (const tu of uses) {
       try { const out = await onTool(tu.name, tu.input || {}); actions.push(out); results.push({ tool_use_id: tu.id, content: String(out).slice(0, 2000) }); }

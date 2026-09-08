@@ -25,7 +25,7 @@ export function useFamilyBundle(portfolioId, role, enabled) {
       rules: FAMILY_RULES,
       idSet: familyIdSet,
       habitList: HABIT_LIST,
-      runTool: (name, input) => runFamilyTool(name, input, api),
+      runTool: (name, input) => runFamilyTool(name, input, api, new Date(), it.items || []),
     };
     bundle.summary = (state) => familySummary(bundle, state);
     return bundle;

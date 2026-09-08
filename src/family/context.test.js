@@ -55,6 +55,15 @@ describe('runFamilyTool', () => {
     await expect(runFamilyTool('family_add_item', { kind: 'wish', title: 'x', amount: 5000, link: 'javascript:1' }, a, now)).rejects.toThrow(/http/);
     await expect(runFamilyTool('family_add_item', { kind: 'nope', title: 'x' }, a, now)).rejects.toThrow();
   });
+  it('does not add a duplicate of an existing open item', async () => {
+    const a = api();
+    const existing = [{ kind: 'task', title: 'Pay the house help', due_date: '2026-09-11', status: 'open' }];
+    const msg = await runFamilyTool('family_add_item', { kind: 'task', title: 'pay the house help ', due_date: '2026-09-11' }, a, now, existing);
+    expect(msg).toMatch(/Already exists/);
+    expect(a.saveItem).not.toHaveBeenCalled();
+    await runFamilyTool('family_add_item', { kind: 'task', title: 'Pay the house help', due_date: '2026-09-18' }, a, now, existing);
+    expect(a.saveItem).toHaveBeenCalledTimes(1); // different date → a new task
+  });
   it('ticks only known habits, defaulting to the current week', async () => {
     const a = api();
     const msg = await runFamilyTool('family_tick_habits', { habit_ids: ['fam_time', 'bogus', 'hea_sleep'] }, a, now);

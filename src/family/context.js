@@ -58,12 +58,16 @@ export const FAMILY_TOOL_NAMES = new Set(['family_add_item', 'family_tick_habits
  * (the same functions the screens use, so RLS and validation are identical).
  * Returns a one-line human result; throws a readable message on bad input.
  */
-export async function runFamilyTool(name, input = {}, api, now = new Date()) {
+export async function runFamilyTool(name, input = {}, api, now = new Date(), existing = []) {
   if (!api) throw new Error('Family tools unavailable');
   switch (name) {
     case 'family_add_item': {
       if (!KINDS[input.kind]) throw new Error('Unknown item kind');
       const row = normalizeItem({ ...input, status: 'open' }); // drops anything the form would not accept
+      // Idempotent: a model that re-reads an earlier "✓ Added …" line must not add it twice.
+      const dup = (existing || []).find(i => i.kind === row.kind && i.status !== 'archived'
+        && String(i.title).trim().toLowerCase() === row.title.toLowerCase() && (i.due_date || null) === (row.due_date || null));
+      if (dup) return `Already exists: ${KINDS[row.kind].label.toLowerCase()} “${dup.title}”${dup.due_date ? ` for ${dup.due_date}` : ''} — nothing added.`;
       const saved = await api.saveItem({ ...row, ...row.data, data: undefined });
       return `Added ${KINDS[row.kind].label.toLowerCase()} “${saved?.title || row.title}”${row.due_date ? ` for ${row.due_date}` : ''}.`;
     }
