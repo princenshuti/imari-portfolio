@@ -227,6 +227,7 @@ Household planning shared by every member of a portfolio — the 2026 standalone
 - **Documents** ([Documents.jsx](src/views/Documents.jsx)) — metadata in `family_items`, files in the PRIVATE bucket `family-docs` (10 MB, PDF/JPG/PNG/WebP) under `<portfolio>/<item>/<file>`; storage policies resolve the portfolio from the path through `family_doc_access()` (safe cast, never errors into allow); files open via 60-second signed URLs; only a 4-character reference hint may be stored, never a full ID number.
 - **Wish list** ([Wishlist.jsx](src/views/Wishlist.jsx)) — priority-ranked wishes with an affordability verdict (liquid − 3-month buffer vs cost; months-to-afford from the 6-month savings pace) and “Make it a goal” (creates a liquid-funded Goal, idempotent via `data.goal_id`).
 - Family Home gained a “Next two weeks” card from the same derived calendar.
+- **PWA shell is network-first (2026-09).** `index.html` left the Workbox precache and navigations use `NetworkFirst` (3 s timeout, cache fallback offline). Before this, every first load after a deploy served the previous build and users had to hard-reload to see new screens.
 
 ### Trends & market data
 - Live crypto prices (CoinGecko) and FX (open.er-api.com fallback)

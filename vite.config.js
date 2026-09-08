@@ -32,7 +32,12 @@ export default defineConfig({
         // The spreadsheet libraries are lazy-loaded on the import path and
         // cached by the browser on first use — precaching them forced every
         // first visit to download ~1.4 MB it would likely never run.
-        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+        // `html` is deliberately NOT precached: a precached index.html meant every
+        // first visit after a deploy showed the previous build until a second
+        // load (users saw new features "missing"). The shell is served
+        // network-first below and only falls back to cache when offline.
+        globPatterns: ['**/*.{js,css,ico,svg,woff2}'],
+        navigateFallback: null,
         // Lazy heavyweights stay OUT of the precache: the spreadsheet libs
         // (import path only) and the entire Spline 3D family (landing finale
         // only — react-spline, physics, navmesh, opentype, howler, boolean,
@@ -45,6 +50,13 @@ export default defineConfig({
           '**/ui-*',
         ],
         runtimeCaching: [
+          {
+            // App shell (index.html for any in-app route): fresh from the network,
+            // cached copy only when offline or the network stalls > 3 s.
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: { cacheName: 'app-shell', networkTimeoutSeconds: 3, expiration: { maxEntries: 4 } },
+          },
           {
             urlPattern: /^https:\/\/api\.coingecko\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
