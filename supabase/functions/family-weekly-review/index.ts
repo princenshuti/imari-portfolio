@@ -41,7 +41,8 @@ function timingSafeEqual(a: string, b: string): boolean {
   return r === 0;
 }
 const rwf = (n: number) => `RWF ${Math.round(n).toLocaleString('en-US')}`;
-const clean = (s: string, max: number) => String(s ?? '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, max);
+// Control chars out, markdown headings/bold off (the card renders plain text), length capped.
+const clean = (s: string, max: number) => String(s ?? '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').replace(/^#{1,6}\s*/gm, '').replace(/\*\*/g, '').trim().slice(0, max);
 
 type Sb = ReturnType<typeof createClient>;
 
