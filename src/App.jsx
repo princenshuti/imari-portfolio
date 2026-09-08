@@ -11,6 +11,8 @@ import TopBar from './components/TopBar.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import { NAV_ITEMS } from './nav.js';
 import { visibleNavIds } from './features.js';
+import { isEntitled, FEATURES } from './services/entitlements.js';
+import { useFamilyBundle } from './family/useFamilyBundle.js';
 import { InsightsProvider } from './contexts/InsightsContext.jsx';
 import { useMarket } from './contexts/MarketContext.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
@@ -363,6 +365,9 @@ export default function App() {
     return () => { aborted = true; };
   }, [session?.user?.id]);
 
+  // Family data for the insight engine + advisor — only fetched for entitled households.
+  const family = useFamilyBundle(portfolioId, role, Boolean(portfolioId) && isEntitled(entitlements, FEATURES.FAMILY));
+
   useEffect(() => {
     if (!portfolioId) { setEntitlements(null); return; }
     let aborted = false;
@@ -693,7 +698,7 @@ export default function App() {
 
   return i18nWrap(
     <ErrorBoundary>
-      <InsightsProvider state={state} dispatch={guardedDispatch}>
+      <InsightsProvider state={state} dispatch={guardedDispatch} family={family}>
       <a href="#main-content" className="skip-to-main">Skip to main content</a>
       <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
         <Sidebar
@@ -729,7 +734,7 @@ export default function App() {
         </div>
         <MobileTabBar active={nav} onNav={navigateTo} visibleIds={visibleIds} />
         <div data-noprint><ToastContainer toasts={toasts} dismiss={dismiss} /></div>
-        <div data-noprint><FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} /></div>
+        <div data-noprint><FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} family={family} /></div>
       </div>
       </InsightsProvider>
     </ErrorBoundary>

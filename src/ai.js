@@ -121,6 +121,53 @@ async function callDirect(apiKey, systemPrompt, messages, userQuestion, model) {
   return response.content[0].text;
 }
 
+// ── Tool-enabled chat (Family module) ─────────────────────────────────────────
+// The proxy owns the tool definitions; the browser only executes allow-listed
+// names through RLS-scoped functions. Up to 3 rounds, then we stop.
+async function invokeProxy(body) {
+  const { data, error } = await supabase.functions.invoke('ai-proxy', { body });
+  if (error) {
+    if (error.context && typeof error.context.json === 'function') {
+      try { const b = await error.context.json(); if (b?.error) throw new Error(b.error); }
+      catch (e) { if (e.message && e.message !== 'Unexpected end of JSON input') throw e; }
+    }
+    throw new Error(error.message || 'AI request failed');
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+/**
+ * completeChatTools — like completeChat, but lets the model call the family
+ * tools. `onTool(name, input)` must return a short result string (or throw).
+ * Resolves { text, actions: string[] }.
+ */
+export async function completeChatTools(systemPrompt, messages, userQuestion, { toolset = 'family', onTool, model = 'claude-sonnet-4-6' } = {}) {
+  if (!(isConfigured && supabase)) {
+    return { text: await completeChat(null, systemPrompt, messages, userQuestion), actions: [] };
+  }
+  throttle();
+  const msgs = (messages || []).slice(-10).map(m => ({ role: m.role, content: String(m.content).slice(0, 4000) }));
+  let body = { systemPrompt, messages: msgs, userQuestion: String(userQuestion).slice(0, 2000), model, toolset };
+  const actions = [];
+  let lastText = '';
+  for (let round = 0; round < 3; round++) {
+    const res = await invokeProxy(body);
+    lastText = res.text || lastText;
+    const uses = Array.isArray(res.toolUses) ? res.toolUses : [];
+    if (!uses.length) return { text: res.text || '', actions };
+    const results = [];
+    for (const tu of uses) {
+      try { const out = await onTool(tu.name, tu.input || {}); actions.push(out); results.push({ tool_use_id: tu.id, content: String(out).slice(0, 2000) }); }
+      catch (e) { const msg = `Error: ${e.message || 'failed'}`; actions.push(msg); results.push({ tool_use_id: tu.id, content: msg, is_error: true }); }
+    }
+    if (round === 0) msgs.push({ role: 'user', content: body.userQuestion });
+    msgs.push({ role: 'assistant', content: [ ...(res.text ? [{ type: 'text', text: res.text }] : []), ...uses.map(tu => ({ type: 'tool_use', id: tu.id, name: tu.name, input: tu.input || {} })) ] });
+    body = { systemPrompt, messages: msgs.slice(-10), toolResults: results, model, toolset };
+  }
+  return { text: lastText || 'Done.', actions };
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function completeText(_apiKey, prompt) {

@@ -2,7 +2,7 @@
 // this week's scorecard, annual milestones and the shared planning notes.
 // Money numbers are read from engine helpers so they can never disagree with
 // the Dashboard; family data comes from useFamily (migration 006 tables).
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { fmtBase } from '../data.js';
 import { netWorthRWF, totalDebtRWF, liquidValueRWF, monthlyFlowsRWF } from '../engine/insights/_shared.js';
 import { goalProgressPct } from '../engine/goals.js';
@@ -12,6 +12,7 @@ import { useFamily, useDebouncedNote } from '../family/useFamily.js';
 import { useItems } from '../family/useItems.js';
 import { deriveEvents } from '../family/planning.js';
 import { Due } from '../family/ui.jsx';
+import { supabase } from '../supabase.js';
 import { MILESTONES, PLAN_FIELDS, NOTE_KEY, MAX_SCORE, weekStart, weekScore, rating, toLocalISO } from '../family/habits.js';
 
 const textareaStyle = { ...inputStyle, minHeight: 88, resize: 'vertical', lineHeight: 1.5 };
@@ -45,6 +46,14 @@ export default function Family({ state, dispatch, portfolioId, role }) {
   const score = logs ? weekScore(logs, week) : null;
   const r = rating(score || 0);
   const msDone = MILESTONES.filter(m => notes[NOTE_KEY.milestone(m.id)]).length;
+  const reviewKey = Object.keys(notes).filter(k => k.startsWith('review:')).sort().pop();
+  const [reviewBusy, setReviewBusy] = useState(false);
+  async function runReview() {
+    setReviewBusy(true);
+    try { const { error: e } = await supabase.functions.invoke('family-weekly-review', { body: {} }); if (e) throw e; }
+    catch (e) { console.warn('review failed', e?.message); }
+    finally { setReviewBusy(false); }
+  }
   const go = to => dispatch({ type: 'nav', to });
 
   if (!portfolioId) {
@@ -109,6 +118,17 @@ export default function Family({ state, dispatch, portfolioId, role }) {
             })}
           </div>
         </div>
+      </div>
+
+      <div className="card" style={{ padding: 18, borderLeft: '3px solid var(--brand)' }}>
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <div className="font-serif" style={{ fontSize: 18 }}>Sunday review</div>
+            <div className="muted" style={{ fontSize: 12 }}>{reviewKey ? `Week of ${reviewKey.slice(7)} · written by the advisor every Sunday evening and emailed to both of you` : 'Arrives every Sunday evening by email and here.'}</div>
+          </div>
+          {canEdit && <button className="btn btn-ghost btn-xs" disabled={reviewBusy} onClick={runReview}>{reviewBusy ? 'Writing…' : 'Write it now'}</button>}
+        </div>
+        {reviewKey && <div style={{ marginTop: 10, fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{notes[reviewKey]}</div>}
       </div>
 
       <div className="card" style={{ padding: 18 }}>
