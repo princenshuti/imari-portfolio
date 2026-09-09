@@ -14,6 +14,8 @@ import { applyCatRules } from '../engine/catRules.js';
 import { budgetStatus } from '../engine/budgets.js';
 import { monthlyEquivalentRWF, parseLocalDate } from '../engine/recurrence.js';
 
+import { tx } from '../i18n/tx.js';
+
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
 
@@ -26,7 +28,7 @@ const RECURRING = ['once', 'monthly', 'quarterly', 'annually'];
 
 // ─── Compress image to JPEG base64 ───────────────────────────────────────────
 async function compressImage(file, maxDim = 1200) {
-  if (!file.type.startsWith('image/')) throw new Error('Only image files supported (JPG, PNG, WebP)');
+  if (!file.type.startsWith('image/')) throw new Error(tx('Only image files supported (JPG, PNG, WebP)'));
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -43,7 +45,7 @@ async function compressImage(file, maxDim = 1200) {
       URL.revokeObjectURL(url);
       resolve({ name: file.name, data: canvas.toDataURL('image/jpeg', 0.82), thumb: tc.toDataURL('image/jpeg', 0.7) });
     };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(tx('Could not read image'))); };
     img.src = url;
   });
 }
@@ -76,8 +78,14 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
       }));
       try { u('attachment', await compressImage(file)); } catch { /* attach is best-effort */ }
       setOcrMsg({ ok: true, text: r.confidence < 0.6
-        ? `Low confidence (${Math.round(r.confidence * 100)}%) — check the fields before saving.`
-        : `Filled from your receipt (${Math.round(r.confidence * 100)}% confidence) — review and save.` });
+        ? tx(
+        'Low confidence ({0}%) — check the fields before saving.',
+        [Math.round(r.confidence * 100)]
+      )
+        : tx(
+        'Filled from your receipt ({0}% confidence) — review and save.',
+        [Math.round(r.confidence * 100)]
+      ) });
     } catch (err) {
       setOcrMsg({ ok: false, text: err.message });
     } finally { setOcrBusy(false); }
@@ -97,147 +105,141 @@ function CFEditor({ entry, accounts, onSave, onCancel }) {
   };
 
   return (
-    <Modal open onClose={onCancel} maxWidth={540} title={isNew ? 'Add entry' : 'Edit entry'}>
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
-          <h2 className="font-serif" style={{ fontSize: 22, margin: 0, fontWeight: 400 }}>{isNew ? 'Add entry' : 'Edit entry'}</h2>
-          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
-            <span aria-hidden="true">×</span>
+    (<Modal open onClose={onCancel} maxWidth={540} title={isNew ? tx('Add entry') : tx('Edit entry')}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
+        <h2 className="font-serif" style={{ fontSize: 22, margin: 0, fontWeight: 400 }}>{isNew ? tx('Add entry') : tx('Edit entry')}</h2>
+        <button type="button" onClick={onCancel} aria-label={tx('Close dialog')} className="btn-icon-sm">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      {/* Income / Expense toggle */}
+      <div className="row" style={{ gap: 8, marginBottom: 18 }}>
+        {['income', 'expense'].map(t => (
+          <button key={t} onClick={() => { u('type', t); u('category', t === 'income' ? 'salary' : 'loan-repay'); }}
+            style={{
+              flex: 1, padding: '9px 0', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+              background: e.type === t ? (t === 'income' ? 'var(--up-soft)' : 'var(--down-soft)') : 'var(--bg-2)',
+              color: e.type === t ? (t === 'income' ? 'var(--up)' : 'var(--down)') : 'var(--ink-3)',
+              border: e.type === t ? `1.5px solid ${t === 'income' ? 'var(--up)' : 'var(--down)'}` : '1.5px solid transparent',
+            }}>
+            {t === 'income' ? tx('▲ Income') : tx('▼ Expense')}
           </button>
+        ))}
+      </div>
+      {/* B13 — Snap a receipt to auto-fill (vision OCR via the shared ai-proxy path) */}
+      {hasEnvKey && (
+        <div style={{ marginBottom: 16 }}>
+          <input ref={ocrRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+            onChange={ev => { const f = ev.target.files?.[0]; if (f) handleSnap(f); ev.target.value = ''; }} />
+          <button type="button" onClick={() => ocrRef.current?.click()} disabled={ocrBusy} className="btn btn-ghost" style={{ width: '100%' }}>
+            {ocrBusy ? tx('Reading receipt…') : tx('📷 Snap a receipt — auto-fill from a photo')}
+          </button>
+          {ocrMsg && (
+            <div role="status" style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: ocrMsg.ok ? 'var(--ink-2)' : 'var(--down)' }}>{tx(ocrMsg.text)}</div>
+          )}
         </div>
-
-        {/* Income / Expense toggle */}
-        <div className="row" style={{ gap: 8, marginBottom: 18 }}>
-          {['income', 'expense'].map(t => (
-            <button key={t} onClick={() => { u('type', t); u('category', t === 'income' ? 'salary' : 'loan-repay'); }}
-              style={{
-                flex: 1, padding: '9px 0', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                background: e.type === t ? (t === 'income' ? 'var(--up-soft)' : 'var(--down-soft)') : 'var(--bg-2)',
-                color: e.type === t ? (t === 'income' ? 'var(--up)' : 'var(--down)') : 'var(--ink-3)',
-                border: e.type === t ? `1.5px solid ${t === 'income' ? 'var(--up)' : 'var(--down)'}` : '1.5px solid transparent',
-              }}>
-              {t === 'income' ? '▲ Income' : '▼ Expense'}
-            </button>
+      )}
+      {/* Category */}
+      <Field label={tx('Category')}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {cats.map(c => (
+            <div key={c.id} onClick={() => u('category', c.id)} style={{
+              padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 11, fontWeight: 500,
+              background: c.id === e.category ? 'var(--brand-soft)' : 'var(--bg-2)',
+              color: c.id === e.category ? 'var(--brand)' : 'var(--ink-2)',
+              border: c.id === e.category ? '1px solid var(--brand)' : '1px solid transparent',
+            }}>{tx(c.label)}</div>
           ))}
         </div>
-
-        {/* B13 — Snap a receipt to auto-fill (vision OCR via the shared ai-proxy path) */}
-        {hasEnvKey && (
-          <div style={{ marginBottom: 16 }}>
-            <input ref={ocrRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-              onChange={ev => { const f = ev.target.files?.[0]; if (f) handleSnap(f); ev.target.value = ''; }} />
-            <button type="button" onClick={() => ocrRef.current?.click()} disabled={ocrBusy} className="btn btn-ghost" style={{ width: '100%' }}>
-              {ocrBusy ? 'Reading receipt…' : '📷 Snap a receipt — auto-fill from a photo'}
-            </button>
-            {ocrMsg && (
-              <div role="status" style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: ocrMsg.ok ? 'var(--ink-2)' : 'var(--down)' }}>{ocrMsg.text}</div>
+      </Field>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
+        <Field label={tx('Amount')}>
+          <input type="number" value={e.amount} onChange={ev => u('amount', ev.target.value)} placeholder="0" style={inputStyle} />
+        </Field>
+        <Field label={tx('Currency')}>
+          <select value={e.currency} onChange={ev => u('currency', ev.target.value)} style={inputStyle}>
+            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+          </select>
+        </Field>
+        <Field label={tx('Date')}>
+          <input type="date" value={e.date} onChange={ev => u('date', ev.target.value)} style={inputStyle} />
+        </Field>
+        <Field label={tx('Frequency')}>
+          <select value={e.recurring} onChange={ev => u('recurring', ev.target.value)} style={inputStyle}>
+            {RECURRING.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+          </select>
+        </Field>
+      </div>
+      {/* Account selector — always visible */}
+      <Field label={tx('Account (optional)')} top={14}>
+        {accounts.length > 0 ? (
+          <>
+            <select value={e.accountId || ''} onChange={ev => u('accountId', ev.target.value || null)} style={inputStyle}>
+              <option value="">{tx('— No account linked')}</option>
+              {accounts.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.bank || a.wallet || a.name} ({a.currency})
+                </option>
+              ))}
+            </select>
+            {e.accountId && e.recurring !== 'once' && (
+              <div className="muted" style={{ fontSize: 11, marginTop: 5, padding: '6px 10px', background: 'color-mix(in oklab, var(--gold) 12%, transparent)', borderRadius: 6 }}>
+                {tx('⚠ Only')} <strong>{tx('Once')}</strong> {tx(
+                  'entries update the linked account balance.\n                  Change Frequency to "Once" if this transaction should move the balance.'
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="muted" style={{ fontSize: 12, padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8, lineHeight: 1.5 }}>
+            {tx('No bank or mobile money accounts yet.')}{' '}
+            {tx('Go to')} <strong>{tx('Accounts')}</strong> {tx(
+              'and add one — then you can link transactions here to keep your balance up to date automatically.'
             )}
           </div>
         )}
-
-        {/* Category */}
-        <Field label="Category">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-            {cats.map(c => (
-              <div key={c.id} onClick={() => u('category', c.id)} style={{
-                padding: '7px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 11, fontWeight: 500,
-                background: c.id === e.category ? 'var(--brand-soft)' : 'var(--bg-2)',
-                color: c.id === e.category ? 'var(--brand)' : 'var(--ink-2)',
-                border: c.id === e.category ? '1px solid var(--brand)' : '1px solid transparent',
-              }}>{c.label}</div>
-            ))}
-          </div>
-        </Field>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
-          <Field label="Amount">
-            <input type="number" value={e.amount} onChange={ev => u('amount', ev.target.value)} placeholder="0" style={inputStyle} />
-          </Field>
-          <Field label="Currency">
-            <select value={e.currency} onChange={ev => u('currency', ev.target.value)} style={inputStyle}>
-              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-            </select>
-          </Field>
-          <Field label="Date">
-            <input type="date" value={e.date} onChange={ev => u('date', ev.target.value)} style={inputStyle} />
-          </Field>
-          <Field label="Frequency">
-            <select value={e.recurring} onChange={ev => u('recurring', ev.target.value)} style={inputStyle}>
-              {RECURRING.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
-            </select>
-          </Field>
-        </div>
-
-        {/* Account selector — always visible */}
-        <Field label="Account (optional)" top={14}>
-          {accounts.length > 0 ? (
-            <>
-              <select value={e.accountId || ''} onChange={ev => u('accountId', ev.target.value || null)} style={inputStyle}>
-                <option value="">— No account linked</option>
-                {accounts.map(a => (
-                  <option key={a.id} value={a.id}>
-                    {a.bank || a.wallet || a.name} ({a.currency})
-                  </option>
-                ))}
-              </select>
-              {e.accountId && e.recurring !== 'once' && (
-                <div className="muted" style={{ fontSize: 11, marginTop: 5, padding: '6px 10px', background: 'color-mix(in oklab, var(--gold) 12%, transparent)', borderRadius: 6 }}>
-                  ⚠ Only <strong>Once</strong> entries update the linked account balance.
-                  Change Frequency to "Once" if this transaction should move the balance.
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="muted" style={{ fontSize: 12, padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8, lineHeight: 1.5 }}>
-              No bank or mobile money accounts yet.{' '}
-              Go to <strong>Accounts</strong> and add one — then you can link transactions here to keep your balance up to date automatically.
-            </div>
-          )}
-        </Field>
-
-        <Field label="Notes" top={14}>
-          <input value={e.notes} onChange={ev => u('notes', ev.target.value)} placeholder="optional" style={inputStyle} />
-        </Field>
-
-        {/* Attachment */}
-        <Field label="Attachment (receipt / invoice)" top={14}>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }}
-            onChange={ev => handleAttach(ev.target.files?.[0])} />
-          {e.attachment ? (
-            <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
-              <img
-                src={e.attachment.thumb}
-                alt="attachment"
-                onClick={() => setShowFull(true)}
-                style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, cursor: 'pointer', border: '1px solid var(--line)' }}
-                title="Click to view full size"
-              />
-              <div className="col" style={{ gap: 4 }}>
-                <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>{e.attachment.name}</div>
-                <div className="row" style={{ gap: 8 }}>
-                  <button onClick={() => fileRef.current.click()} className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }}>Replace</button>
-                  <button onClick={() => u('attachment', null)} className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px', color: 'var(--down)' }}>Remove</button>
-                </div>
+      </Field>
+      <Field label={tx('Notes')} top={14}>
+        <input value={e.notes} onChange={ev => u('notes', ev.target.value)} placeholder="optional" style={inputStyle} />
+      </Field>
+      {/* Attachment */}
+      <Field label={tx('Attachment (receipt / invoice)')} top={14}>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }}
+          onChange={ev => handleAttach(ev.target.files?.[0])} />
+        {e.attachment ? (
+          <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+            <img
+              src={e.attachment.thumb}
+              alt="attachment"
+              onClick={() => setShowFull(true)}
+              style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, cursor: 'pointer', border: '1px solid var(--line)' }}
+              title={tx('Click to view full size')}
+            />
+            <div className="col" style={{ gap: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>{e.attachment.name}</div>
+              <div className="row" style={{ gap: 8 }}>
+                <button onClick={() => fileRef.current.click()} className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }}>{tx('Replace')}</button>
+                <button onClick={() => u('attachment', null)} className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px', color: 'var(--down)' }}>{tx('Remove')}</button>
               </div>
             </div>
-          ) : (
-            <button onClick={() => fileRef.current.click()} disabled={attachLoading}
-              style={{ ...inputStyle, cursor: 'pointer', textAlign: 'left', color: 'var(--ink-3)', background: 'var(--bg-2)', border: '1.5px dashed var(--line)' }}>
-              {attachLoading ? 'Compressing…' : '📎 Click to attach image'}
-            </button>
-          )}
-          {attachErr && <div style={{ fontSize: 11, color: 'var(--down)', marginTop: 4 }}>{attachErr}</div>}
-        </Field>
-
-        <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
-          <button type="button" onClick={() => onSave({ ...e, amount: +e.amount || 0 })} className="btn btn-primary" disabled={!e.amount}>
-            {isNew ? 'Add entry' : 'Save'}
+          </div>
+        ) : (
+          <button onClick={() => fileRef.current.click()} disabled={attachLoading}
+            style={{ ...inputStyle, cursor: 'pointer', textAlign: 'left', color: 'var(--ink-3)', background: 'var(--bg-2)', border: '1.5px dashed var(--line)' }}>
+            {attachLoading ? tx('Compressing…') : tx('📎 Click to attach image')}
           </button>
-        </div>
-
-        {/* Full-size attachment viewer */}
-        <ImageLightbox open={showFull && !!e.attachment} onClose={() => setShowFull(false)} src={e.attachment?.data} alt={`Attachment: ${e.attachment?.name || 'receipt'}`} />
-    </Modal>
+        )}
+        {attachErr && <div style={{ fontSize: 11, color: 'var(--down)', marginTop: 4 }}>{attachErr}</div>}
+      </Field>
+      <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+        <button type="button" onClick={onCancel} className="btn btn-ghost">{tx('Cancel')}</button>
+        <button type="button" onClick={() => onSave({ ...e, amount: +e.amount || 0 })} className="btn btn-primary" disabled={!e.amount}>
+          {isNew ? tx('Add entry') : tx('Save')}
+        </button>
+      </div>
+      {/* Full-size attachment viewer */}
+      <ImageLightbox open={showFull && !!e.attachment} onClose={() => setShowFull(false)} src={e.attachment?.data} alt={tx('Attachment: {0}', [e.attachment?.name || 'receipt'])} />
+    </Modal>)
   );
 }
 
@@ -266,17 +268,19 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
   // ── File upload ────────────────────────────────────────────────────────────
   const handleFile = async (file) => {
     if (!file) return;
-    if (!acctId) { setErr('Pick the account this statement belongs to first.'); return; }
+    if (!acctId) { setErr(tx('Pick the account this statement belongs to first.')); return; }
     setErr(null); setLoading(true); setFileName(file.name);
     try {
       const result = await parseFile(file);
-      if (!result.headers.length) throw new Error('No headers found. Open the file in Excel and make sure row 1 has column titles.');
+      if (!result.headers.length) throw new Error(tx(
+        'No headers found. Open the file in Excel and make sure row 1 has column titles.'
+      ));
       const detected = detectColumns(result.headers);
       setParsed(result);
       setColMap(detected);
       setStep('map');
     } catch (e) {
-      setErr(e.message || 'Could not read this file.');
+      setErr(e.message || tx('Could not read this file.'));
       setFileName('');
     } finally { setLoading(false); }
   };
@@ -285,14 +289,16 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
   const goToReview = async () => {
     setErr(null);
     if (!colMap.date) {
-      setErr('Pick the Date column before continuing — every transaction needs a date.');
+      setErr(tx('Pick the Date column before continuing — every transaction needs a date.'));
       return;
     }
     try {
       // User rules first (F5) — explicit, free, offline. The AI pass only sees
       // what the keyword matcher AND the user's own rules couldn't place.
       const d = applyCatRules(rowsToDrafts(parsed.rows, colMap, curr), catRules);
-      if (!d.length) throw new Error('No transactions matched. Check your column mapping — debit+credit OR amount+type must be filled.');
+      if (!d.length) throw new Error(tx(
+        'No transactions matched. Check your column mapping — debit+credit OR amount+type must be filled.'
+      ));
 
       let final = d;
       const lowDrafts = d.filter(x => x._confidence === 'low');
@@ -340,7 +346,7 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
   const colField = (label, key, hint, required = false) => {
     const missing = required && !colMap[key];
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      (<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <label style={{ fontSize: 12, color: 'var(--ink-2)', width: 120, flexShrink: 0 }}>
           {label}{required && <span style={{ color: 'var(--down)', marginLeft: 2 }}>*</span>}
           {hint && <span className="muted" style={{ display: 'block', fontSize: 10, marginTop: 1 }}>{hint}</span>}
@@ -356,9 +362,9 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
           aria-required={required}
           aria-invalid={missing || undefined}
         >
-          {colOpts.map(o => <option key={o} value={o}>{o || '— skip —'}</option>)}
+          {colOpts.map(o => <option key={o} value={o}>{o || tx('— skip —')}</option>)}
         </select>
-      </div>
+      </div>)
     );
   };
 
@@ -369,22 +375,21 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
   const pickedAcct = accounts.find(a => a.id === acctId);
 
   return (
-    <Modal open onClose={onCancel} maxWidth={maxW} title="Import bank statement">
+    (<Modal open onClose={onCancel} maxWidth={maxW} title={tx('Import bank statement')}>
       {/* Header — step indicator */}
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18, alignItems: 'flex-start' }}>
         <div>
           <div className="muted" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
-            Step {stepIdx + 1} of {STEP_ORDER.length}
+            {tx('Step')} {stepIdx + 1}of {STEP_ORDER.length}
           </div>
           <h2 className="font-serif" style={{ fontSize: 22, marginTop: 2, margin: 0, fontWeight: 400 }}>
-            {STEP_LABELS[step]}
+            {tx(STEP_LABELS[step])}
           </h2>
         </div>
-        <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
+        <button type="button" onClick={onCancel} aria-label={tx('Close dialog')} className="btn-icon-sm">
           <span aria-hidden="true">×</span>
         </button>
       </div>
-
       {/* Progress dots — quiet, just orient the user */}
       <div className="row" style={{ gap: 6, marginBottom: 22 }}>
         {STEP_ORDER.map((s, i) => (
@@ -395,7 +400,6 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
           }} />
         ))}
       </div>
-
       {err && (
         <div role="alert" style={{
           padding: '10px 14px', background: 'var(--down-soft)', color: 'var(--down-ink)',
@@ -404,32 +408,31 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
           {err}
         </div>
       )}
-
       {/* ── Step 1: Upload ────────────────────────────────────────────────── */}
       {step === 'upload' && (
         <>
           <div className="muted" style={{ fontSize: 13, marginBottom: 18, lineHeight: 1.6 }}>
-            Export a statement from your bank, MTN MoMo or Airtel Money app, pick the matching
-            account here, and Imari will categorise every transaction for you.
+            {tx(
+              'Export a statement from your bank, MTN MoMo or Airtel Money app, pick the matching\n            account here, and Imari will categorise every transaction for you.'
+            )}
           </div>
 
           {/* Account selector — required, first thing */}
-          <Field label="Account this statement belongs to *">
+          <Field label={tx('Account this statement belongs to *')}>
             {accounts.length > 0 ? (
               <select value={acctId} onChange={e => setAcctId(e.target.value)} style={inputStyle} required>
-                <option value="">— Choose account —</option>
+                <option value="">{tx('— Choose account —')}</option>
                 {accounts.map(a => <option key={a.id} value={a.id}>{acctLabel(a)}</option>)}
               </select>
             ) : (
               <div className="muted" style={{ fontSize: 12, padding: '12px 14px', background: 'var(--bg-2)', borderRadius: 8, lineHeight: 1.5 }}>
-                You don't have any accounts yet. Add a bank or Mobile Money account in <strong>Accounts</strong> first,
-                then come back here to import statements.
+                {tx('You don\'t have any accounts yet. Add a bank or Mobile Money account in')} <strong>{tx('Accounts')}</strong> {tx('first,\n                then come back here to import statements.')}
               </div>
             )}
           </Field>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 14 }}>
-            <Field label="Statement currency">
+            <Field label={tx('Statement currency')}>
               <select value={curr} onChange={e => setCurr(e.target.value)} style={inputStyle}>
                 {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
               </select>
@@ -458,14 +461,14 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
           >
             {loading ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <Spinner /> Reading {fileName || 'file'}…
-              </span>
+                <Spinner /> {tx('Reading')} {fileName || 'file'}…
+                              </span>
             ) : (
               <>
                 <div style={{ fontSize: 22, marginBottom: 6 }}>↓</div>
-                <div style={{ fontWeight: 600, color: 'var(--ink)' }}>Choose a CSV or Excel file</div>
+                <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{tx('Choose a CSV or Excel file')}</div>
                 <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
-                  .csv · .tsv · .xlsx · .xls — up to 10 MB
+                  {tx('.csv · .tsv · .xlsx · .xls — up to 10 MB')}
                 </div>
               </>
             )}
@@ -473,29 +476,29 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
 
           <details style={{ marginTop: 16, padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 8 }}>
             <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>
-              Which banks and formats are supported?
+              {tx('Which banks and formats are supported?')}
             </summary>
             <div className="muted" style={{ fontSize: 11.5, lineHeight: 1.65, marginTop: 8 }}>
-              <strong style={{ color: 'var(--ink-2)' }}>Tested:</strong> Bank of Kigali, Equity, I&amp;M, Cogebanque, KCB, BPR,
-              MTN MoMo (mini-statement Excel export), Airtel Money.
+              <strong style={{ color: 'var(--ink-2)' }}>{tx('Tested:')}</strong> {tx(
+                'Bank of Kigali, Equity, I&M, Cogebanque, KCB, BPR,\n              MTN MoMo (mini-statement Excel export), Airtel Money.'
+              )}
               <br />
-              <strong style={{ color: 'var(--ink-2)' }}>Auto-detected columns:</strong> Date, Description / Narration / Details,
-              Debit / Credit / Money In / Money Out, Amount, Type, Charge / Fee.
+              <strong style={{ color: 'var(--ink-2)' }}>{tx('Auto-detected columns:')}</strong> {tx(
+                'Date, Description / Narration / Details,\n              Debit / Credit / Money In / Money Out, Amount, Type, Charge / Fee.'
+              )}
               <br />
-              <strong style={{ color: 'var(--ink-2)' }}>Not supported:</strong> PDF, OFX, MT940 — save as Excel or CSV first.
+              <strong style={{ color: 'var(--ink-2)' }}>{tx('Not supported:')}</strong> {tx('PDF, OFX, MT940 — save as Excel or CSV first.')}
             </div>
           </details>
         </>
       )}
-
       {/* ── Step 2: Map columns ──────────────────────────────────────────── */}
       {step === 'map' && parsed && (
         <>
           <div className="muted" style={{ fontSize: 12.5, marginBottom: 18, lineHeight: 1.6 }}>
-            Found <strong>{parsed.headers.length}</strong> columns, <strong>{parsed.rows.length}</strong> rows in{' '}
-            <strong style={{ color: 'var(--ink-2)' }}>{fileName}</strong>.
-            Fill <em>Debit + Credit</em> <strong>or</strong> <em>Amount + Type</em>.
-          </div>
+            {tx('Found')} <strong>{parsed.headers.length}</strong> {tx('columns,')} <strong>{parsed.rows.length}</strong> {tx('rows in')}{' '}
+            <strong style={{ color: 'var(--ink-2)' }}>{fileName}</strong>{tx('.\n            Fill')} <em>{tx('Debit + Credit')}</em> <strong>or</strong> <em>{tx('Amount + Type')}</em>.
+                      </div>
           <div className="col" style={{ gap: 12 }}>
             {colField('Date', 'date', null, true)}
             {colField('Description', 'desc')}
@@ -525,24 +528,24 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
           </div>
 
           <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-            <button onClick={() => { setStep('upload'); setErr(null); }} className="btn btn-ghost">← Back</button>
+            <button onClick={() => { setStep('upload'); setErr(null); }} className="btn btn-ghost">{tx('← Back')}</button>
             <button onClick={goToReview} className="btn btn-primary">
-              {aiAvailable ? 'Categorise & review →' : 'Generate preview →'}
+              {aiAvailable ? tx('Categorise & review →') : tx('Generate preview →')}
             </button>
           </div>
         </>
       )}
-
       {/* ── Step 3: AI categorising interstitial ─────────────────────────── */}
       {step === 'ai' && (
         <div style={{ padding: '36px 20px 28px', textAlign: 'center' }}>
           <Spinner size={36} />
           <div className="font-serif" style={{ fontSize: 18, marginTop: 18, marginBottom: 6, fontWeight: 400 }}>
-            Categorising your transactions
+            {tx('Categorising your transactions')}
           </div>
           <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
-            Imari is reading each description and picking the best category.
-            Anything unclear will be flagged for you to confirm.
+            {tx(
+              'Imari is reading each description and picking the best category.\n            Anything unclear will be flagged for you to confirm.'
+            )}
           </div>
           {aiProgress.total > 0 && (
             <div style={{ marginTop: 22, maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>
@@ -561,19 +564,18 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
           )}
         </div>
       )}
-
       {/* ── Step 4: Review & import ──────────────────────────────────────── */}
       {step === 'review' && (
         <>
           {/* Summary strip */}
           <div className="row" style={{ gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            <Stat label="To import" value={drafts.length} accent="var(--brand)" />
-            <Stat label="Income"   value={drafts.filter(d => d.type === 'income').length} accent="var(--up)" />
-            <Stat label="Expenses" value={drafts.filter(d => d.type === 'expense').length} accent="var(--down)" />
-            <Stat label="Needs review" value={lowCount} accent={lowCount ? 'var(--gold-ink)' : 'var(--ink-3)'} />
+            <Stat label={tx('To import')} value={drafts.length} accent="var(--brand)" />
+            <Stat label={tx('Income')}   value={drafts.filter(d => d.type === 'income').length} accent="var(--up)" />
+            <Stat label={tx('Expenses')} value={drafts.filter(d => d.type === 'expense').length} accent="var(--down)" />
+            <Stat label={tx('Needs review')} value={lowCount} accent={lowCount ? 'var(--gold-ink)' : 'var(--ink-3)'} />
             <div style={{ flex: 1, minWidth: 140, padding: '8px 12px', background: 'var(--brand-softer)', borderRadius: 8, fontSize: 11.5, color: 'var(--ink-2)', lineHeight: 1.4 }}>
-              Will post to{' '}
-              <strong style={{ color: 'var(--brand)' }}>{acctLabel(pickedAcct) || 'selected account'}</strong>
+              {tx('Will post to')}{' '}
+              <strong style={{ color: 'var(--brand)' }}>{acctLabel(pickedAcct) || tx('selected account')}</strong>
             </div>
           </div>
 
@@ -584,9 +586,9 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
               border: '1px solid var(--gold-soft)',
             }}>
               <strong style={{ color: 'var(--gold-ink)' }}>{lowCount}</strong>{' '}
-              {lowCount === 1 ? 'transaction needs' : 'transactions need'} your eye.
-              They're at the top of the list — pick the right category from the dropdown,
-              or tick the box below the table to import them as-is.
+              {lowCount === 1 ? tx('transaction needs') : tx('transactions need')} {tx(
+                'your eye.\n              They\'re at the top of the list — pick the right category from the dropdown,\n              or tick the box below the table to import them as-is.'
+              )}
             </div>
           )}
 
@@ -608,7 +610,7 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                 {drafts.map((d, idx) => {
                   const flagged = d._confidence === 'low' && !d._userTouched;
                   return (
-                    <tr
+                    (<tr
                       key={d._key}
                       className="cf-draft-row"
                       style={{
@@ -619,13 +621,13 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                     >
                       <td style={{ padding: '8px 10px', width: 32 }}>
                         {flagged ? (
-                          <span title="Needs your review" style={{
+                          <span title={tx('Needs your review')} style={{
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                             width: 18, height: 18, borderRadius: 999, background: 'var(--gold)',
                             color: '#1A170E', fontSize: 11, fontWeight: 700,
                           }}>!</span>
                         ) : d._aiCategorized ? (
-                          <span title="Suggested by AI" style={{ fontSize: 11, color: 'var(--brand)' }}>✦</span>
+                          <span title={tx('Suggested by AI')} style={{ fontSize: 11, color: 'var(--brand)' }}>✦</span>
                         ) : null}
                       </td>
                       <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: 'var(--ink-3)', fontSize: 11 }}>{d.date}</td>
@@ -637,7 +639,7 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                         <select
                           value={d.type}
                           onChange={ev => updateDraft(d._key, 'type', ev.target.value)}
-                          aria-label="Transaction type"
+                          aria-label={tx('Transaction type')}
                           style={{
                             fontSize: 11, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--line)',
                             background: d.type === 'income' ? 'var(--up-soft)' : 'var(--down-soft)',
@@ -645,8 +647,8 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                             fontWeight: 600, cursor: 'pointer',
                           }}
                         >
-                          <option value="income">▲ Income</option>
-                          <option value="expense">▼ Expense</option>
+                          <option value="income">{tx('▲ Income')}</option>
+                          <option value="expense">{tx('▼ Expense')}</option>
                         </select>
                       </td>
                       <td className="num" style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap', color: d.type === 'income' ? 'var(--up)' : 'var(--down)' }}>
@@ -656,7 +658,7 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                         <select
                           value={d.category}
                           onChange={ev => updateDraft(d._key, 'category', ev.target.value)}
-                          aria-label="Category"
+                          aria-label={tx('Category')}
                           style={{
                             fontSize: 11, padding: '4px 7px', borderRadius: 6,
                             border: flagged ? '1px solid var(--gold)' : '1px solid var(--line)',
@@ -664,11 +666,11 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                             minWidth: 150,
                           }}
                         >
-                          <optgroup label="Income">
-                            {incCats.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                          <optgroup label={tx('Income')}>
+                            {incCats.map(c => <option key={c.id} value={c.id}>{tx(c.label)}</option>)}
                           </optgroup>
-                          <optgroup label="Expense">
-                            {expCats.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                          <optgroup label={tx('Expense')}>
+                            {expCats.map(c => <option key={c.id} value={c.id}>{tx(c.label)}</option>)}
                           </optgroup>
                         </select>
                       </td>
@@ -676,7 +678,7 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                         <button
                           type="button"
                           onClick={() => removeDraft(d._key)}
-                          aria-label="Remove this row"
+                          aria-label={tx('Remove this row')}
                           className="cf-row-x"
                           style={{
                             background: 'none', border: 'none', cursor: 'pointer',
@@ -685,7 +687,7 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                           }}
                         >×</button>
                       </td>
-                    </tr>
+                    </tr>)
                   );
                 })}
               </tbody>
@@ -706,28 +708,32 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
                 style={{ marginTop: 2, accentColor: 'var(--brand)' }}
               />
               <span>
-                I've reviewed the <strong>{stillFlagged}</strong> flagged{' '}
-                {stillFlagged === 1 ? 'transaction' : 'transactions'} and want to import them as-is.
-                You can still re-categorise them later from the Cash Flow list.
+                {tx('I\'ve reviewed the')} <strong>{stillFlagged}</strong>flagged{' '}
+                {stillFlagged === 1 ? 'transaction' : 'transactions'} {tx(
+                  'and want to import them as-is.\n                You can still re-categorise them later from the Cash Flow list.'
+                )}
               </span>
             </label>
           )}
 
           <div className="row" style={{ gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
-            <button type="button" onClick={() => { setStep('map'); setReviewedFlag(false); }} className="btn btn-ghost">← Back</button>
+            <button type="button" onClick={() => { setStep('map'); setReviewedFlag(false); }} className="btn btn-ghost">{tx('← Back')}</button>
             <button
               type="button"
               onClick={doImport}
               className="btn btn-primary"
               disabled={!canImport}
-              title={!canImport ? `Resolve ${stillFlagged} flagged row${stillFlagged === 1 ? '' : 's'} first` : undefined}
+              title={!canImport ? tx(
+                'Resolve {0} flagged row{1} first',
+                [stillFlagged, stillFlagged === 1 ? '' : 's']
+              ) : undefined}
             >
-              Import {drafts.length} {drafts.length === 1 ? 'entry' : 'entries'} →
-            </button>
+              {tx('Import')} {drafts.length} {drafts.length === 1 ? 'entry' : 'entries'}→
+                          </button>
           </div>
         </>
       )}
-    </Modal>
+    </Modal>)
   );
 }
 
@@ -765,7 +771,7 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
   const isIncome = cf.type === 'income';
 
   return (
-    <div className="hover-actions">
+    (<div className="hover-actions">
       <div className="row" style={{ padding: '12px 20px', justifyContent: 'space-between' }}>
         <div className="col" style={{ gap: 3, minWidth: 0, flex: 1 }}>
           <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -776,7 +782,7 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
               </span>
             )}
             {cf.attachment && (
-              <button onClick={() => setShowImg(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} title="View attachment">
+              <button onClick={() => setShowImg(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} title={tx('View attachment')}>
                 <img src={cf.attachment.thumb} alt="receipt" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'cover', border: '1px solid var(--line)' }} />
               </button>
             )}
@@ -793,8 +799,8 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
           <button type="button" onClick={() => onDelete(cf.id)} aria-label={`Delete cashflow ${cf.description || cf.category || ''}`.trim()} className="btn-icon-sm is-row-action is-danger"><span aria-hidden="true">×</span></button>
         </div>
       </div>
-      <ImageLightbox open={showImg && !!cf.attachment} onClose={() => setShowImg(false)} src={cf.attachment?.data} alt="Cashflow receipt" />
-    </div>
+      <ImageLightbox open={showImg && !!cf.attachment} onClose={() => setShowImg(false)} src={cf.attachment?.data} alt={tx('Cashflow receipt')} />
+    </div>)
   );
 }
 
@@ -910,23 +916,21 @@ export default function CashFlowView({ state, dispatch }) {
   };
 
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       {/* KPI strip */}
       <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 22 }}>
         {[
-          { label: 'Monthly income',   value: fmtBase(totInc, profile.displayCurrency, { compact: true }), color: 'var(--up)',   bg: 'var(--up-soft)' },
-          { label: 'Monthly expenses', value: fmtBase(totExp, profile.displayCurrency, { compact: true }), color: 'var(--down)', bg: 'var(--down-soft)' },
-          { label: 'Net cash flow',    value: `${netFlow >= 0 ? '+' : ''}${fmtBase(netFlow, profile.displayCurrency, { compact: true })}`, color: netFlow >= 0 ? 'var(--up)' : 'var(--down)', bg: netFlow >= 0 ? 'var(--up-soft)' : 'var(--down-soft)' },
-          { label: 'Savings rate',     value: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)', bg: 'var(--paper)' },
+          { label: tx('Monthly income'),   value: fmtBase(totInc, profile.displayCurrency, { compact: true }), color: 'var(--up)',   bg: 'var(--up-soft)' },
+          { label: tx('Monthly expenses'), value: fmtBase(totExp, profile.displayCurrency, { compact: true }), color: 'var(--down)', bg: 'var(--down-soft)' },
+          { label: tx('Net cash flow'),    value: `${netFlow >= 0 ? '+' : ''}${fmtBase(netFlow, profile.displayCurrency, { compact: true })}`, color: netFlow >= 0 ? 'var(--up)' : 'var(--down)', bg: netFlow >= 0 ? 'var(--up-soft)' : 'var(--down-soft)' },
+          { label: tx('Savings rate'),     value: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)', bg: 'var(--paper)' },
         ].map((c, i) => (
           <StaggerItem key={i} style={{ padding: '14px 18px', borderRadius: 'var(--r-md)', background: c.bg, border: '0.5px solid var(--line)' }}>
-            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{c.label}</div>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{tx(c.label)}</div>
             <div className="num" style={{ fontSize: 22, fontWeight: 700, color: c.color, letterSpacing: '-0.02em' }}>{c.value}</div>
           </StaggerItem>
         ))}
       </Stagger>
-
       {/* Trend chart + category breakdown ─────────────────────────────────── */}
       {cashflows.length > 0 && (
         <Reveal className="card" style={{ padding: '18px 22px', marginBottom: 20, display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 22 }}>
@@ -934,7 +938,7 @@ export default function CashFlowView({ state, dispatch }) {
           <div style={{ minWidth: 0 }}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>
-                {chartMonths === 12 ? '12-Month' : '6-Month'} Cash Flow
+                {chartMonths === 12 ? tx('12-Month') : tx('6-Month')} {tx('Cash Flow')}
               </div>
               <div className="row" style={{ gap: 4 }}>
                 {[6, 12].map(n => (
@@ -958,15 +962,19 @@ export default function CashFlowView({ state, dispatch }) {
                 padding: '8px 10px', marginBottom: 12, borderRadius: 6, fontSize: 11,
                 background: 'var(--gold-soft)', color: 'var(--ink-2)',
               }}>
-                Only <strong>{monthsWithData} month{monthsWithData === 1 ? '' : 's'}</strong> of data — averages
-                and savings rate may not be reliable yet.
+                {tx('Only')} <strong>{monthsWithData} month{monthsWithData === 1 ? '' : 's'}</strong> {tx(
+                  'of data — averages\n                and savings rate may not be reliable yet.'
+                )}
               </div>
             )}
 
             {/* Chart proper — Y-axis + bars side by side */}
             <div
               role="img"
-              aria-label={`${chartMonths}-month cash flow bar chart: ${barData.map(b => `${b.label} income ${fmtBase(b.inc, profile.displayCurrency, { compact: true })}, expenses ${fmtBase(b.exp, profile.displayCurrency, { compact: true })}`).join('; ')}`}
+              aria-label={tx('{0}-month cash flow bar chart: {1}', [
+                chartMonths,
+                barData.map(b => `${b.label} income ${fmtBase(b.inc, profile.displayCurrency, { compact: true })}, expenses ${fmtBase(b.exp, profile.displayCurrency, { compact: true })}`).join('; ')
+              ])}
               style={{ display: 'flex', gap: 8, height: 120 }}
             >
               {/* Y-axis ticks: max / 50% / 0 */}
@@ -992,7 +1000,7 @@ export default function CashFlowView({ state, dispatch }) {
                   const net = b.inc - b.exp;
                   const tip = `${b.label} ${b.y} · Income ${fmtBase(b.inc, profile.displayCurrency, { compact: true })} · Expense ${fmtBase(b.exp, profile.displayCurrency, { compact: true })} · Net ${net >= 0 ? '+' : ''}${fmtBase(net, profile.displayCurrency, { compact: true })}`;
                   return (
-                    <div
+                    (<div
                       key={i}
                       title={tip}
                       style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, position: 'relative', minWidth: 0 }}
@@ -1003,8 +1011,8 @@ export default function CashFlowView({ state, dispatch }) {
                       </div>
                       {/* bottom:-16 drops the label into the 18px strip the row's
                           paddingBottom reserves — at bottom:0 it overlapped the bars. */}
-                      <div style={{ position: 'absolute', bottom: -16, fontSize: 10, color: 'var(--ink-4)' }}>{b.label}</div>
-                    </div>
+                      <div style={{ position: 'absolute', bottom: -16, fontSize: 10, color: 'var(--ink-4)' }}>{tx(b.label)}</div>
+                    </div>)
                   );
                 })}
               </div>
@@ -1012,23 +1020,23 @@ export default function CashFlowView({ state, dispatch }) {
 
             {/* Legend */}
             <div className="row" style={{ gap: 16, marginTop: 10 }}>
-              {[{ color: 'var(--up)', label: 'Income' }, { color: 'var(--down)', label: 'Expense' }].map(l => (
+              {[{ color: 'var(--up)', label: tx('Income') }, { color: 'var(--down)', label: tx('Expense') }].map(l => (
                 <div key={l.label} className="row" style={{ gap: 5 }}>
                   <div style={{ width: 10, height: 10, background: l.color, borderRadius: 2, opacity: 0.78 }} />
-                  <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{l.label}</span>
+                  <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{tx(l.label)}</span>
                 </div>
               ))}
-              <span className="muted" style={{ fontSize: 10, marginLeft: 'auto' }}>Hover a bar for exact values</span>
+              <span className="muted" style={{ fontSize: 10, marginLeft: 'auto' }}>{tx('Hover a bar for exact values')}</span>
             </div>
           </div>
 
           {/* Category breakdown pie for currently-viewed month — UX review #37 */}
           <div className="col" style={{ gap: 8, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>Expenses by category</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>{tx('Expenses by category')}</div>
             <div className="muted" style={{ fontSize: 10.5, marginTop: -4 }}>{monthLabel}</div>
             {expenseByCategory.length === 0 ? (
               <div className="muted" style={{ fontSize: 11, padding: 16, textAlign: 'center', background: 'var(--bg-2)', borderRadius: 8 }}>
-                No expense data this month
+                {tx('No expense data this month')}
               </div>
             ) : (
               <div className="row" style={{ gap: 12, alignItems: 'center' }}>
@@ -1040,13 +1048,13 @@ export default function CashFlowView({ state, dispatch }) {
                     const total = expenseByCategory.reduce((s, x) => s + x.value, 0);
                     const pct = total > 0 ? (c.value / total) * 100 : 0;
                     return (
-                      <div key={c.id} className="row" style={{ justifyContent: 'space-between', gap: 6, minWidth: 0 }}>
+                      (<div key={c.id} className="row" style={{ justifyContent: 'space-between', gap: 6, minWidth: 0 }}>
                         <span className="row" style={{ gap: 6, minWidth: 0 }}>
                           <span style={{ width: 7, height: 7, borderRadius: 1.5, background: c.color, flexShrink: 0 }} />
-                          <span style={{ color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</span>
+                          <span style={{ color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx(c.label)}</span>
                         </span>
                         <span className="num" style={{ color: 'var(--ink-3)', fontSize: 10, flexShrink: 0 }}>{pct.toFixed(0)}%</span>
-                      </div>
+                      </div>)
                     );
                   })}
                   {expenseByCategory.length > 5 && (
@@ -1058,37 +1066,33 @@ export default function CashFlowView({ state, dispatch }) {
           </div>
         </Reveal>
       )}
-
       {/* 30-day forecast — projects the liquid balance forward from recurring
           entries + future-dated one-offs (F3). */}
       {cashflows.length > 0 && (
         <ForecastSection cashflows={cashflows} accounts={accounts} displayCurrency={profile.displayCurrency} />
       )}
-
       {/* Monthly budget envelopes (F6) — limits per expense category, paced
           against how far through the month we are. */}
       <BudgetSection cashflows={cashflows} budgets={state.budgets || {}} dispatch={dispatch} displayCurrency={profile.displayCurrency} />
-
       {/* Month navigator + actions */}
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div className="row" style={{ gap: 8 }}>
-          <button onClick={() => setMonthOffset(m => m - 1)} className="btn btn-ghost" style={{ padding: '7px 14px' }}>‹ Prev</button>
+          <button onClick={() => setMonthOffset(m => m - 1)} className="btn btn-ghost" style={{ padding: '7px 14px' }}>{tx('‹ Prev')}</button>
           <div style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', background: 'var(--paper)', border: '1px solid var(--line)', fontSize: 13, fontWeight: 600 }}>{monthLabel}</div>
-          <button onClick={() => setMonthOffset(m => m + 1)} disabled={monthOffset >= 0} className="btn btn-ghost" style={{ padding: '7px 14px' }}>Next ›</button>
+          <button onClick={() => setMonthOffset(m => m + 1)} disabled={monthOffset >= 0} className="btn btn-ghost" style={{ padding: '7px 14px' }}>{tx('Next ›')}</button>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <button onClick={() => setImporting(true)} className="btn btn-ghost" style={{ fontSize: 13 }}>⬆ Import statement</button>
-          <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add entry</button>
+          <button onClick={() => setImporting(true)} className="btn btn-ghost" style={{ fontSize: 13 }}>{tx('⬆ Import statement')}</button>
+          <button onClick={() => setEditing({})} className="btn btn-primary">{tx('＋ Add entry')}</button>
         </div>
       </div>
-
       {/* Income section */}
       {incomes.length > 0 && (
         <Reveal className="card" style={{ padding: 0, marginBottom: 14 }}>
           <div className="row" style={{ padding: '14px 20px', justifyContent: 'space-between' }}>
             <div className="row" style={{ gap: 8 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--up)', flexShrink: 0 }} />
-              <div className="font-serif" style={{ fontSize: 16 }}>Income</div>
+              <div className="font-serif" style={{ fontSize: 16 }}>{tx('Income')}</div>
               <span className="pill pill-soft">{incomes.length}</span>
             </div>
             <div className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--up)' }}>
@@ -1109,14 +1113,13 @@ export default function CashFlowView({ state, dispatch }) {
           ))}
         </Reveal>
       )}
-
       {/* Expense section */}
       {expenses.length > 0 && (
         <Reveal className="card" style={{ padding: 0, marginBottom: 14 }}>
           <div className="row" style={{ padding: '14px 20px', justifyContent: 'space-between' }}>
             <div className="row" style={{ gap: 8 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--down)', flexShrink: 0 }} />
-              <div className="font-serif" style={{ fontSize: 16 }}>Expenses</div>
+              <div className="font-serif" style={{ fontSize: 16 }}>{tx('Expenses')}</div>
               <span className="pill pill-soft">{expenses.length}</span>
             </div>
             <div className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--down)' }}>
@@ -1137,32 +1140,28 @@ export default function CashFlowView({ state, dispatch }) {
           ))}
         </Reveal>
       )}
-
       {/* Recurring-subscription audit — always-visible roll-up of every non-'once'
           expense, so the user sees what they're paying every month without having
           to look at it. Independent of the month picker (subscriptions don't move). */}
       <RecurringAuditSection cashflows={cashflows} displayCurrency={profile.displayCurrency} />
-
       {cashflows.length === 0 && (
         <div className="card" style={{ padding: 60, textAlign: 'center' }}>
-          <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>Track your cash flow</div>
+          <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>{tx('Track your cash flow')}</div>
           <div className="muted" style={{ fontSize: 13, marginBottom: 20 }}>
-            Add individual entries or import a bank statement CSV to get started.
+            {tx('Add individual entries or import a bank statement CSV to get started.')}
           </div>
           <div className="row" style={{ gap: 10, justifyContent: 'center' }}>
-            <button onClick={() => setImporting(true)} className="btn btn-ghost">⬆ Import statement</button>
-            <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add first entry</button>
+            <button onClick={() => setImporting(true)} className="btn btn-ghost">{tx('⬆ Import statement')}</button>
+            <button onClick={() => setEditing({})} className="btn btn-primary">{tx('＋ Add first entry')}</button>
           </div>
         </div>
       )}
-
       {editing !== null && (
         <CFEditor entry={editing} accounts={accounts} onSave={handleSave} onCancel={() => setEditing(null)} />
       )}
       {importing && (
         <ImportModal accounts={accounts} currency={profile.displayCurrency} catRules={state.catRules || []} onImport={handleImport} onCancel={() => setImporting(false)} />
       )}
-
       <ConfirmDestructive
         open={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
@@ -1170,20 +1169,20 @@ export default function CashFlowView({ state, dispatch }) {
           dispatch({ type: 'deleteCashflow', id: pendingDelete.id });
           setPendingDelete(null);
         }}
-        title="Delete this cash flow entry?"
+        title={tx('Delete this cash flow entry?')}
         description={pendingDelete && (
           <span>
             <strong style={{ color: 'var(--ink)' }}>{pendingDelete.description || pendingDelete.category || pendingDelete.type}</strong>
             {' · '}
             <span className="num">{fmt(pendingDelete.amount, pendingDelete.currency || 'RWF')}</span>
             <br />
-            {pendingDelete.accountId && 'Any linked account balance will recompute. '}
-            You can't undo this.
+            {pendingDelete.accountId && tx('Any linked account balance will recompute. ')}
+            {tx('You can\'t undo this.')}
           </span>
         )}
-        confirmLabel="Delete entry"
+        confirmLabel={tx('Delete entry')}
       />
-    </div>
+    </div>)
   );
 }
 
@@ -1197,13 +1196,15 @@ function BudgetSection({ cashflows, budgets, dispatch, displayCurrency }) {
   const hasBudgets = status.rows.length > 0;
   if (!hasBudgets && !managing) {
     return (
-      <div className="card" style={{ padding: '14px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      (<div className="card" style={{ padding: '14px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>Monthly budgets</div>
-          <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>No envelopes yet — every category without a limit is a category that can quietly overrun.</div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>{tx('Monthly budgets')}</div>
+          <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{tx(
+            'No envelopes yet — every category without a limit is a category that can quietly overrun.'
+          )}</div>
         </div>
-        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setManaging(true)}>Set budgets</button>
-      </div>
+        <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setManaging(true)}>{tx('Set budgets')}</button>
+      </div>)
     );
   }
 
@@ -1216,33 +1217,35 @@ function BudgetSection({ cashflows, budgets, dispatch, displayCurrency }) {
   };
 
   return (
-    <div className="card" style={{ padding: '18px 22px', marginBottom: 20 }}>
+    (<div className="card" style={{ padding: '18px 22px', marginBottom: 20 }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <div className="row" style={{ gap: 8, alignItems: 'baseline' }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>Monthly budgets</div>
+          <div style={{ fontSize: 13, fontWeight: 600 }}>{tx('Monthly budgets')}</div>
           {hasBudgets && (
             <span className="muted" style={{ fontSize: 11 }}>
-              {fmtBase(status.totalSpent, displayCurrency, { compact: true })} of {fmtBase(status.totalBudget, displayCurrency, { compact: true })} · {Math.round(status.monthPct)}% through the month
+              {fmtBase(status.totalSpent, displayCurrency, { compact: true })}of {fmtBase(status.totalBudget, displayCurrency, { compact: true })}· {Math.round(status.monthPct)}{tx('% through the month')}
             </span>
           )}
         </div>
         <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setManaging(m => !m)}>
-          {managing ? 'Done' : 'Manage'}
+          {managing ? tx('Done') : tx('Manage')}
         </button>
       </div>
-
       {!managing && status.rows.map(r => (
         <div key={r.category} style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-            <span style={{ fontWeight: 500 }}>{r.label}</span>
+            <span style={{ fontWeight: 500 }}>{tx(r.label)}</span>
             <span className="num" style={{ color: paceColor(r.pace), fontWeight: 600 }}>
               {fmtBase(r.spent, displayCurrency, { compact: true })} / {fmtBase(r.budget, displayCurrency, { compact: true })}
-              {r.over && ` · ${fmtBase(r.spent - r.budget, displayCurrency, { compact: true })} over`}
+              {r.over && tx(
+                ' · {0} over',
+                [fmtBase(r.spent - r.budget, displayCurrency, { compact: true })]
+              )}
             </span>
           </div>
           <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden', position: 'relative' }}
             role="progressbar" aria-valuenow={Math.round(r.pct)} aria-valuemin={0} aria-valuemax={100}
-            aria-label={`${r.label} budget: ${Math.round(r.pct)}% used`}>
+            aria-label={tx('{0} budget: {1}% used', [r.label, Math.round(r.pct)])}>
             <div style={{
               width: `${Math.min(r.pct, 100)}%`, height: '100%', borderRadius: 3,
               background: paceColor(r.pace), opacity: 0.85, transition: 'width 240ms cubic-bezier(0.23,1,0.32,1)',
@@ -1252,36 +1255,34 @@ function BudgetSection({ cashflows, budgets, dispatch, displayCurrency }) {
           </div>
         </div>
       ))}
-
       {!managing && status.overCount > 0 && (
         <div role="status" style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 11.5, background: 'var(--down-soft)', color: 'var(--down)', fontWeight: 600 }}>
-          {status.overCount} envelope{status.overCount > 1 ? 's' : ''} over plan — {fmtBase(status.totalOver, displayCurrency, { compact: true })} past budget this month.
+          {status.overCount}envelope{status.overCount > 1 ? 's' : ''} {tx('over plan —')} {fmtBase(status.totalOver, displayCurrency, { compact: true })} {tx('past budget this month.')}
         </div>
       )}
-
       {managing && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
           {EXPENSE_CATEGORIES.map(c => (
             <label key={c.id} className="row" style={{ gap: 8, fontSize: 12, justifyContent: 'space-between' }}>
-              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</span>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx(c.label)}</span>
               <input
                 inputMode="numeric"
-                placeholder="No limit"
+                placeholder={tx('No limit')}
                 value={draft[c.id] !== undefined ? draft[c.id] : (budgets[c.id] || '')}
                 onChange={e => setDraft(d => ({ ...d, [c.id]: e.target.value }))}
                 onBlur={() => commit(c.id)}
                 onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                aria-label={`Monthly budget for ${c.label} in RWF`}
+                aria-label={tx('Monthly budget for {0} in RWF', [c.label])}
                 style={{ ...inputStyle, width: 110, textAlign: 'right', fontSize: 12 }}
               />
             </label>
           ))}
           <div className="muted" style={{ fontSize: 10.5, gridColumn: '1 / -1' }}>
-            Amounts are RWF per month. Clear a field to remove its envelope.
+            {tx('Amounts are RWF per month. Clear a field to remove its envelope.')}
           </div>
         </div>
       )}
-    </div>
+    </div>)
   );
 }
 
@@ -1303,30 +1304,28 @@ function ForecastSection({ cashflows, accounts, displayCurrency }) {
   const crunch = forecast.firstShortfallDate;
 
   return (
-    <div className="card" style={{ padding: '18px 22px', marginBottom: 20 }}>
+    (<div className="card" style={{ padding: '18px 22px', marginBottom: 20 }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>Next 30 days</div>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>{tx('Next 30 days')}</div>
         <div className="muted" style={{ fontSize: 10.5 }}>
           {accounts.length > 0
-            ? 'Projected from your account balances and recurring entries'
-            : 'Projected from your recurring entries (no linked accounts — starts at 0)'}
+            ? tx('Projected from your account balances and recurring entries')
+            : tx('Projected from your recurring entries (no linked accounts — starts at 0)')}
         </div>
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, margin: '10px 0 14px' }}>
         {[
-          { label: 'Expected in',  value: `+ ${fmtBase(forecast.totalIncome, displayCurrency, { compact: true })}`, color: 'var(--up)' },
-          { label: 'Expected out', value: `− ${fmtBase(forecast.totalExpense, displayCurrency, { compact: true })}`, color: 'var(--down)' },
-          { label: 'Balance in 30 days', value: fmtBase(forecast.endBalance, displayCurrency, { compact: true }), color: forecast.endBalance >= 0 ? 'var(--ink)' : 'var(--down)' },
-          { label: 'Lowest point', value: fmtBase(forecast.minBalance, displayCurrency, { compact: true }), color: forecast.minBalance >= 0 ? 'var(--ink)' : 'var(--down)' },
+          { label: tx('Expected in'),  value: `+ ${fmtBase(forecast.totalIncome, displayCurrency, { compact: true })}`, color: 'var(--up)' },
+          { label: tx('Expected out'), value: `− ${fmtBase(forecast.totalExpense, displayCurrency, { compact: true })}`, color: 'var(--down)' },
+          { label: tx('Balance in 30 days'), value: fmtBase(forecast.endBalance, displayCurrency, { compact: true }), color: forecast.endBalance >= 0 ? 'var(--ink)' : 'var(--down)' },
+          { label: tx('Lowest point'), value: fmtBase(forecast.minBalance, displayCurrency, { compact: true }), color: forecast.minBalance >= 0 ? 'var(--ink)' : 'var(--down)' },
         ].map(c => (
           <div key={c.label} style={{ padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 8 }}>
-            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{c.label}</div>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{tx(c.label)}</div>
             <div className="num" style={{ fontSize: 15, fontWeight: 700, color: c.color, marginTop: 2 }}>{c.value}</div>
           </div>
         ))}
       </div>
-
       <AreaChart
         data={forecast.days.map(d => d.balance)}
         labels={forecast.days.map(d => shortDate(d.date))}
@@ -1336,17 +1335,17 @@ function ForecastSection({ cashflows, accounts, displayCurrency }) {
         formatValue={(v) => fmtBase(v, displayCurrency, { compact: true })}
         ariaLabel={`Projected balance over the next 30 days, ending at ${fmtBase(forecast.endBalance, displayCurrency, { compact: true })}.`}
       />
-
       {crunch && (
         <div role="status" style={{
           marginTop: 12, padding: '9px 12px', borderRadius: 8, fontSize: 11.5, lineHeight: 1.5,
           background: 'var(--down-soft)', color: 'var(--down)', fontWeight: 600,
         }}>
-          ▼ Projected to run dry on {shortDate(crunch)} — recurring bills outpace your balance.
-          Move money before then or trim a subscription below.
+          {tx('▼ Projected to run dry on')} {shortDate(crunch)} {tx(
+            '— recurring bills outpace your balance.\n          Move money before then or trim a subscription below.'
+          )}
         </div>
       )}
-    </div>
+    </div>)
   );
 }
 
@@ -1358,7 +1357,7 @@ function RecurringAuditSection({ cashflows, displayCurrency }) {
   if (audit.count === 0) return null;
 
   return (
-    <div className="card" style={{ padding: 0, marginBottom: 14 }}>
+    (<div className="card" style={{ padding: 0, marginBottom: 14 }}>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -1371,7 +1370,7 @@ function RecurringAuditSection({ cashflows, displayCurrency }) {
       >
         <div className="row" style={{ gap: 8, alignItems: 'baseline' }}>
           <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
-          <div className="font-serif" style={{ fontSize: 16 }}>Recurring subscriptions</div>
+          <div className="font-serif" style={{ fontSize: 16 }}>{tx('Recurring subscriptions')}</div>
           <span className="pill pill-soft">{audit.count}</span>
           <span className="muted" style={{ fontSize: 11 }}>{open ? 'hide' : 'review'}</span>
         </div>
@@ -1384,7 +1383,6 @@ function RecurringAuditSection({ cashflows, displayCurrency }) {
           </div>
         </div>
       </button>
-
       {open && (
         <>
           <div className="hr" />
@@ -1409,7 +1407,7 @@ function RecurringAuditSection({ cashflows, displayCurrency }) {
                 {i > 0 && <div className="hr" style={{ margin: '0 20px' }} />}
                 <div className="row" style={{ padding: '10px 20px', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.description}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx(s.description)}</div>
                     <div className="muted" style={{ fontSize: 11 }}>
                       {s.recurring} · {s.category.replace(/-/g, ' ')} · {fmt(s.amount, s.currency, { compact: true })} each
                     </div>
@@ -1422,10 +1420,12 @@ function RecurringAuditSection({ cashflows, displayCurrency }) {
             ))}
           </div>
           <div className="muted" style={{ fontSize: 11, padding: '10px 20px', lineHeight: 1.5, background: 'var(--bg-2)' }}>
-            This is what you pay every month without thinking about it. Cancelling one RWF 5,000/mo subscription saves RWF 60,000/year — and compounds in your goal lockbox.
+            {tx(
+              'This is what you pay every month without thinking about it. Cancelling one RWF 5,000/mo subscription saves RWF 60,000/year — and compounds in your goal lockbox.'
+            )}
           </div>
         </>
       )}
-    </div>
+    </div>)
   );
 }

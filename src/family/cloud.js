@@ -5,9 +5,11 @@
 import { supabase } from '../supabase.js';
 import { HABIT_IDS, MAX_NOTE, cleanText, isISODate } from './habits.js';
 
+import { tx } from '../i18n/tx.js';
+
 const need = (portfolioId) => {
-  if (!supabase) throw new Error('Cloud sync is not configured');
-  if (!portfolioId) throw new Error('No portfolio');
+  if (!supabase) throw new Error(tx('Cloud sync is not configured'));
+  if (!portfolioId) throw new Error(tx('No portfolio'));
 };
 const throwIf = ({ error }) => { if (error) throw error; };
 
@@ -36,7 +38,7 @@ export function rowsToLogs(rows) {
 
 export async function setHabit(portfolioId, weekStart, habitId, done) {
   need(portfolioId);
-  if (!isISODate(weekStart) || !HABIT_IDS.has(habitId)) throw new Error('Invalid habit');
+  if (!isISODate(weekStart) || !HABIT_IDS.has(habitId)) throw new Error(tx('Invalid habit'));
   throwIf(await supabase
     .from('family_habit_logs')
     .upsert({ portfolio_id: portfolioId, week_start: weekStart, habit_id: habitId, done: !!done },
@@ -55,7 +57,7 @@ export async function fetchNotes(portfolioId, prefix = '') {
 
 export async function setNote(portfolioId, key, body) {
   need(portfolioId);
-  if (!/^[a-z0-9_:-]{1,60}$/.test(key)) throw new Error('Invalid note key');
+  if (!/^[a-z0-9_:-]{1,60}$/.test(key)) throw new Error(tx('Invalid note key'));
   const clean = cleanText(body, MAX_NOTE);
   if (!clean) {
     throwIf(await supabase.from('family_notes').delete().eq('portfolio_id', portfolioId).eq('key', key));

@@ -7,6 +7,8 @@ import { nextOccurrence, parseLocalDate } from '../engine/recurrence.js';
 import { liquidValueRWF, monthlyFlowsRWF } from '../engine/insights/_shared.js';
 import { toLocalISO, fromISO, isISODate, cleanText } from './habits.js';
 
+import { tx } from '../i18n/tx.js';
+
 const opt = (id, label) => ({ id, label });
 
 // Field spec: key = typed column ('title' | 'due_date' | 'amount') or a data.* key.
@@ -78,7 +80,7 @@ export function itemToForm(row) {
  */
 export function normalizeItem(form) {
   const spec = KINDS[form.kind];
-  if (!spec) throw new Error('Unknown item kind');
+  if (!spec) throw new Error(tx('Unknown item kind'));
   const row = { kind: form.kind, status: ['open', 'done', 'archived'].includes(form.status) ? form.status : 'open', title: '', due_date: null, amount: null, data: {} };
   if (form.id) row.id = form.id;
   for (const f of spec.fields) {
@@ -96,13 +98,13 @@ export function normalizeItem(form) {
         v = f.options.some(o => o.id === v) ? v : (f.def ?? null); break;
       case 'url':
         v = cleanText(v, f.max || 300).trim();
-        if (v && !/^https?:\/\/[^\s]+$/i.test(v)) throw new Error('Link must start with http:// or https://');
+        if (v && !/^https?:\/\/[^\s]+$/i.test(v)) throw new Error(tx('Link must start with http:// or https://'));
         break;
       case 'asset':
         v = typeof v === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(v) ? v : null; break;
       default: v = null;
     }
-    if (f.required && (v === null || v === '')) throw new Error(`${f.label} is required`);
+    if (f.required && (v === null || v === '')) throw new Error(tx('{0} is required', [f.label]));
     if (COLUMN_KEYS.has(f.key)) row[f.key] = v === '' ? null : v;
     else if (v !== null && v !== '') row.data[f.key] = v;
   }

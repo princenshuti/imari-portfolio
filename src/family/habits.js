@@ -1,3 +1,4 @@
+import { tx } from '../i18n/tx.js';
 // habits.js — Family module: the weekly scorecard definition and every pure
 // calculation behind it (scores, ratings, streaks, month/year roll-ups, and
 // the one-off importer for the 2026 standalone dashboard export).
@@ -204,12 +205,12 @@ export const MAX_IMPORT_BYTES = 1024 * 1024;
 const MAX_IMPORT_WEEKS = 200;
 
 export function mapLegacyExport(raw, { importedAt = new Date() } = {}) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Not a dashboard export');
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error(tx('Not a dashboard export'));
   const logs = [];   // { week_start, habit_id, done }
   const notes = [];  // { key, body }
 
   const weeks = raw.weeks && typeof raw.weeks === 'object' ? Object.entries(raw.weeks) : [];
-  if (weeks.length > MAX_IMPORT_WEEKS) throw new Error(`Too many weeks (max ${MAX_IMPORT_WEEKS})`);
+  if (weeks.length > MAX_IMPORT_WEEKS) throw new Error(tx('Too many weeks (max {0})', [MAX_IMPORT_WEEKS]));
   for (const [key, rec] of weeks) {
     if (!isISODate(key) || !rec || typeof rec !== 'object') continue;
     const week = weekStart(key); // normalise to Monday, local

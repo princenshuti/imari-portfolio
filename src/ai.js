@@ -14,6 +14,8 @@
  */
 import { supabase, isConfigured } from './supabase.js';
 
+import { tx } from './i18n/tx.js';
+
 // ── Local-dev fallback key (never used in production with Supabase) ───────────
 // Key baked in at build time via VITE_ANTHROPIC_KEY in .env.local (never .env)
 const ENV_KEY = import.meta.env.VITE_ANTHROPIC_KEY || '';
@@ -57,7 +59,7 @@ const MIN_INTERVAL_MS = 3000;
 function throttle() {
   const now = Date.now();
   if (now - _lastReqAt < MIN_INTERVAL_MS) {
-    throw new Error('Please wait a moment before asking again.');
+    throw new Error(tx('Please wait a moment before asking again.'));
   }
   _lastReqAt = now;
 }
@@ -89,7 +91,7 @@ async function callProxy(systemPrompt, messages, userQuestion, model) {
         if (e.message && e.message !== 'Unexpected end of JSON input') throw e;
       }
     }
-    throw new Error(error.message || 'AI request failed');
+    throw new Error(error.message || tx('AI request failed'));
   }
   if (data?.error) throw new Error(data.error);
   return data.text;
@@ -131,7 +133,7 @@ async function invokeProxy(body) {
       try { const b = await error.context.json(); if (b?.error) throw new Error(b.error); }
       catch (e) { if (e.message && e.message !== 'Unexpected end of JSON input') throw e; }
     }
-    throw new Error(error.message || 'AI request failed');
+    throw new Error(error.message || tx('AI request failed'));
   }
   if (data?.error) throw new Error(data.error);
   return data;
@@ -155,7 +157,7 @@ export async function completeChatTools(systemPrompt, messages, userQuestion, { 
     const res = await invokeProxy(body);
     lastText = res.text || lastText;
     const uses = Array.isArray(res.toolUses) ? res.toolUses : [];
-    if (!uses.length) return { text: res.text || (actions.length ? '' : 'I could not produce an answer — please try again.'), actions };
+    if (!uses.length) return { text: res.text || (actions.length ? '' : tx('I could not produce an answer — please try again.')), actions };
     const results = [];
     for (const tu of uses) {
       try { const out = await onTool(tu.name, tu.input || {}); actions.push(out); results.push({ tool_use_id: tu.id, content: String(out).slice(0, 2000) }); }
@@ -165,7 +167,7 @@ export async function completeChatTools(systemPrompt, messages, userQuestion, { 
     msgs.push({ role: 'assistant', content: [ ...(res.text ? [{ type: 'text', text: res.text }] : []), ...uses.map(tu => ({ type: 'tool_use', id: tu.id, name: tu.name, input: tu.input || {} })) ] });
     body = { systemPrompt, messages: msgs.slice(-10), toolResults: results, model, toolset };
   }
-  return { text: lastText || 'Done.', actions };
+  return { text: lastText || tx('Done.'), actions };
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -175,7 +177,7 @@ export async function completeText(_apiKey, prompt) {
     return callProxy(null, [], prompt, 'claude-haiku-4-5-20251001');
   }
   const key = ENV_KEY || _memKey;
-  if (!key) throw new Error('No API key available');
+  if (!key) throw new Error(tx('No API key available'));
   return callDirect(key, null, [], prompt, 'claude-haiku-4-5-20251001');
 }
 
@@ -184,7 +186,7 @@ export async function completeChat(_apiKey, systemPrompt, messages, userQuestion
     return callProxy(systemPrompt, messages, userQuestion, 'claude-sonnet-4-6');
   }
   const key = ENV_KEY || _memKey;
-  if (!key) throw new Error('No API key available');
+  if (!key) throw new Error(tx('No API key available'));
   return callDirect(key, systemPrompt, messages, userQuestion, 'claude-sonnet-4-6');
 }
 
@@ -203,13 +205,13 @@ export async function completeVision(prompt, image, model = 'claude-haiku-4-5-20
       if (error.context && typeof error.context.json === 'function') {
         try { const b = await error.context.json(); if (b?.error) throw new Error(b.error); } catch (e) { if (e.message && e.message !== 'Unexpected end of JSON input') throw e; }
       }
-      throw new Error(error.message || 'AI request failed');
+      throw new Error(error.message || tx('AI request failed'));
     }
     if (data?.error) throw new Error(data.error);
     return data.text;
   }
   const key = ENV_KEY || _memKey;
-  if (!key) throw new Error('No API key available');
+  if (!key) throw new Error(tx('No API key available'));
   throttle();
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });

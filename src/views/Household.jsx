@@ -9,6 +9,8 @@ import { KINDS, daysUntil } from '../family/planning.js';
 import { addDays, toLocalISO } from '../family/habits.js';
 import { ItemEditor, ErrorBanner, SignInNote, PageHead, Empty, Due, money } from '../family/ui.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 const WHO = Object.fromEntries(KINDS.task.fields.find(f => f.key === 'assignee').options.map(o => [o.id, o.label]));
 const catLabel = id => EXPENSE_CATEGORIES.find(c => c.id === id)?.label || id || 'Expense';
 
@@ -43,33 +45,40 @@ export default function Household({ state, dispatch, portfolioId, role }) {
   }
 
   return (
-    <div className="col" style={{ gap: 16 }}>
+    (<div className="col" style={{ gap: 16 }}>
       <ErrorBanner error={error} />
       <div className="dash-grid-2">
         <div className="card" style={{ padding: 18 }}>
-          <PageHead title="Tasks" sub={`${open.length} open · ${done.length} done`}
-            action={canEdit && <button className="btn btn-primary btn-sm" onClick={() => setEditing('new')}>+ Task</button>} />
-          {items === null && !error && <Empty>Loading…</Empty>}
-          {items && open.length === 0 && <Empty>No open tasks. Chores, repairs, school runs, house-help pay day — anything the home needs.</Empty>}
+          <PageHead title={tx('Tasks')} sub={tx('{0} open · {1} done', [open.length, done.length])}
+            action={canEdit && <button className="btn btn-primary btn-sm" onClick={() => setEditing('new')}>{tx('+ Task')}</button>} />
+          {items === null && !error && <Empty>{tx('Loading…')}</Empty>}
+          {items && open.length === 0 && <Empty>{tx(
+            'No open tasks. Chores, repairs, school runs, house-help pay day — anything the home needs.'
+          )}</Empty>}
           <div className="col" style={{ gap: 2, marginTop: 8 }}>
             {(showDone ? tasks : open).map(t => (
               <div key={t.id} className="row" style={{ gap: 10, padding: '7px 0', borderTop: '1px solid var(--line-soft)', alignItems: 'flex-start' }}>
-                <input type="checkbox" checked={t.status === 'done'} disabled={!canEdit} onChange={e => complete(t, e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--up)' }} aria-label={`Done: ${t.title}`} />
+                <input type="checkbox" checked={t.status === 'done'} disabled={!canEdit} onChange={e => complete(t, e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--up)' }} aria-label={tx('Done: {0}', [t.title])} />
                 <button className="btn-unstyled" onClick={() => canEdit && setEditing(t)} style={{ flex: 1, textAlign: 'left', cursor: canEdit ? 'pointer' : 'default' }}>
-                  <div style={{ fontSize: 13, textDecoration: t.status === 'done' ? 'line-through' : 'none', color: t.status === 'done' ? 'var(--ink-3)' : 'var(--ink)' }}>{t.title}</div>
-                  <div className="muted" style={{ fontSize: 11 }}>{WHO[t.data?.assignee] || 'Me'}{t.data?.repeat && t.data.repeat !== 'none' ? ` · ${t.data.repeat}` : ''}{t.due_date ? ` · ${t.due_date}` : ''}</div>
+                  <div style={{ fontSize: 13, textDecoration: t.status === 'done' ? 'line-through' : 'none', color: t.status === 'done' ? 'var(--ink-3)' : 'var(--ink)' }}>{tx(t.title)}</div>
+                  <div className="muted" style={{ fontSize: 11 }}>{WHO[t.data?.assignee] || tx('Me')}{t.data?.repeat && t.data.repeat !== 'none' ? ` · ${t.data.repeat}` : ''}{t.due_date ? ` · ${t.due_date}` : ''}</div>
                 </button>
                 {t.status === 'open' && <Due days={daysUntil(t.due_date, now)} />}
               </div>
             ))}
           </div>
-          {done.length > 0 && <button className="btn btn-ghost btn-xs" style={{ marginTop: 8 }} onClick={() => setShowDone(v => !v)}>{showDone ? 'Hide done' : `Show ${done.length} done`}</button>}
+          {done.length > 0 && <button className="btn btn-ghost btn-xs" style={{ marginTop: 8 }} onClick={() => setShowDone(v => !v)}>{showDone ? tx('Hide done') : tx('Show {0} done', [done.length])}</button>}
         </div>
 
         <div className="card" style={{ padding: 18 }}>
-          <PageHead title="Recurring bills" sub={`${money(monthlyTotal, cur)} / month across ${bills.length} bill${bills.length === 1 ? '' : 's'}`}
-            action={<button className="btn btn-ghost btn-xs" onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}>Add in Cash Flow →</button>} />
-          {bills.length === 0 && <Empty>No recurring expenses yet. Record cash power, water, internet, rent, school fees and house-help pay as recurring entries in Cash Flow and they appear here with their next due date.</Empty>}
+          <PageHead title={tx('Recurring bills')} sub={tx(
+            '{0} / month across {1} bill{2}',
+            [money(monthlyTotal, cur), bills.length, bills.length === 1 ? '' : 's']
+          )}
+            action={<button className="btn btn-ghost btn-xs" onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}>{tx('Add in Cash Flow →')}</button>} />
+          {bills.length === 0 && <Empty>{tx(
+            'No recurring expenses yet. Record cash power, water, internet, rent, school fees and house-help pay as recurring entries in Cash Flow and they appear here with their next due date.'
+          )}</Empty>}
           <div className="col" style={{ gap: 2, marginTop: 8 }}>
             {bills.map(b => (
               <div key={b.id} className="row" style={{ gap: 10, padding: '7px 0', borderTop: '1px solid var(--line-soft)' }}>
@@ -84,8 +93,7 @@ export default function Household({ state, dispatch, portfolioId, role }) {
           </div>
         </div>
       </div>
-
       {editing && <ItemEditor kind="task" initial={editing === 'new' ? undefined : editing} onSave={save} onDelete={remove} onClose={() => setEditing(null)} />}
-    </div>
+    </div>)
   );
 }

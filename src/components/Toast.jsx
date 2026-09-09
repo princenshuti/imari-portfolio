@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SPRING } from './motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 export function useToast() {
   const [toasts, setToasts] = useState([]);
 
@@ -40,7 +42,7 @@ const COLOURS = {
 export function ToastContainer({ toasts, dismiss }) {
   // Always mounted (even when empty) so AnimatePresence can play exits.
   return (
-    <div
+    (<div
       aria-live="polite"
       aria-atomic="false"
       className="toast-container"
@@ -55,7 +57,7 @@ export function ToastContainer({ toasts, dismiss }) {
         const c = COLOURS[t.type] || COLOURS.info;
         const isAlert = t.type === 'error' || t.type === 'warning';
         return (
-          <motion.div
+          (<motion.div
             key={t.id}
             layout
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
@@ -81,12 +83,12 @@ export function ToastContainer({ toasts, dismiss }) {
                   marginRight: 2,
                 }}
               >
-                {t.action.label}
+                {tx(t.action.label)}
               </button>
             )}
             <button
               onClick={() => dismiss(t.id)}
-              aria-label="Dismiss notification"
+              aria-label={tx('Dismiss notification')}
               style={{
                 background: 'transparent', border: 0, color: 'inherit',
                 cursor: 'pointer', fontSize: 16, opacity: 0.8, padding: 4, lineHeight: 1,
@@ -95,10 +97,10 @@ export function ToastContainer({ toasts, dismiss }) {
             >
               <span aria-hidden="true">×</span>
             </button>
-          </motion.div>
+          </motion.div>)
         );
       })}
       </AnimatePresence>
-    </div>
+    </div>)
   );
 }

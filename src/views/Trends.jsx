@@ -4,6 +4,8 @@ import { TrendCard } from '../components/Field.jsx';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { Stagger, StaggerItem, Reveal } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 /** Count live domains from a given overrides map */
 function countLive(overrides) {
   return Object.values(overrides).filter(o => o?.live).length;
@@ -46,8 +48,7 @@ export default function TrendsView({ state, dispatch }) {
   }
 
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       {/* ── Status bar ──────────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10,
@@ -65,7 +66,7 @@ export default function TrendsView({ state, dispatch }) {
                 background: 'var(--ink-3)',
                 animation: 'imari-dot-pulse 1.4s ease-in-out infinite',
               }} />
-              Fetching live rates…
+              {tx('Fetching live rates…')}
             </div>
           ) : liveCount > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11 }}>
@@ -75,28 +76,28 @@ export default function TrendsView({ state, dispatch }) {
               }} />
               <span style={{ color: 'var(--up)', fontWeight: 700 }}>{liveCount} live</span>
               <span style={{ color: 'var(--ink-3)' }}>
-                · {totalLiveable - liveCount > 0 ? `${totalLiveable - liveCount} unavailable · ` : ''}
-                {fetchedAt ? `updated ${relativeTime(fetchedAt)}` : ''}
+                · {totalLiveable - liveCount > 0 ? tx('{0} unavailable · ', [totalLiveable - liveCount]) : ''}
+                {fetchedAt ? tx('updated {0}', [relativeTime(fetchedAt)]) : ''}
               </span>
             </div>
           ) : (
             <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, color: 'var(--gold-ink)' }}>
               <span aria-hidden="true" style={{ fontSize: 12 }}>◆</span>
-              {errorMsg ? `${errorMsg} — showing reference values` : 'Live APIs unreachable — showing reference values'}
+              {errorMsg ? tx('{0} — showing reference values', [errorMsg]) : tx('Live APIs unreachable — showing reference values')}
             </div>
           )}
 
           {/* Badge legend */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {[
-              { label: 'Live',      bg: 'color-mix(in oklab, var(--up) 14%, transparent)',   color: 'var(--up)'   },
-              { label: 'Reference', bg: 'color-mix(in oklab, var(--gold) 14%, transparent)', color: 'var(--gold)' },
-              { label: 'Modeled',   bg: 'var(--bg-2)',                                        color: 'var(--ink-4)'},
+              { label: tx('Live'),      bg: 'color-mix(in oklab, var(--up) 14%, transparent)',   color: 'var(--up)'   },
+              { label: tx('Reference'), bg: 'color-mix(in oklab, var(--gold) 14%, transparent)', color: 'var(--gold)' },
+              { label: tx('Modeled'),   bg: 'var(--bg-2)',                                        color: 'var(--ink-4)'},
             ].map(b => (
               <div key={b.label} style={{
                 padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700,
                 background: b.bg, color: b.color,
-              }}>{b.label}</div>
+              }}>{tx(b.label)}</div>
             ))}
           </div>
         </div>
@@ -116,24 +117,24 @@ export default function TrendsView({ state, dispatch }) {
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
         >
           <span style={{ fontSize: 13, lineHeight: 1 }}>↻</span>
-          Refresh
+          {tx('Refresh')}
         </button>
       </div>
-
       {/* ── Data coverage note ────────────────────────────────────── */}
       <div style={{
         marginBottom: 20, padding: '12px 16px', borderRadius: 10,
         background: 'var(--bg-2)', fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.55,
       }}>
-        <strong style={{ color: 'var(--ink-2)' }}>Data sources</strong>
+        <strong style={{ color: 'var(--ink-2)' }}>{tx('Data sources')}</strong>
         {' · '}
-        <strong style={{ color: 'var(--up)' }}>Live</strong>: FX (ExchangeRate-API), Gold (metals.live), Crypto (CoinGecko)
+        <strong style={{ color: 'var(--up)' }}>{tx('Live')}</strong>{tx(': FX (ExchangeRate-API), Gold (metals.live), Crypto (CoinGecko)')}
         {' · '}
-        <strong style={{ color: 'var(--gold)' }}>Reference</strong>: BNR repo rate, NISR CPI, RSE ASI, 10yr Treasury — no public APIs exist; values are manually sourced from official publications
+        <strong style={{ color: 'var(--gold)' }}>{tx('Reference')}</strong>{tx(
+          ': BNR repo rate, NISR CPI, RSE ASI, 10yr Treasury — no public APIs exist; values are manually sourced from official publications'
+        )}
         {' · '}
-        <strong style={{ color: 'var(--ink-4)' }}>Modeled</strong>: Kigali RE (no official index)
+        <strong style={{ color: 'var(--ink-4)' }}>{tx('Modeled')}</strong>{tx(': Kigali RE (no official index)')}
       </div>
-
       {/* ── Indicator groups ──────────────────────────────────────── */}
       {Object.entries(groups).map(([groupName, domains]) => (
         <div key={groupName} style={{ marginBottom: 26 }}>
@@ -159,20 +160,19 @@ export default function TrendsView({ state, dispatch }) {
           </Stagger>
         </div>
       ))}
-
       {/* ── Kigali neighbourhoods ─────────────────────────────────── */}
       <Reveal className="card" style={{ padding: 22, marginTop: 8 }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <div className="font-serif" style={{ fontSize: 20 }}>Kigali real estate · by neighbourhood</div>
+            <div className="font-serif" style={{ fontSize: 20 }}>{tx('Kigali real estate · by neighbourhood')}</div>
             <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-              Indicative price per m² · no official source · community estimates
+              {tx('Indicative price per m² · no official source · community estimates')}
             </div>
           </div>
           <div style={{
             padding: '3px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700,
             background: 'var(--bg-2)', color: 'var(--ink-4)',
-          }}>Modeled</div>
+          }}>{tx('Modeled')}</div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
           {KIGALI_NEIGHBOURHOODS.sort((a, b) => b.pricePerSqm - a.pricePerSqm).map(n => (
@@ -182,7 +182,7 @@ export default function TrendsView({ state, dispatch }) {
             }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>{n.name}</div>
-                <div className="muted" style={{ fontSize: 11 }}>per m²</div>
+                <div className="muted" style={{ fontSize: 11 }}>{tx('per m²')}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div className="num" style={{ fontSize: 14, fontWeight: 600 }}>
@@ -199,7 +199,6 @@ export default function TrendsView({ state, dispatch }) {
           ))}
         </div>
       </Reveal>
-
       {/* ── Keyframe for live dot pulse ───────────────────────────── */}
       <style>{`
         @keyframes imari-dot-pulse {
@@ -207,6 +206,6 @@ export default function TrendsView({ state, dispatch }) {
           50%       { opacity: 0.45; transform: scale(0.7); }
         }
       `}</style>
-    </div>
+    </div>)
   );
 }

@@ -9,6 +9,8 @@ import { useMarket } from '../contexts/MarketContext.jsx';
 import { monthlyFlowsRWF } from '../engine/insights/_shared.js';
 import { Stagger, StaggerItem, Reveal } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 const EMPTY_GOAL = {
   category: 'investment', title: '', targetAmount: '', currency: 'RWF',
   deadline: '', notes: '', achieved: false, achievedAt: null,
@@ -46,150 +48,142 @@ function GoalEditor({ goal, onSave, onCancel, assets = [] }) {
   }));
 
   return (
-    <Modal open onClose={onCancel} maxWidth={560} title={isNew ? 'New goal' : 'Edit goal'}>
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
-          <h2 className="font-serif" style={{ fontSize: 22, margin: 0, fontWeight: 400 }}>{isNew ? 'New goal' : 'Edit goal'}</h2>
-          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-
-        {/* Template chips — shown only for new goals to avoid clobbering edits. */}
-        {isNew && (
-          <div style={{ marginBottom: 18 }}>
-            <div className="muted" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
-              Start from a template
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {GOAL_TEMPLATES.map(t => (
-                <button
-                  key={t.id} type="button" onClick={() => applyTemplate(t)}
-                  className="pill pill-soft"
-                  style={{ fontSize: 11, padding: '5px 10px', border: 0, cursor: 'pointer', fontFamily: 'inherit' }}
-                >
-                  <span aria-hidden="true" style={{ marginRight: 4 }}>{t.icon}</span>{t.title}
-                </button>
-              ))}
-            </div>
+    (<Modal open onClose={onCancel} maxWidth={560} title={isNew ? tx('New goal') : tx('Edit goal')}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
+        <h2 className="font-serif" style={{ fontSize: 22, margin: 0, fontWeight: 400 }}>{isNew ? tx('New goal') : tx('Edit goal')}</h2>
+        <button type="button" onClick={onCancel} aria-label={tx('Close dialog')} className="btn-icon-sm">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      {/* Template chips — shown only for new goals to avoid clobbering edits. */}
+      {isNew && (
+        <div style={{ marginBottom: 18 }}>
+          <div className="muted" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+            {tx('Start from a template')}
           </div>
-        )}
-
-        <Field label="Category">
-          <div role="radiogroup" aria-label="Goal category" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
-            {GOAL_CATEGORIES.map(c => {
-              const selected = c.id === g.category;
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {GOAL_TEMPLATES.map(t => (
+              <button
+                key={t.id} type="button" onClick={() => applyTemplate(t)}
+                className="pill pill-soft"
+                style={{ fontSize: 11, padding: '5px 10px', border: 0, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                <span aria-hidden="true" style={{ marginRight: 4 }}>{t.icon}</span>{tx(t.title)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <Field label={tx('Category')}>
+        <div role="radiogroup" aria-label={tx('Goal category')} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+          {GOAL_CATEGORIES.map(c => {
+            const selected = c.id === g.category;
+            return (
+              (<button
+                key={c.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => u('category', c.id)}
+                style={{
+                  padding: '8px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 11,
+                  background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
+                  color: selected ? 'var(--brand)' : 'var(--ink-2)',
+                  border: selected ? '1px solid var(--brand)' : '1px solid transparent',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <div aria-hidden="true" style={{ fontSize: 18, marginBottom: 2 }}>{c.icon}</div>
+                <div style={{ lineHeight: 1.2 }}>{tx(c.label)}</div>
+              </button>)
+            );
+          })}
+        </div>
+      </Field>
+      <Field label={tx('Goal title')} top={16}>
+        <input value={g.title} onChange={e => u('title', e.target.value)}
+          placeholder={tx('e.g. {0}', [cat.label])} style={inputStyle} />
+      </Field>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 4 }}>
+        <Field label={tx('Target amount')}>
+          <input type="number" value={g.targetAmount} onChange={e => u('targetAmount', e.target.value)}
+            placeholder="0" style={inputStyle} />
+        </Field>
+        <Field label={tx('Currency')}>
+          <select value={g.currency} onChange={e => u('currency', e.target.value)} style={inputStyle}>
+            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+          </select>
+        </Field>
+        <Field label={tx('Target deadline')}>
+          <input type="date" value={g.deadline} onChange={e => u('deadline', e.target.value)} style={inputStyle} />
+        </Field>
+      </div>
+      {/* Funding source — what counts toward this goal. */}
+      <Field label={tx('Funded by')} top={14}>
+        <div role="radiogroup" aria-label={tx('Funding source')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {[
+            { id: 'net-worth', label: tx('Net worth'),       sub: tx('All assets minus debts') },
+            { id: 'liquid',    label: tx('Liquid only'),     sub: tx('Cash, savings, MoMo') },
+            { id: 'linked',    label: tx('Specific assets'), sub: tx('Pick which ones') },
+          ].map(opt => {
+            const selected = g.fundingType === opt.id;
+            return (
+              (<button
+                key={opt.id} type="button" role="radio" aria-checked={selected}
+                onClick={() => u('fundingType', opt.id)}
+                style={{
+                  padding: '8px 10px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+                  background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
+                  color:      selected ? 'var(--brand)'      : 'var(--ink-2)',
+                  border:     selected ? '1px solid var(--brand)' : '1px solid transparent',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 600 }}>{tx(opt.label)}</div>
+                <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{tx(opt.sub)}</div>
+              </button>)
+            );
+          })}
+        </div>
+      </Field>
+      {/* Asset multi-select — only meaningful when fundingType==='linked' */}
+      {g.fundingType === 'linked' && (
+        <Field label={tx('Linked assets')} top={12}>
+          <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 6, padding: 4 }}>
+            {assets.length === 0 ? (
+              <div className="muted" style={{ fontSize: 12, padding: 12, textAlign: 'center' }}>{tx('No assets yet — add one first.')}</div>
+            ) : assets.map(a => {
+              const checked = (g.linkedAssetIds || []).includes(a.id);
               return (
-                <button
-                  key={c.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => u('category', c.id)}
-                  style={{
-                    padding: '8px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center', fontSize: 11,
-                    background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
-                    color: selected ? 'var(--brand)' : 'var(--ink-2)',
-                    border: selected ? '1px solid var(--brand)' : '1px solid transparent',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  <div aria-hidden="true" style={{ fontSize: 18, marginBottom: 2 }}>{c.icon}</div>
-                  <div style={{ lineHeight: 1.2 }}>{c.label}</div>
-                </button>
+                <label key={a.id} className="row" style={{ gap: 8, padding: '6px 8px', borderRadius: 5, cursor: 'pointer', fontSize: 12.5 }}>
+                  <input
+                    type="checkbox" checked={checked}
+                    onChange={e => {
+                      const next = new Set(g.linkedAssetIds || []);
+                      e.target.checked ? next.add(a.id) : next.delete(a.id);
+                      u('linkedAssetIds', Array.from(next));
+                    }}
+                  />
+                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
+                  <span className="muted num" style={{ fontSize: 10.5 }}>{fmt(valueRWF(a, new Date()), 'RWF', { compact: true })}</span>
+                </label>
               );
             })}
           </div>
         </Field>
-
-        <Field label="Goal title" top={16}>
-          <input value={g.title} onChange={e => u('title', e.target.value)}
-            placeholder={`e.g. ${cat.label}`} style={inputStyle} />
-        </Field>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 4 }}>
-          <Field label="Target amount">
-            <input type="number" value={g.targetAmount} onChange={e => u('targetAmount', e.target.value)}
-              placeholder="0" style={inputStyle} />
-          </Field>
-          <Field label="Currency">
-            <select value={g.currency} onChange={e => u('currency', e.target.value)} style={inputStyle}>
-              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-            </select>
-          </Field>
-          <Field label="Target deadline">
-            <input type="date" value={g.deadline} onChange={e => u('deadline', e.target.value)} style={inputStyle} />
-          </Field>
-        </div>
-
-        {/* Funding source — what counts toward this goal. */}
-        <Field label="Funded by" top={14}>
-          <div role="radiogroup" aria-label="Funding source" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-            {[
-              { id: 'net-worth', label: 'Net worth',       sub: 'All assets minus debts' },
-              { id: 'liquid',    label: 'Liquid only',     sub: 'Cash, savings, MoMo' },
-              { id: 'linked',    label: 'Specific assets', sub: 'Pick which ones' },
-            ].map(opt => {
-              const selected = g.fundingType === opt.id;
-              return (
-                <button
-                  key={opt.id} type="button" role="radio" aria-checked={selected}
-                  onClick={() => u('fundingType', opt.id)}
-                  style={{
-                    padding: '8px 10px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
-                    background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
-                    color:      selected ? 'var(--brand)'      : 'var(--ink-2)',
-                    border:     selected ? '1px solid var(--brand)' : '1px solid transparent',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  <div style={{ fontSize: 12, fontWeight: 600 }}>{opt.label}</div>
-                  <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{opt.sub}</div>
-                </button>
-              );
-            })}
-          </div>
-        </Field>
-
-        {/* Asset multi-select — only meaningful when fundingType==='linked' */}
-        {g.fundingType === 'linked' && (
-          <Field label="Linked assets" top={12}>
-            <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 6, padding: 4 }}>
-              {assets.length === 0 ? (
-                <div className="muted" style={{ fontSize: 12, padding: 12, textAlign: 'center' }}>No assets yet — add one first.</div>
-              ) : assets.map(a => {
-                const checked = (g.linkedAssetIds || []).includes(a.id);
-                return (
-                  <label key={a.id} className="row" style={{ gap: 8, padding: '6px 8px', borderRadius: 5, cursor: 'pointer', fontSize: 12.5 }}>
-                    <input
-                      type="checkbox" checked={checked}
-                      onChange={e => {
-                        const next = new Set(g.linkedAssetIds || []);
-                        e.target.checked ? next.add(a.id) : next.delete(a.id);
-                        u('linkedAssetIds', Array.from(next));
-                      }}
-                    />
-                    <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
-                    <span className="muted num" style={{ fontSize: 10.5 }}>{fmt(valueRWF(a, new Date()), 'RWF', { compact: true })}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </Field>
-        )}
-
-        <Field label="Notes" top={14}>
-          <textarea value={g.notes} onChange={e => u('notes', e.target.value)} placeholder="optional"
-            style={{ ...inputStyle, minHeight: 52, fontFamily: 'inherit', resize: 'vertical', paddingTop: 8 }} />
-        </Field>
-
-        <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
-          <button type="button" onClick={() => onSave({ ...g, targetAmount: +g.targetAmount || 0 })}
-            className="btn btn-primary" disabled={!g.title || !g.targetAmount}>
-            {isNew ? 'Create goal' : 'Save changes'}
-          </button>
-        </div>
-    </Modal>
+      )}
+      <Field label={tx('Notes')} top={14}>
+        <textarea value={g.notes} onChange={e => u('notes', e.target.value)} placeholder="optional"
+          style={{ ...inputStyle, minHeight: 52, fontFamily: 'inherit', resize: 'vertical', paddingTop: 8 }} />
+      </Field>
+      <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+        <button type="button" onClick={onCancel} className="btn btn-ghost">{tx('Cancel')}</button>
+        <button type="button" onClick={() => onSave({ ...g, targetAmount: +g.targetAmount || 0 })}
+          className="btn btn-primary" disabled={!g.title || !g.targetAmount}>
+          {isNew ? tx('Create goal') : tx('Save changes')}
+        </button>
+      </div>
+    </Modal>)
   );
 }
 
@@ -246,10 +240,10 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
     if (timeElapsedPct - pct > 15) status = 'slipping';
   }
   const statusMeta = {
-    'on-track': { label: 'On track', color: 'var(--up)',   bg: 'var(--up-soft)'   },
-    'slipping': { label: 'Slipping', color: 'var(--gold-ink)', bg: 'var(--gold-soft)' },
-    'overdue':  { label: 'Overdue',  color: 'var(--down)', bg: 'var(--down-soft)' },
-    'done':     { label: 'Done',     color: 'var(--up)',   bg: 'var(--up-soft)'   },
+    'on-track': { label: tx('On track'), color: 'var(--up)',   bg: 'var(--up-soft)'   },
+    'slipping': { label: tx('Slipping'), color: 'var(--gold-ink)', bg: 'var(--gold-soft)' },
+    'overdue':  { label: tx('Overdue'),  color: 'var(--down)', bg: 'var(--down-soft)' },
+    'done':     { label: tx('Done'),     color: 'var(--up)',   bg: 'var(--up-soft)'   },
   }[status];
 
   const deadlineFmt = deadline ? deadline.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
@@ -258,7 +252,7 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
   const milestones = [25, 50, 75];
 
   return (
-    <div className="hover-actions card" style={{
+    (<div className="hover-actions card" style={{
       padding: '20px 22px', marginBottom: 14,
       borderLeft: `3px solid ${isAchieved ? 'var(--up)' : isOverdue ? 'var(--down)' : 'var(--brand)'}`,
     }}>
@@ -267,28 +261,28 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
           <span style={{ fontSize: 28 }}>{cat.icon}</span>
           <div>
             <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 15, fontWeight: 700 }}>{goal.title}</span>
+              <span style={{ fontSize: 15, fontWeight: 700 }}>{tx(goal.title)}</span>
               <span className="pill" style={{ background: statusMeta.bg, color: statusMeta.color, fontSize: 10 }}>
-                {statusMeta.label}
+                {tx(statusMeta.label)}
               </span>
             </div>
             <div className="muted" style={{ fontSize: 11 }}>
-              {cat.label}
+              {tx(cat.label)}
               {deadlineFmt && (
                 <span style={{ marginLeft: 8, color: isOverdue ? 'var(--down-ink)' : daysLeft < 90 ? 'var(--gold-ink)' : 'var(--ink-3)' }}>
                   · {deadlineFmt} {isOverdue
-                    ? `(${Math.abs(daysLeft)}d overdue)`
-                    : daysLeft !== null ? `(${daysLeft}d left)` : ''}
+                    ? tx('({0}d overdue)', [Math.abs(daysLeft)])
+                    : daysLeft !== null ? tx('({0}d left)', [daysLeft]) : ''}
                 </span>
               )}
-              {goal.fundingType === 'liquid'  && <span style={{ marginLeft: 8 }}>· liquid only</span>}
+              {goal.fundingType === 'liquid'  && <span style={{ marginLeft: 8 }}>{tx('· liquid only')}</span>}
               {goal.fundingType === 'linked' && <span style={{ marginLeft: 8 }}>· {(goal.linkedAssetIds || []).length} linked</span>}
             </div>
           </div>
         </div>
         <div className="row-actions" style={{ position: 'relative' }}>
           <button type="button" className="btn-icon-sm" aria-haspopup="menu" aria-expanded={menuOpen}
-            aria-label={`Actions for ${goal.title}`} onClick={() => setMenuOpen(v => !v)}
+            aria-label={tx('Actions for {0}', [goal.title])} onClick={() => setMenuOpen(v => !v)}
             onBlur={(e) => { if (!e.currentTarget.parentElement.contains(e.relatedTarget)) setMenuOpen(false); }}>
             <span aria-hidden="true">⋯</span>
           </button>
@@ -302,17 +296,16 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
                 style={{ display: 'block', width: '100%', padding: '9px 14px', fontSize: 12.5 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >✎ Edit goal</button>
+              >{tx('✎ Edit goal')}</button>
               <button type="button" className="btn-unstyled" onClick={() => { setMenuOpen(false); onDelete(); }}
                 style={{ display: 'block', width: '100%', padding: '9px 14px', fontSize: 12.5, color: 'var(--down-ink)' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--down-soft)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >× Delete…</button>
+              >{tx('× Delete…')}</button>
             </div>
           )}
         </div>
       </div>
-
       {/* Progress bar with milestone ticks at 25/50/75% */}
       <div style={{ marginBottom: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
@@ -332,7 +325,7 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
           }} />
           {milestones.map(m => (
             <span key={m}
-              title={`${m}% milestone${pct >= m ? ' — reached!' : ''}`}
+              title={tx('{0}% milestone{1}', [m, pct >= m ? ' — reached!' : ''])}
               aria-hidden="true"
               style={{
                 position: 'absolute', top: -2, left: `${m}%`,
@@ -344,11 +337,10 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
           ))}
         </div>
         <div className="muted" style={{ fontSize: 10, marginTop: 3, display: 'flex', justifyContent: 'space-between' }}>
-          <span>{pct.toFixed(1)}% of target</span>
-          {remaining > 0 && <span>Still need {fmtBase(remaining, displayCurrency, { compact: true })}</span>}
+          <span>{pct.toFixed(1)}{tx('% of target')}</span>
+          {remaining > 0 && <span>{tx('Still need')} {fmtBase(remaining, displayCurrency, { compact: true })}</span>}
         </div>
       </div>
-
       {/* Celebration — an achieved goal looks WON, not merely complete */}
       {isAchieved && (
         <div className="row" style={{
@@ -357,11 +349,10 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
         }}>
           <span aria-hidden="true" style={{ fontSize: 18 }}>🎉</span>
           <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--up-ink)' }}>
-            Achieved{goal.achievedAt ? ` · ${new Date(goal.achievedAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}` : ''} — {fmt(goal.targetAmount, goal.currency, { compact: true })} reached.
+            {tx('Achieved')}{goal.achievedAt ? ` · ${new Date(goal.achievedAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}` : ''}— {fmt(goal.targetAmount, goal.currency, { compact: true })} {tx('reached.')}
           </span>
         </div>
       )}
-
       {/* Funded-by projection — the user's own pace, honestly stated */}
       {fundedBy && (
         <div style={{
@@ -369,45 +360,47 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
           background: fundedLate ? 'var(--gold-soft)' : 'var(--up-soft)',
           fontSize: 11, color: fundedLate ? 'var(--gold-ink, var(--gold))' : 'var(--up-ink)',
         }}>
-          Funded by <strong>{fundedBy.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong> at
-          your current {fmtBase(monthlySaving, displayCurrency, { compact: true })}/mo saving
-          {fundedLate && deadline ? ` — after your ${deadline.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} deadline` : ''}.
-        </div>
+          {tx('Funded by')} <strong>{fundedBy.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong> {tx('at\n          your current')} {fmtBase(monthlySaving, displayCurrency, { compact: true })}/mo saving
+                    {fundedLate && deadline ? tx(
+            ' — after your {0} deadline',
+            [deadline.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })]
+          ) : ''}.
+                  </div>
       )}
       {!isAchieved && remaining > 0 && monthlySaving <= 0 && (
         <div className="muted" style={{ fontSize: 10.5, marginBottom: 8 }}>
-          Add income and expenses in Cash Flow to project a funded-by date.
+          {tx('Add income and expenses in Cash Flow to project a funded-by date.')}
         </div>
       )}
-
       {/* Monthly savings needed */}
       {monthlySavingsNeeded !== null && remaining > 0 && !isAchieved && (
         <div style={{
           padding: '8px 12px', borderRadius: 'var(--r-sm)',
           background: 'var(--brand-soft)', fontSize: 11, color: 'var(--brand)',
         }}>
-          Save <strong>{fmtBase(monthlySavingsNeeded, displayCurrency, { compact: true })}/month</strong> to hit this goal on time.
+          {tx('Save')} <strong>{fmtBase(monthlySavingsNeeded, displayCurrency, { compact: true })}/month</strong> {tx('to hit this goal on time.')}
         </div>
       )}
-
       {/* §9 Goal Lockbox — commitment against a real BNR instrument (no execution) */}
       {!isAchieved && onLock && (
         goal.lock?.locked ? (
           <div className="row" style={{ marginTop: 10, justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: 'var(--r-sm)', background: 'var(--gold-soft)', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 11, color: 'var(--gold-ink, var(--gold))' }}>
-              <span aria-hidden="true">🔒</span> Locked to <strong>{goal.lock.instrumentRef}</strong>
-              {goal.lock.auctionDate ? ` · next auction ${new Date(goal.lock.auctionDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+              <span aria-hidden="true">🔒</span> {tx('Locked to')} <strong>{goal.lock.instrumentRef}</strong>
+              {goal.lock.auctionDate ? tx(' · next auction {0}', [
+                new Date(goal.lock.auctionDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              ]) : ''}
             </span>
-            <button type="button" onClick={() => onLock(null)} className="btn btn-ghost btn-xs">Unlock</button>
+            <button type="button" onClick={() => onLock(null)} className="btn btn-ghost btn-xs">{tx('Unlock')}</button>
           </div>
         ) : (
           <button type="button" className="btn btn-ghost btn-xs" style={{ marginTop: 10 }}
             onClick={() => onLock({ locked: true, instrumentRef: 'BNR T-bill', auctionDate: nextBnrAuction() })}>
-            <span aria-hidden="true">🔒</span> Lock to a T-bill
+            <span aria-hidden="true">🔒</span> {tx('Lock to a T-bill')}
           </button>
         )
       )}
-    </div>
+    </div>)
   );
 }
 
@@ -441,27 +434,25 @@ export default function GoalsView({ state, dispatch }) {
   const achieved = goals.filter(g => g.achieved || isFunded(g));
 
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       {/* Header */}
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 22 }}>
         {/* Title lives in the TopBar — the page header does real work only (#12). */}
         <div className="muted" style={{ fontSize: 13 }}>
-          {active.length} active · {achieved.length} achieved
-        </div>
-        <button onClick={() => setEditing({})} className="btn btn-primary">＋ New goal</button>
+          {active.length} {tx('active ·')} {achieved.length}achieved
+                  </div>
+        <button onClick={() => setEditing({})} className="btn btn-primary">{tx('＋ New goal')}</button>
       </div>
-
       {/* Goals overview strip */}
       {goals.length > 0 && (
         <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}>
           {[
-            { label: 'Active goals', value: active.length, sub: 'in progress' },
+            { label: tx('Active goals'), value: active.length, sub: tx('in progress') },
             // Goal-specific, not a sidebar duplicate (round-3 #13): the total
             // gap across active goals — the number this page exists to close.
-            { label: 'Still needed', value: fmtBase(
+            { label: tx('Still needed'), value: fmtBase(
                 active.reduce((s, g) => s + Math.max(0, toBase(g.targetAmount || 0, g.currency || 'RWF') - currentValueFor(g)), 0),
-                profile.displayCurrency, { compact: true }), sub: 'across active goals', isNum: true },
+                profile.displayCurrency, { compact: true }), sub: tx('across active goals'), isNum: true },
             // "Closest to done" — goal with the highest % progress (per its
             // own funding type, so the math matches the card below). Picking
             // by deadline alone is misleading: a 1B target with a deadline is
@@ -479,24 +470,26 @@ export default function GoalsView({ state, dispatch }) {
                 .filter(x => x.pct < 100)
                 .sort((a, b) => b.pct - a.pct);
               const top = withProgress[0];
-              if (!top || !top.g) return { label: 'Closest to done', value: '—', sub: 'add a goal to start' };
+              if (!top || !top.g) return { label: tx('Closest to done'), value: '—', sub: tx('add a goal to start') };
               const daysLeft = top.g.deadline ? Math.ceil((new Date(top.g.deadline) - today) / 86400000) : null;
               return {
-                label: 'Closest to done',
+                label: tx('Closest to done'),
                 value: top.g.title || '—',
-                sub: `${top.pct.toFixed(1)}% complete${daysLeft != null ? ` · ${daysLeft}d to deadline` : ''}`,
+                sub: tx(
+                  '{0}% complete{1}',
+                  [top.pct.toFixed(1), daysLeft != null ? ` · ${daysLeft}d to deadline` : '']
+                ),
               };
             })(),
           ].map((c, i) => (
             <StaggerItem key={i} style={{ padding: '14px 18px', borderRadius: 'var(--r-md)', background: 'var(--paper)', border: '0.5px solid var(--line)' }}>
-              <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{c.label}</div>
+              <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{tx(c.label)}</div>
               <div className={c.isNum ? 'num' : ''} style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)' }}>{c.value}</div>
-              <div className="muted" style={{ fontSize: 10 }}>{c.sub}</div>
+              <div className="muted" style={{ fontSize: 10 }}>{tx(c.sub)}</div>
             </StaggerItem>
           ))}
         </Stagger>
       )}
-
       {/* Active goals */}
       {active.map((g, i) => (
         <Reveal key={g.id} delay={Math.min(i * 0.06, 0.3)}>
@@ -507,13 +500,12 @@ export default function GoalsView({ state, dispatch }) {
           />
         </Reveal>
       ))}
-
       {/* Achieved goals */}
       {achieved.length > 0 && (
         <>
           <div className="muted" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '24px 0 12px' }}>
-            Achieved ({achieved.length})
-          </div>
+            {tx('Achieved (')}{achieved.length})
+                      </div>
           {achieved.map(g => (
             <Reveal key={g.id}>
               <GoalCard goal={g} currentValue={currentValueFor(g)} monthlySaving={monthlySaving} displayCurrency={profile.displayCurrency}
@@ -524,18 +516,18 @@ export default function GoalsView({ state, dispatch }) {
           ))}
         </>
       )}
-
       {goals.length === 0 && (
         <div className="card" style={{ padding: 60, textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🎯</div>
-          <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>Set your first goal</div>
+          <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>{tx('Set your first goal')}</div>
           <div className="muted" style={{ fontSize: 13, marginBottom: 20 }}>
-            Define what you're saving toward — a plot, emergency fund, school fees — and Imari tracks your progress.
+            {tx(
+              'Define what you\'re saving toward — a plot, emergency fund, school fees — and Imari tracks your progress.'
+            )}
           </div>
-          <button onClick={() => setEditing({})} className="btn btn-primary">＋ Create a goal</button>
+          <button onClick={() => setEditing({})} className="btn btn-primary">{tx('＋ Create a goal')}</button>
         </div>
       )}
-
       {editing !== null && (
         <GoalEditor
           goal={editing}
@@ -549,7 +541,6 @@ export default function GoalsView({ state, dispatch }) {
           onCancel={() => setEditing(null)}
         />
       )}
-
       <ConfirmDestructive
         open={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
@@ -557,17 +548,17 @@ export default function GoalsView({ state, dispatch }) {
           dispatch({ type: 'deleteGoal', id: pendingDelete.id });
           setPendingDelete(null);
         }}
-        title="Delete this goal?"
+        title={tx('Delete this goal?')}
         description={pendingDelete && (
           <span>
-            <strong style={{ color: 'var(--ink)' }}>{pendingDelete.title}</strong>
-            {pendingDelete.targetAmount ? <> · target <span className="num">{fmt(pendingDelete.targetAmount, pendingDelete.currency || 'RWF')}</span></> : null}
+            <strong style={{ color: 'var(--ink)' }}>{tx(pendingDelete.title)}</strong>
+            {pendingDelete.targetAmount ? <> {tx('· target')} <span className="num">{fmt(pendingDelete.targetAmount, pendingDelete.currency || 'RWF')}</span></> : null}
             <br />
-            Your progress history for this goal will be lost. You can't undo this.
+            {tx('Your progress history for this goal will be lost. You can\'t undo this.')}
           </span>
         )}
-        confirmLabel="Delete goal"
+        confirmLabel={tx('Delete goal')}
       />
-    </div>
+    </div>)
   );
 }

@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchHabitLogs, fetchNotes, setHabit, setNote, subscribeFamily } from './cloud.js';
 import { HABIT_IDS } from './habits.js';
 
+import { tx } from '../i18n/tx.js';
+
 export function useFamily(portfolioId, role) {
   const [logs, setLogs]   = useState(null);   // Map<week, Set<habitId>> — null while loading
   const [notes, setNotes] = useState({});     // { [key]: body }
@@ -19,7 +21,7 @@ export function useFamily(portfolioId, role) {
       if (!alive.current) return;
       setLogs(l); setNotes(n); setError(null);
     } catch (e) {
-      if (alive.current) setError(e.message || 'Could not load family data');
+      if (alive.current) setError(e.message || tx('Could not load family data'));
     }
   }, [portfolioId]);
 

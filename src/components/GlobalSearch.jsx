@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { searchPortfolio } from '../services/search.js';
 import { useT } from '../contexts/I18nContext.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 const TYPE_GLYPH = { asset: '◆', liability: '↓', goal: '◎', cashflow: '⇄', view: '▸' };
 
 // F8 — global search in the TopBar. Pure lookup over the in-memory state via
@@ -55,7 +57,7 @@ export default function GlobalSearch({ state, onNav }) {
   const showPanel = open && q.trim().length >= 2;
 
   return (
-    <div className="global-search" style={{ position: 'relative' }}>
+    (<div className="global-search" style={{ position: 'relative' }}>
       <input
         ref={inputRef}
         type="search"
@@ -109,14 +111,14 @@ export default function GlobalSearch({ state, onNav }) {
             >
               <span aria-hidden="true" style={{ fontSize: 13, color: 'var(--brand)', flexShrink: 0 }}>{TYPE_GLYPH[r.type] || '•'}</span>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</div>
-                <div className="muted" style={{ fontSize: 10.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.subtitle}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx(r.title)}</div>
+                <div className="muted" style={{ fontSize: 10.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx(r.subtitle)}</div>
               </div>
             </div>
           ))}
         </motion.div>
       )}
       </AnimatePresence>
-    </div>
+    </div>)
   );
 }

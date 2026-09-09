@@ -7,6 +7,8 @@ import { downloadAssetTemplate, parseAssetExcel, findExistingByNaturalKey } from
 import { useRovingFocus } from '../hooks/useRovingFocus.js';
 import { Reveal } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 // Canonical group order from CLASSES definition
 const ALL_GROUPS = Array.from(new Set(CLASSES.map(c => c.group)));
 
@@ -59,11 +61,14 @@ export default function AssetsView({ state, dispatch, showToast }) {
     try {
       const { assets: parsed, errors } = await parseAssetExcel(file);
       if (parsed.length === 0 && errors.length === 0) {
-        setImportResult({ kind: 'error', message: 'No rows found in the spreadsheet.' });
+        setImportResult({ kind: 'error', message: tx('No rows found in the spreadsheet.') });
         return;
       }
       if (parsed.length === 0) {
-        setImportResult({ kind: 'error', message: `No valid rows. ${errors.length} error${errors.length === 1 ? '' : 's'} found.`, errors });
+        setImportResult({ kind: 'error', message: tx(
+          'No valid rows. {0} error{1} found.',
+          [errors.length, errors.length === 1 ? '' : 's']
+        ), errors });
         return;
       }
       const matched = parsed.map(p => {
@@ -81,7 +86,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
       // every other irreversible action.
       setPendingImport({ matched, errors, summary, inserts: inserts.length, updates: updates.length });
     } catch (e) {
-      setImportResult({ kind: 'error', message: `Could not read the file: ${e.message}` });
+      setImportResult({ kind: 'error', message: tx('Could not read the file: {0}', [e.message]) });
     } finally {
       if (fileRef.current) fileRef.current.value = '';
     }
@@ -244,8 +249,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
 
   /* ── Render ───────────────────────────────────────────────────── */
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       {/* ─ Top action bar ──────────────────────────────────────── */}
       <div className="row" style={{ gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         {/* Search */}
@@ -257,11 +261,11 @@ export default function AssetsView({ state, dispatch, showToast }) {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name, ticker, neighbourhood…"
+            placeholder={tx('Search by name, ticker, neighbourhood…')}
             style={{ flex: 1, border: 0, outline: 'none', background: 'transparent', fontSize: 13, fontFamily: 'inherit', color: 'var(--ink)' }}
           />
           {search && (
-            <button type="button" onClick={() => setSearch('')} aria-label="Clear search" style={{ border: 0, background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 14, padding: 0 }}><span aria-hidden="true">×</span></button>
+            <button type="button" onClick={() => setSearch('')} aria-label={tx('Clear search')} style={{ border: 0, background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 14, padding: 0 }}><span aria-hidden="true">×</span></button>
           )}
         </div>
 
@@ -273,16 +277,15 @@ export default function AssetsView({ state, dispatch, showToast }) {
           fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
           borderColor: sortBy !== 'default' ? 'var(--brand)' : 'var(--line)',
         }}>
-          {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{tx(o.label)}</option>)}
         </select>
 
-        <button onClick={downloadAssetTemplate} className="btn btn-ghost only-desktop" title="Download an Excel template for bulk import">↓ Template</button>
-        <button onClick={() => fileRef.current?.click()} className="btn btn-ghost" title="Import filled-in Excel template (template available on desktop)">↑ Import</button>
+        <button onClick={downloadAssetTemplate} className="btn btn-ghost only-desktop" title={tx('Download an Excel template for bulk import')}>{tx('↓ Template')}</button>
+        <button onClick={() => fileRef.current?.click()} className="btn btn-ghost" title={tx('Import filled-in Excel template (template available on desktop)')}>{tx('↑ Import')}</button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
           onChange={e => e.target.files?.[0] && handleImport(e.target.files[0])} />
-        <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add asset</button>
+        <button onClick={() => setEditing({})} className="btn btn-primary">{tx('＋ Add asset')}</button>
       </div>
-
       {/* ─ Filter chips row — one scrollable line on mobile (round-3 #7) ── */}
       <div className="assets-chip-row" style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {/* Type chips — All + each group that has assets */}
@@ -292,7 +295,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
           const cls      = CLASSES.find(c => c.group === g);
           const dot      = cls?.color;
           return (
-            <button
+            (<button
               key={g}
               onClick={() => { setTypeFilter(g); setLocFilter('all'); }}
               style={{
@@ -308,8 +311,8 @@ export default function AssetsView({ state, dispatch, showToast }) {
               {g !== 'all' && (
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
               )}
-              {g === 'all' ? `All · ${assets.length}` : `${g} · ${grData?.items.length ?? 0}`}
-            </button>
+              {g === 'all' ? tx('All · {0}', [assets.length]) : `${g} · ${grData?.items.length ?? 0}`}
+            </button>)
           );
         })}
 
@@ -326,7 +329,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
               fontFamily: 'inherit', cursor: 'pointer',
             }}
           >
-            <option value="all">📍 All locations</option>
+            <option value="all">{tx('📍 All locations')}</option>
             {neighbourhoods.map(n => <option key={n} value={n}>📍 {n}</option>)}
           </select>
         )}
@@ -341,11 +344,10 @@ export default function AssetsView({ state, dispatch, showToast }) {
               color: 'var(--down)', fontFamily: 'inherit',
             }}
           >
-            ✕ Clear
+            {tx('✕ Clear')}
           </button>
         )}
       </div>
-
       {/* ─ Summary stats strip ─────────────────────────────────── */}
       <div className="assets-summary-grid" style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginBottom: 20,
@@ -356,7 +358,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
           background: 'var(--paper)', border: '0.5px solid var(--line)',
         }}>
           <div className="muted" style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-            {isFiltered ? 'Filtered assets' : 'Total assets'}
+            {isFiltered ? tx('Filtered assets') : tx('Total assets')}
           </div>
           <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>
             {summary.count}
@@ -372,12 +374,12 @@ export default function AssetsView({ state, dispatch, showToast }) {
           background: 'var(--paper)', border: '0.5px solid var(--line)',
         }}>
           <div className="muted" style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-            Cost basis
+            {tx('Cost basis')}
           </div>
           <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>
             {fmtBase(summary.cost, profile.displayCurrency, { compact: true })}
           </div>
-          <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>purchase price total</div>
+          <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{tx('purchase price total')}</div>
         </div>
 
         {/* Current value */}
@@ -386,12 +388,12 @@ export default function AssetsView({ state, dispatch, showToast }) {
           background: 'var(--paper)', border: '0.5px solid var(--line)',
         }}>
           <div className="muted" style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-            Current value
+            {tx('Current value')}
           </div>
           <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>
             {fmtBase(summary.value, profile.displayCurrency, { compact: true })}
           </div>
-          <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>today's estimate</div>
+          <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{tx('today\'s estimate')}</div>
         </div>
 
         {/* Gain / Loss */}
@@ -404,7 +406,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
             fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4,
             color: summary.gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)',
           }}>
-            {summary.gain >= 0 ? '▲ Appreciation' : '▼ Depreciation'}
+            {summary.gain >= 0 ? tx('▲ Appreciation') : tx('▼ Depreciation')}
           </div>
           <div className="num" style={{
             fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em',
@@ -416,11 +418,10 @@ export default function AssetsView({ state, dispatch, showToast }) {
             fontSize: 11, fontWeight: 600, marginTop: 2,
             color: summary.gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)',
           }}>
-            {summary.gain >= 0 ? '+' : ''}{summary.gainPct.toFixed(1)}% overall
+            {summary.gain >= 0 ? '+' : ''}{summary.gainPct.toFixed(1)}{tx('% overall')}
           </div>
         </div>
       </div>
-
       {/* ─ Bulk-select banner — sticky so it follows the user while scrolling
             through the table. Shows count + summed value so users see exactly
             what they're about to delete. (UX review #22.) */}
@@ -430,9 +431,9 @@ export default function AssetsView({ state, dispatch, showToast }) {
           .filter(a => selected.has(a.id))
           .reduce((s, a) => s + valueRWF(a, today), 0);
         return (
-          <div
+          (<div
             role="region"
-            aria-label="Bulk actions"
+            aria-label={tx('Bulk actions')}
             style={{
               position: 'sticky', top: 8, zIndex: 30,
               padding: '12px 16px', borderRadius: 10, marginBottom: 12,
@@ -444,25 +445,23 @@ export default function AssetsView({ state, dispatch, showToast }) {
           >
             <span style={{ fontSize: 13, color: 'var(--down)', fontWeight: 600, flex: 1, minWidth: 200 }}>
               {selected.size} asset{selected.size === 1 ? '' : 's'} selected
-              <span className="num" style={{ fontWeight: 500, opacity: 0.85, marginLeft: 8 }}>
-                · {fmtBase(selectedTotal, profile.displayCurrency, { compact: true })} total value
+              <span className="num" style={{ fontWeight: 500, opacity: 0.85, marginLeft: 8 }}>· {fmtBase(selectedTotal, profile.displayCurrency, { compact: true })} {tx('total value')}
               </span>
             </span>
             {selected.size < allFilteredIds.size && (
               <button onClick={() => setSelected(new Set(allFilteredIds))} className="btn btn-ghost" style={{ fontSize: 12 }}>
-                Select all {allFilteredIds.size}
+                {tx('Select all')} {allFilteredIds.size}
               </button>
             )}
             <button onClick={() => setSelected(new Set())} className="btn btn-ghost" style={{ fontSize: 12 }}>
-              Deselect all
+              {tx('Deselect all')}
             </button>
             <button type="button" onClick={handleBulkDelete} className="btn btn-danger btn-sm">
-              Delete {selected.size} asset{selected.size === 1 ? '' : 's'}
+              {tx('Delete')} {selected.size}asset{selected.size === 1 ? '' : 's'}
             </button>
-          </div>
+          </div>)
         );
       })()}
-
       {/* ─ Import result banner ────────────────────────────────── */}
       {importResult && (
         <div style={{
@@ -477,24 +476,25 @@ export default function AssetsView({ state, dispatch, showToast }) {
               {importResult.errors?.length > 0 && (
                 <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 12 }}>
                   {importResult.errors.slice(0, 8).map((e, i) => <li key={i}>{e}</li>)}
-                  {importResult.errors.length > 8 && <li>…and {importResult.errors.length - 8} more.</li>}
+                  {importResult.errors.length > 8 && <li>{tx('…and')} {importResult.errors.length - 8} {tx('more.')}</li>}
                 </ul>
               )}
             </div>
-            <button type="button" onClick={() => setImportResult(null)} aria-label="Dismiss import result" style={{
+            <button type="button" onClick={() => setImportResult(null)} aria-label={tx('Dismiss import result')} style={{
               width: 24, height: 24, borderRadius: 6, border: 0, background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: 14,
             }}><span aria-hidden="true">×</span></button>
           </div>
         </div>
       )}
-
       {/* ─ Asset group cards ─ wrapped in a single keyboard-nav region
             so arrow keys move focus across groups in render order. */}
       <div
         {...containerProps}
         ref={listRef}
         role="listbox"
-        aria-label="Assets — use arrow keys to navigate, Enter to edit, Delete to remove, Space to select"
+        aria-label={tx(
+          'Assets — use arrow keys to navigate, Enter to edit, Delete to remove, Space to select'
+        )}
       >
       {pagedGroups.map(g => {
         // Group header totals reflect the FULL filtered group, even when the
@@ -505,7 +505,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
         const gPct   = gCost ? (gGain / gCost) * 100 : 0;
 
         return (
-          <Reveal key={g.group} className="card" style={{ marginBottom: 14, padding: 0 }}>
+          (<Reveal key={g.group} className="card" style={{ marginBottom: 14, padding: 0 }}>
             {/* Group header */}
             <div className="row" style={{ padding: '16px 22px', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <div className="row" style={{ gap: 10, alignItems: 'center' }}>
@@ -515,20 +515,20 @@ export default function AssetsView({ state, dispatch, showToast }) {
               </div>
               <div className="row" style={{ gap: 14, fontSize: 12, flexWrap: 'wrap' }}>
                 <div className="col" style={{ gap: 1, alignItems: 'flex-end' }}>
-                  <span className="muted" style={{ fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Cost basis</span>
+                  <span className="muted" style={{ fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Cost basis')}</span>
                   <span className="num" style={{ color: 'var(--ink-2)', fontWeight: 600 }}>
                     {fmtBase(gCost, profile.displayCurrency, { compact: true })}
                   </span>
                 </div>
                 <div className="col" style={{ gap: 1, alignItems: 'flex-end' }}>
-                  <span className="muted" style={{ fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Value</span>
+                  <span className="muted" style={{ fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Value')}</span>
                   <span className="num" style={{ color: 'var(--ink)', fontWeight: 700 }}>
                     {fmtBase(gValue, profile.displayCurrency, { compact: true })}
                   </span>
                 </div>
                 <div className="col" style={{ gap: 1, alignItems: 'flex-end' }}>
                   <span className="muted" style={{ fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                    {gGain >= 0 ? 'Gain' : 'Loss'}
+                    {gGain >= 0 ? tx('Gain') : tx('Loss')}
                   </span>
                   <span className="num" style={{
                     color: gGain >= 0 ? 'var(--up)' : 'var(--down)',
@@ -543,7 +543,6 @@ export default function AssetsView({ state, dispatch, showToast }) {
               </div>
             </div>
             <div className="hr" />
-
             {/* Column headers */}
             <div className="row muted asset-table-head" style={{
               display: 'grid', gridTemplateColumns: '28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
@@ -560,18 +559,17 @@ export default function AssetsView({ state, dispatch, showToast }) {
                     setSelected(prev => new Set([...prev, ...visibleIds]));
                   }
                 }}
-                title={allVisibleSelected ? 'Deselect all' : 'Select all visible'}
+                title={allVisibleSelected ? tx('Deselect all') : tx('Select all visible')}
                 style={{ cursor: 'pointer', accentColor: 'var(--down)', margin: 0 }}
               />
-              <span>Name</span>
-              <span>Bought</span>
-              <span>Today's value</span>
-              <span>In {profile.displayCurrency}</span>
+              <span>{tx('Name')}</span>
+              <span>{tx('Bought')}</span>
+              <span>{tx('Today\'s value')}</span>
+              <span>{tx('In')} {profile.displayCurrency}</span>
               <span style={{ textAlign: 'right' }}>P/L</span>
               <span />
             </div>
             <div className="hr" />
-
             {/* Asset rows */}
             {g.items.map((a, i) => {
               // Resolve the row's index within the current page so roving
@@ -595,54 +593,52 @@ export default function AssetsView({ state, dispatch, showToast }) {
                 </React.Fragment>
               );
             })}
-          </Reveal>
+          </Reveal>)
         );
       })}
       </div>
-
       {/* ─ Pagination controls (B5) ────────────────────────────── */}
       {flatAssets.length > PAGE_SIZE && (
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
           <div className="muted" style={{ fontSize: 12 }}>
-            Showing {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, flatAssets.length)} of {flatAssets.length}
+            {tx('Showing')} {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, flatAssets.length)}of {flatAssets.length}
           </div>
           <div className="row" style={{ gap: 8, alignItems: 'center' }}>
             <button type="button" className="btn btn-ghost btn-sm" disabled={safePage <= 1}
-              onClick={() => goToPage(safePage - 1)} aria-label="Previous page">← Prev</button>
+              onClick={() => goToPage(safePage - 1)} aria-label={tx('Previous page')}>{tx('← Prev')}</button>
             <span className="muted num" style={{ fontSize: 12, minWidth: 96, textAlign: 'center' }}>
-              Page {safePage} of {totalPages}
+              {tx('Page')} {safePage}of {totalPages}
             </span>
             <button type="button" className="btn btn-ghost btn-sm" disabled={safePage >= totalPages}
-              onClick={() => goToPage(safePage + 1)} aria-label="Next page">Next →</button>
+              onClick={() => goToPage(safePage + 1)} aria-label={tx('Next page')}>{tx('Next →')}</button>
           </div>
         </div>
       )}
-
       {/* ─ Empty state ─────────────────────────────────────────── */}
       {filtered.length === 0 && assets.length > 0 && (
         <div className="card" style={{ padding: 48, textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
-          <div className="font-serif" style={{ fontSize: 20, marginBottom: 6 }}>No assets match this filter</div>
-          <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>Try a different asset type, location, or search term.</div>
+          <div className="font-serif" style={{ fontSize: 20, marginBottom: 6 }}>{tx('No assets match this filter')}</div>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>{tx('Try a different asset type, location, or search term.')}</div>
           <button
             onClick={() => { setTypeFilter('all'); setLocFilter('all'); setSortBy('default'); setSearch(''); }}
             className="btn btn-ghost"
           >
-            Clear all filters
+            {tx('Clear all filters')}
           </button>
         </div>
       )}
-
       {filtered.length === 0 && assets.length === 0 && (
         <div className="card" style={{ padding: 60, textAlign: 'center' }}>
-          <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>No assets yet</div>
+          <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>{tx('No assets yet')}</div>
           <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>
-            Start by adding your first asset — a plot, vehicle, savings account, or anything else.
+            {tx(
+              'Start by adding your first asset — a plot, vehicle, savings account, or anything else.'
+            )}
           </div>
-          <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add your first asset</button>
+          <button onClick={() => setEditing({})} className="btn btn-primary">{tx('＋ Add your first asset')}</button>
         </div>
       )}
-
       {editing && (
         <AssetEditor
           asset={editing}
@@ -651,7 +647,6 @@ export default function AssetsView({ state, dispatch, showToast }) {
           showToast={showToast}
         />
       )}
-
       <ConfirmDestructive
         open={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
@@ -666,8 +661,11 @@ export default function AssetsView({ state, dispatch, showToast }) {
         }}
         title={
           pendingDelete?.kind === 'bulk'
-            ? `Delete ${pendingDelete.ids.size} asset${pendingDelete.ids.size === 1 ? '' : 's'}?`
-            : 'Delete this asset?'
+            ? tx(
+            'Delete {0} asset{1}?',
+            [pendingDelete.ids.size, pendingDelete.ids.size === 1 ? '' : 's']
+          )
+            : tx('Delete this asset?')
         }
         description={
           pendingDelete?.kind === 'single' ? (
@@ -676,22 +674,20 @@ export default function AssetsView({ state, dispatch, showToast }) {
               {' · '}
               <span className="num">{fmtBase(valueRWF(pendingDelete.asset, new Date()), profile.displayCurrency, { compact: true })}</span>
               <br />
-              This removes the asset permanently. You can't undo this.
+              {tx('This removes the asset permanently. You can\'t undo this.')}
             </span>
           ) : (
             <span>
-              This removes <strong style={{ color: 'var(--ink)' }}>{pendingDelete?.ids?.size}</strong> assets permanently.
-              You can't undo this.
+              {tx('This removes')} <strong style={{ color: 'var(--ink)' }}>{pendingDelete?.ids?.size}</strong> {tx('assets permanently.\n              You can\'t undo this.')}
             </span>
           )
         }
         confirmLabel={
           pendingDelete?.kind === 'bulk'
-            ? `Delete ${pendingDelete.ids.size}`
-            : 'Delete asset'
+            ? tx('Delete {0}', [pendingDelete.ids.size])
+            : tx('Delete asset')
         }
       />
-
       <ConfirmDestructive
         open={!!pendingImport}
         onClose={() => setPendingImport(null)}
@@ -709,18 +705,21 @@ export default function AssetsView({ state, dispatch, showToast }) {
           });
           setPendingImport(null);
         }}
-        title="Apply spreadsheet import?"
+        title={tx('Apply spreadsheet import?')}
         description={
           <span>
-            This will {pendingImport?.summary} asset{pendingImport?.matched?.length === 1 ? '' : 's'}.
-            {pendingImport?.updates ? ' Updated rows overwrite the current values.' : ''}
+            {tx('This will')} {tx(pendingImport?.summary)}asset{pendingImport?.matched?.length === 1 ? '' : 's'}.
+                        {pendingImport?.updates ? tx(' Updated rows overwrite the current values.') : ''}
             {pendingImport?.errors?.length
-              ? ` ${pendingImport.errors.length} row${pendingImport.errors.length === 1 ? ' was' : 's were'} skipped due to errors.`
+              ? tx(' {0} row{1} skipped due to errors.', [
+              pendingImport.errors.length,
+              pendingImport.errors.length === 1 ? ' was' : 's were'
+            ])
               : ''}
           </span>
         }
         confirmLabel={`Import ${pendingImport?.matched?.length || ''}`.trim()}
       />
-    </div>
+    </div>)
   );
 }

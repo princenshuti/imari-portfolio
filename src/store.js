@@ -1,5 +1,7 @@
 import { FX, SEED_ASSETS } from './data.js';
 
+import { tx } from './i18n/tx.js';
+
 const STORAGE_KEY = 'imari:portfolio:v1';
 
 export function loadState() {
@@ -104,7 +106,7 @@ function sanitizeAsset(raw) {
 export function importJSONFile(file) {
   // 1. Size guard — before reading anything into memory
   if (file.size > MAX_IMPORT_BYTES) {
-    return Promise.reject(new Error(`File too large (max ${MAX_IMPORT_BYTES / 1024 / 1024} MB)`));
+    return Promise.reject(new Error(tx('File too large (max {0} MB)', [MAX_IMPORT_BYTES / 1024 / 1024])));
   }
 
   return new Promise((resolve, reject) => {
@@ -115,11 +117,11 @@ export function importJSONFile(file) {
 
         // 2. Top-level structure check
         if (!obj || typeof obj !== 'object' || Array.isArray(obj))
-          throw new Error('Invalid portfolio file structure');
+          throw new Error(tx('Invalid portfolio file structure'));
         if (!Array.isArray(obj.assets))
-          throw new Error('Missing assets array');
+          throw new Error(tx('Missing assets array'));
         if (obj.assets.length > MAX_ASSETS)
-          throw new Error(`Too many assets (max ${MAX_ASSETS})`);
+          throw new Error(tx('Too many assets (max {0})', [MAX_ASSETS]));
 
         // 3. Sanitize assets
         obj.assets = obj.assets.map(sanitizeAsset).filter(Boolean);

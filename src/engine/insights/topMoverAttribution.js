@@ -5,6 +5,8 @@
 import { makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { valueRWF, costRWF } from '../../data.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export default function topMoverAttribution(state, { now = new Date() } = {}) {
   const assets = state.assets || [];
   if (assets.length === 0) return null;
@@ -25,9 +27,12 @@ export default function topMoverAttribution(state, { now = new Date() } = {}) {
     type: up ? 'surprise' : 'comparison',
     category: 'networth',
     headline: up
-      ? `"${a.name}" is your biggest gainer`
-      : `"${a.name}" is your biggest drag`,
-    body: `"${a.name}" has moved ${up ? '+' : ''}${rwf(gain)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%) vs cost — the largest single contributor to your net worth change.`,
+      ? tx('"{0}" is your biggest gainer', [a.name])
+      : tx('"{0}" is your biggest drag', [a.name]),
+    body: tx(
+      '"{0}" has moved {1}{2} ({3}{4}%) vs cost — the largest single contributor to your net worth change.',
+      [a.name, up ? '+' : '', rwf(gain), pct >= 0 ? '+' : '', pct.toFixed(1)]
+    ),
     sourceRefs: [a.id],
     dataAsOf: inputsAsOf(state, [a.id], now),
     now,
@@ -38,8 +43,11 @@ export default function topMoverAttribution(state, { now = new Date() } = {}) {
     insight.costOfAbsence = {
       severity: 'info',
       amount: Math.abs(gain),
-      costStatement: `This one position is pulling your net worth down by ${rwf(Math.abs(gain))}. Worth deciding: hold, average down, or exit.`,
-      action: { label: 'Open in Assets', to: 'assets' },
+      costStatement: tx(
+        'This one position is pulling your net worth down by {0}. Worth deciding: hold, average down, or exit.',
+        [rwf(Math.abs(gain))]
+      ),
+      action: { label: tx('Open in Assets'), to: 'assets' },
     };
   }
 

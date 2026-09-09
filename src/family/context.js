@@ -14,6 +14,8 @@ import {
 } from './habits.js';
 import { KINDS, deriveEvents, affordability, insuranceGaps, daysUntil, normalizeItem } from './planning.js';
 
+import { tx } from '../i18n/tx.js';
+
 const short = (s, n) => (typeof s === 'string' && s.length > n ? `${s.slice(0, n - 1)}…` : s || '');
 
 /**
@@ -59,10 +61,10 @@ export const FAMILY_TOOL_NAMES = new Set(['family_add_item', 'family_tick_habits
  * Returns a one-line human result; throws a readable message on bad input.
  */
 export async function runFamilyTool(name, input = {}, api, now = new Date(), existing = []) {
-  if (!api) throw new Error('Family tools unavailable');
+  if (!api) throw new Error(tx('Family tools unavailable'));
   switch (name) {
     case 'family_add_item': {
-      if (!KINDS[input.kind]) throw new Error('Unknown item kind');
+      if (!KINDS[input.kind]) throw new Error(tx('Unknown item kind'));
       const row = normalizeItem({ ...input, status: 'open' }); // drops anything the form would not accept
       // Idempotent: a model that re-reads an earlier "✓ Added …" line must not add it twice.
       const dup = (existing || []).find(i => i.kind === row.kind && i.status !== 'archived'
@@ -74,7 +76,7 @@ export async function runFamilyTool(name, input = {}, api, now = new Date(), exi
     case 'family_tick_habits': {
       const week = isISODate(input.week) ? weekStart(input.week) : weekStart(now);
       const ids = Array.isArray(input.habit_ids) ? input.habit_ids.filter(id => HABIT_IDS.has(id)).slice(0, MAX_SCORE) : [];
-      if (!ids.length) throw new Error('No valid habit ids');
+      if (!ids.length) throw new Error(tx('No valid habit ids'));
       const done = input.done !== false;
       for (const id of ids) await api.setHabit(week, id, done);
       const labels = ids.map(id => HABITS.find(h => h.id === id)?.label).filter(Boolean);
@@ -82,14 +84,14 @@ export async function runFamilyTool(name, input = {}, api, now = new Date(), exi
     }
     case 'family_update_plan': {
       const field = PLAN_FIELDS.find(f => f.key === input.field);
-      if (!field) throw new Error('Unknown plan field');
+      if (!field) throw new Error(tx('Unknown plan field'));
       const body = cleanText(input.body, 4000).trim();
-      if (!body) throw new Error('Nothing to write');
+      if (!body) throw new Error(tx('Nothing to write'));
       await api.setNote(NOTE_KEY.plan(field.key), body);
       return `Updated “${field.label}”.`;
     }
     default:
-      throw new Error('Tool not allowed');
+      throw new Error(tx('Tool not allowed'));
   }
 }
 
@@ -107,11 +109,17 @@ function uninsuredAsset(state, { now = new Date(), family } = {}) {
   const value = valueRWF(top, now);
   return makeInsight({
     id: 'family-uninsured-asset', type: 'foresight', category: 'family',
-    headline: `${top.name || top.kind} has no insurance policy linked`,
-    body: `${gaps.length} insurable asset${gaps.length === 1 ? '' : 's'} (vehicles, houses) carry no policy in the family vault.`,
+    headline: tx('{0} has no insurance policy linked', [top.name || top.kind]),
+    body: tx(
+      '{0} insurable asset{1} (vehicles, houses) carry no policy in the family vault.',
+      [gaps.length, gaps.length === 1 ? '' : 's']
+    ),
     costOfAbsence: { severity: value > 0 ? 'warning' : 'info', amount: value,
-      costStatement: `One accident or fire and ${rwf(value)} of ${top.name || 'this asset'} is a total loss paid from family cash.`,
-      action: { label: 'Add a policy', to: 'insurance' } },
+      costStatement: tx(
+        'One accident or fire and {0} of {1} is a total loss paid from family cash.',
+        [rwf(value), top.name || 'this asset']
+      ),
+      action: { label: tx('Add a policy'), to: 'insurance' } },
     sourceRefs: [top.id], dataAsOf: now, now,
   });
 }
@@ -128,13 +136,22 @@ function renewalsDue(state, { now = new Date(), family } = {}) {
   const when = d < 0 ? `${-d} day${d === -1 ? '' : 's'} ago` : d === 0 ? 'today' : `in ${d} day${d === 1 ? '' : 's'}`;
   return makeInsight({
     id: 'family-renewal-due', type: 'foresight', category: 'family',
-    headline: i.kind === 'policy' ? `Insurance renewal ${when}: ${i.title}` : `Document expiry ${when}: ${i.title}`,
-    body: `${due.length} family renewal${due.length === 1 ? '' : 's'} or expir${due.length === 1 ? 'y' : 'ies'} inside the warning window.`,
+    headline: i.kind === 'policy' ? tx('Insurance renewal {0}: {1}', [when, i.title]) : tx('Document expiry {0}: {1}', [when, i.title]),
+    body: tx(
+      '{0} family renewal{1} or expir{2} inside the warning window.',
+      [due.length, due.length === 1 ? '' : 's', due.length === 1 ? 'y' : 'ies']
+    ),
     costOfAbsence: { severity: d <= 7 ? 'critical' : 'warning', amount: premium,
       costStatement: i.kind === 'policy'
-        ? `A lapsed policy means an uncovered loss plus a fresh underwriting cycle${premium ? ` on a ${rwf(premium)} premium` : ''}.`
-        : `An expired ${i.title} blocks travel, school or bank steps and costs a rush renewal.`,
-      action: { label: i.kind === 'policy' ? 'Review policies' : 'Open the vault', to: i.kind === 'policy' ? 'insurance' : 'documents' } },
+        ? tx(
+        'A lapsed policy means an uncovered loss plus a fresh underwriting cycle{0}.',
+        [premium ? ` on a ${rwf(premium)} premium` : '']
+      )
+        : tx(
+        'An expired {0} blocks travel, school or bank steps and costs a rush renewal.',
+        [i.title]
+      ),
+      action: { label: i.kind === 'policy' ? tx('Review policies') : tx('Open the vault'), to: i.kind === 'policy' ? 'insurance' : 'documents' } },
     sourceRefs: [i.id], dataAsOf: now, now,
   });
 }
@@ -154,11 +171,16 @@ function scorecardSlipping(state, { now = new Date(), family } = {}) {
   const weakest = secs[0];
   return makeInsight({
     id: 'family-scorecard-slipping', type: 'foresight', category: 'family',
-    headline: nothingLogged ? 'This week’s family scorecard is still empty' : `Family scorecard at ${score}/${MAX_SCORE} with the week nearly over`,
-    body: nothingLogged ? 'Nothing ticked yet for this week; last week closed at ' + `${lastWeek}/${MAX_SCORE}.` : `Weakest area: ${weakest.title} (${weakest.done}/${weakest.max}).`,
+    headline: nothingLogged ? tx('This week’s family scorecard is still empty') : tx(
+      'Family scorecard at {0}/{1} with the week nearly over',
+      [score, MAX_SCORE]
+    ),
+    body: nothingLogged ? 'Nothing ticked yet for this week; last week closed at ' + `${lastWeek}/${MAX_SCORE}.` : tx('Weakest area: {0} ({1}/{2}).', [weakest.title, weakest.done, weakest.max]),
     costOfAbsence: { severity: 'info', amount: 0,
-      costStatement: 'Unlogged weeks break the streak and hide the pattern the Sunday review is meant to catch.',
-      action: { label: 'Open the scorecard', to: 'scorecard' } },
+      costStatement: tx(
+        'Unlogged weeks break the streak and hide the pattern the Sunday review is meant to catch.'
+      ),
+      action: { label: tx('Open the scorecard'), to: 'scorecard' } },
     sourceRefs: [FAMILY_SCORECARD_REF], dataAsOf: now, now,
   });
 }

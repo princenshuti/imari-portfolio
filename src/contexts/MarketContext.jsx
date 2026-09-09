@@ -22,6 +22,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { fetchMarket, getCachedMarket } from '../services/market.js';
 
+import { tx } from '../i18n/tx.js';
+
 const MarketContext = createContext(null);
 
 /** Build per-domain overrides from a market fetch result. */
@@ -90,7 +92,7 @@ export function MarketProvider({ children }) {
       setStatus('done');
       return m;
     } catch (e) {
-      setError(e?.message || 'Could not reach market data sources.');
+      setError(e?.message || tx('Could not reach market data sources.'));
       setStatus('error');
       throw e;
     }
@@ -114,6 +116,6 @@ export function MarketProvider({ children }) {
 
 export function useMarket() {
   const ctx = useContext(MarketContext);
-  if (!ctx) throw new Error('useMarket must be used within <MarketProvider>');
+  if (!ctx) throw new Error(tx('useMarket must be used within <MarketProvider>'));
   return ctx;
 }

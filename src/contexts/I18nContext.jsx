@@ -21,6 +21,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import en from '../locales/en.js';
 import fr from '../locales/fr.js';
 import rw from '../locales/rw.js';
+import { setTxLocale, registerMessages, hasMessages } from '../i18n/tx.js';
+
+// Interior catalogues (English text → translation), loaded only when chosen.
+const LOADERS = {
+  fr: () => import('../i18n/messages.fr.json'),
+  rw: () => import('../i18n/messages.rw.json'),
+};
+
+import { tx } from '../i18n/tx.js';
 
 const BUNDLES = { en, fr, rw };
 const STORAGE_KEY = 'imari:locale';
@@ -68,6 +77,19 @@ const I18nContext = createContext(null);
 
 export function I18nProvider({ profile, onChangeLocale, children }) {
   const [locale, setLocaleState] = useState(() => detectLocale(profile?.locale));
+  // Bumps once the interior catalogue for `locale` is loaded so consumers re-render.
+  const [catalogueVersion, setCatalogueVersion] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    setTxLocale(locale);
+    try { document.documentElement.lang = locale; } catch {}
+    if (hasMessages(locale)) { setCatalogueVersion(v => v + 1); return; }
+    const load = LOADERS[locale];
+    if (!load) return;
+    load().then(mod => { if (!alive) return; registerMessages(locale, mod.default || mod); setCatalogueVersion(v => v + 1); })
+          .catch(() => { /* stay on English fallback text */ });
+    return () => { alive = false; };
+  }, [locale]);
 
   // Sync down: when profile.locale changes externally (cloud sync from
   // another device), adopt it. Skip if user just changed it locally.
@@ -99,12 +121,20 @@ export function I18nProvider({ profile, onChangeLocale, children }) {
     return key;
   }, [locale]);
 
-  const value = useMemo(() => ({ t, locale, setLocale }), [t, locale, setLocale]);
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+  // `key` changes when the language (or its catalogue) changes so the whole
+  // subtree re-renders with the new strings — tx() reads module state.
+  const value = useMemo(() => ({ t, locale, setLocale, key: `${locale}:${catalogueVersion}` }), [t, locale, setLocale, catalogueVersion]);
+  return <I18nContext.Provider value={value}><LocaleBoundary>{children}</LocaleBoundary></I18nContext.Provider>;
+}
+
+/** Re-mounts everything below it when the language or its catalogue changes, so tx() output refreshes. */
+function LocaleBoundary({ children }) {
+  const ctx = useContext(I18nContext);
+  return <div key={ctx?.key || 'en'} style={{ display: 'contents' }}>{children}</div>;
 }
 
 export function useT() {
   const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error('useT must be used within <I18nProvider>');
+  if (!ctx) throw new Error(tx('useT must be used within <I18nProvider>'));
   return ctx;
 }

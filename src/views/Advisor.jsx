@@ -19,6 +19,8 @@ import { glossaryFor } from '../glossary.js';
 import Explain from '../components/Explain.jsx';
 import { renderMD } from '../markdown.js';
 
+import { tx } from '../i18n/tx.js';
+
 const askAdvisor = (question) =>
   window.dispatchEvent(new CustomEvent('imari:advisor:ask', { detail: question }));
 
@@ -61,16 +63,16 @@ export default function AdvisorView({ state, dispatch }) {
   // Market pulse — same provenance-tagged values the AI itself is grounded in.
   const bnrUSD = market?.bnrRates?.USD;
   const pulse = [
-    bnrUSD && { label: 'USD/RWF (BNR)', value: `${fmtNum(bnrUSD.buy, 0)} / ${fmtNum(bnrUSD.sell, 0)}`, sub: `buy / sell · ${bnrUSD.date}`, live: true },
-    { label: 'Inflation (CPI)', value: `${REFERENCE.cpiYoYPct}%`, sub: 'NISR · reference', live: false },
-    { label: 'T-bill yield', value: `${REFERENCE.tBillYieldPct}%`, sub: 'BNR auction · reference', live: false },
-    overrides?.['bnr-repo'] && { label: 'BNR repo rate', value: `${overrides['bnr-repo'].value ?? ''}%`, sub: 'MPC · reference', live: false },
+    bnrUSD && { label: tx('USD/RWF (BNR)'), value: `${fmtNum(bnrUSD.buy, 0)} / ${fmtNum(bnrUSD.sell, 0)}`, sub: tx('buy / sell · {0}', [bnrUSD.date]), live: true },
+    { label: tx('Inflation (CPI)'), value: `${REFERENCE.cpiYoYPct}%`, sub: tx('NISR · reference'), live: false },
+    { label: tx('T-bill yield'), value: `${REFERENCE.tBillYieldPct}%`, sub: tx('BNR auction · reference'), live: false },
+    overrides?.['bnr-repo'] && { label: tx('BNR repo rate'), value: `${overrides['bnr-repo'].value ?? ''}%`, sub: tx('MPC · reference'), live: false },
   ].filter(Boolean);
 
   const shown = showAll ? recommendations : recommendations.slice(0, 5);
 
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: '100vh' }}>
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: '100vh' }}>
       {/* ── Hero ── */}
       <div className="row" style={{ gap: 14, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
         <div aria-hidden="true" style={{
@@ -81,54 +83,60 @@ export default function AdvisorView({ state, dispatch }) {
         }}>✦</div>
         <div>
           <h2 className="font-serif" style={{ fontSize: 28, margin: 0, lineHeight: 1.1 }}>
-            Your AI Advisor
+            {tx('Your AI Advisor')}
           </h2>
           <div className="muted" style={{ fontSize: 13, marginTop: 3 }}>
             {recommendations.length > 0
-              ? `${recommendations.length} recommendation${recommendations.length > 1 ? 's' : ''} from your numbers and today's market — every figure computed, never guessed.`
-              : 'Watching your portfolio against today\'s market — every figure computed, never guessed.'}
+              ? tx(
+              '{0} recommendation{1} from your numbers and today\'s market — every figure computed, never guessed.',
+              [recommendations.length, recommendations.length > 1 ? 's' : '']
+            )
+              : tx(
+              'Watching your portfolio against today\'s market — every figure computed, never guessed.'
+            )}
           </div>
         </div>
         <button type="button" className="btn btn-primary" style={{ marginLeft: 'auto' }}
           onClick={() => askAdvisor('Give me a one-paragraph summary of my financial health, grounded in my numbers and today\'s market.')}>
-          ✦ Ask anything
+          {tx('✦ Ask anything')}
         </button>
       </div>
       <div className="muted" style={{ fontSize: 11, marginBottom: 18 }}>
-        Conversations happen in the floating ✦ assistant — it sees everything on this page. Not professional advice.
+        {tx(
+          'Conversations happen in the floating ✦ assistant — it sees everything on this page. Not professional advice.'
+        )}
       </div>
-
       {/* ── Market pulse the advice is grounded in ── */}
       <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10, marginBottom: 18 }}>
         {pulse.map(p => (
           <StaggerItem key={p.label} className="card" style={{ padding: '12px 16px' }}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{p.label}</span>
+              <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{tx(p.label)}</span>
               <span className="pill pill-soft" style={{ fontSize: 10, color: p.live ? 'var(--up)' : 'var(--gold-ink)' }}>{p.live ? 'live' : 'ref'}</span>
             </div>
             <div className="num" style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{p.value}</div>
-            <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{p.sub}</div>
+            <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{tx(p.sub)}</div>
           </StaggerItem>
         ))}
       </Stagger>
-
       {/* ── Recommendations — the product ── */}
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-        <div className="font-serif" style={{ fontSize: 20 }}>Today's recommendations</div>
+        <div className="font-serif" style={{ fontSize: 20 }}>{tx('Today\'s recommendations')}</div>
         {recommendations.length > 5 && (
           <button type="button" className="btn-link" style={{ fontSize: 12 }} onClick={() => setShowAll(v => !v)}>
-            {showAll ? 'Show top 5' : `Show all ${recommendations.length}`}
+            {showAll ? tx('Show top 5') : tx('Show all {0}', [recommendations.length])}
           </button>
         )}
       </div>
-
       {recommendations.length === 0 ? (
         <div className="card" style={{ padding: '28px 24px', marginBottom: 22, display: 'flex', gap: 12, alignItems: 'center' }}>
           <span aria-hidden="true" style={{ color: 'var(--up)', fontSize: 22 }}>✓</span>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>Nothing urgent in your data right now</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{tx('Nothing urgent in your data right now')}</div>
             <div className="muted" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.5 }}>
-              The engine re-checks every change you make — add expenses, debts, and goals and the advice sharpens.
+              {tx(
+                'The engine re-checks every change you make — add expenses, debts, and goals and the advice sharpens.'
+              )}
             </div>
           </div>
         </div>
@@ -138,36 +146,35 @@ export default function AdvisorView({ state, dispatch }) {
             const color = severityColor(r.costOfAbsence.severity);
             const terms = glossaryFor(r.id);
             return (
-              <StaggerItem key={r.id} className="card" style={{ padding: '16px 20px', borderLeft: `3px solid ${color}` }}>
+              (<StaggerItem key={r.id} className="card" style={{ padding: '16px 20px', borderLeft: `3px solid ${color}` }}>
                 <div className="row" style={{ gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                   <span className="pill pill-soft" style={{ fontSize: 10, fontWeight: 700, color }}>
                     {SEVERITY_LABEL[r.costOfAbsence.severity] || r.costOfAbsence.severity}
                   </span>
-                  <div className="font-serif" style={{ fontSize: 17 }}>{r.headline}</div>
+                  <div className="font-serif" style={{ fontSize: 17 }}>{tx(r.headline)}</div>
                 </div>
-                <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', marginTop: 6 }}>{r.body}</div>
-                <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 8, color: 'var(--ink)' }}>{r.costOfAbsence.costStatement}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', marginTop: 6 }}>{tx(r.body)}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 8, color: 'var(--ink)' }}>{tx(r.costOfAbsence.costStatement)}</div>
                 <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                   <button type="button" className="btn btn-primary" style={{ fontSize: 12, padding: '7px 13px' }}
                     onClick={() => askAdvisor(`Imari flagged this for me: "${r.headline}". ${r.costOfAbsence.costStatement} Walk me through what's behind it and exactly how I should act on it, step by step.`)}>
-                    ✦ Discuss this
+                    {tx('✦ Discuss this')}
                   </button>
                   {r.costOfAbsence.action && (
                     <button type="button" className="btn btn-ghost" style={{ fontSize: 12, padding: '7px 13px' }}
                       onClick={() => dispatch({ type: 'nav', to: r.costOfAbsence.action.to })}>
-                      {r.costOfAbsence.action.label} →
+                      {tx(r.costOfAbsence.action.label)} →
                     </button>
                   )}
                 </div>
                 {terms.length > 0 && <Explain entries={terms} style={{ marginTop: 12 }} />}
-              </StaggerItem>
+              </StaggerItem>)
             );
           })}
         </Stagger>
       )}
-
       {/* ── Ask about your portfolio ── */}
-      <div className="font-serif" style={{ fontSize: 20, marginBottom: 10 }}>Ask about your portfolio</div>
+      <div className="font-serif" style={{ fontSize: 20, marginBottom: 10 }}>{tx('Ask about your portfolio')}</div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 26 }}>
         {questions.map(q => (
           <button key={q} type="button" onClick={() => askAdvisor(q)}
@@ -182,11 +189,10 @@ export default function AdvisorView({ state, dispatch }) {
           >✦ {q}</button>
         ))}
       </div>
-
       {/* ── Saved insights ── */}
       {savedInsights.length > 0 && (
         <>
-          <div className="font-serif" style={{ fontSize: 20, marginBottom: 10 }}>Saved insights</div>
+          <div className="font-serif" style={{ fontSize: 20, marginBottom: 10 }}>{tx('Saved insights')}</div>
           <div className="col" style={{ gap: 10, maxWidth: 820 }}>
             {[...savedInsights].reverse().map((sv, i) => (
               <div key={i} className="card" style={{ padding: '14px 18px' }}>
@@ -194,7 +200,7 @@ export default function AdvisorView({ state, dispatch }) {
                   <div className="muted" style={{ fontSize: 10.5 }}>
                     {sv.question ? `“${sv.question}” · ` : ''}{new Date(sv.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
-                  <button type="button" className="btn-icon-sm" aria-label="Remove saved insight" onClick={() => removeSaved(sv.content)}>
+                  <button type="button" className="btn-icon-sm" aria-label={tx('Remove saved insight')} onClick={() => removeSaved(sv.content)}>
                     <span aria-hidden="true">×</span>
                   </button>
                 </div>
@@ -205,6 +211,6 @@ export default function AdvisorView({ state, dispatch }) {
           </div>
         </>
       )}
-    </div>
+    </div>)
   );
 }

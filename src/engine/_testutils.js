@@ -1,3 +1,4 @@
+import { tx } from '../i18n/tx.js';
 // Shared fixtures for engine tests. Not a *.test.js file, so Vitest won't try to
 // run it as a suite. All assets use RWF + explicit currentValue so valuation is
 // deterministic (no time-derived suggestValue drift).
@@ -37,7 +38,7 @@ export function cf(o = {}) {
 export function goal(o = {}) {
   return {
     id: o.id || nextId('g'),
-    title: 'Goal',
+    title: tx('Goal'),
     category: 'investment',
     targetAmount: 0,
     currency: 'RWF',

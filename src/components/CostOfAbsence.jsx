@@ -18,6 +18,8 @@ import FreshnessChip from './FreshnessChip.jsx';
 import Explain from './Explain.jsx';
 import { SEVERITY_COLOR, SEVERITY_GLYPH, SEVERITY_LABEL } from '../severity.js';
 
+import { tx } from '../i18n/tx.js';
+
 const SEVERITY = Object.fromEntries(Object.keys(SEVERITY_COLOR).map(k =>
   [k, { color: SEVERITY_COLOR[k], glyph: SEVERITY_GLYPH[k], label: SEVERITY_LABEL[k] }]));
 
@@ -35,7 +37,7 @@ export default function CostOfAbsence({
   };
 
   return (
-    <div
+    (<div
       role={severity === 'critical' ? 'alert' : 'status'}
       className="cost-of-absence-card"
       style={{
@@ -65,8 +67,7 @@ export default function CostOfAbsence({
       >
         {s.glyph}
       </div>
-      <span className="sr-only">{s.label}:</span>
-
+      <span className="sr-only">{tx(s.label)}:</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         {headline && (
           <div className="font-serif" style={{ fontSize: 16, lineHeight: 1.2, marginBottom: 4, color: 'var(--ink)' }}>
@@ -89,7 +90,7 @@ export default function CostOfAbsence({
                 transition: 'opacity 140ms ease-out, transform 140ms ease-out',
               }}
             >
-              {action.label} →
+              {tx(action.label)} →
             </button>
           )}
           {asOf && <FreshnessChip asOf={asOf} type="netWorth" now={now} />}
@@ -99,12 +100,11 @@ export default function CostOfAbsence({
             insight leans on. Click-to-open, never hover-only. */}
         {terms?.length > 0 && <Explain entries={terms} style={{ marginTop: 12 }} />}
       </div>
-
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Dismiss this alert"
+          aria-label={tx('Dismiss this alert')}
           style={{
             flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
             border: 0, background: 'transparent', cursor: 'pointer',
@@ -116,6 +116,6 @@ export default function CostOfAbsence({
           ×
         </button>
       )}
-    </div>
+    </div>)
   );
 }

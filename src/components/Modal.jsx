@@ -11,6 +11,8 @@ import { useEffect, useId, useRef } from 'react';
 import { motion } from 'motion/react';
 import { SPRING } from './motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 const FOCUSABLE = [
   'button:not([disabled])',
   '[href]',
@@ -143,11 +145,11 @@ export function ImageLightbox({ open, onClose, src, alt = '' }) {
 
   if (!open) return null;
   return (
-    <div
+    (<div
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={alt || 'Image preview'}
+      aria-label={alt || tx('Image preview')}
       style={{
         // Above any other modal — lightbox is always the topmost layer
         position: 'fixed', inset: 0, background: 'var(--scrim-image)', zIndex: 2147483646,
@@ -156,6 +158,6 @@ export function ImageLightbox({ open, onClose, src, alt = '' }) {
       }}
     >
       <img src={src} alt={alt} style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 10 }} />
-    </div>
+    </div>)
   );
 }

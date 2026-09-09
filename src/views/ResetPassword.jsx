@@ -3,6 +3,8 @@ import { supabase } from '../supabase.js';
 import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 import { Reveal } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 export default function ResetPassword({ onDone, session }) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -30,8 +32,8 @@ export default function ResetPassword({ onDone, session }) {
   const submit = async (e) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) return setError('Password must be at least 8 characters.');
-    if (password !== confirm) return setError('Passwords do not match.');
+    if (password.length < 8) return setError(tx('Password must be at least 8 characters.'));
+    if (password !== confirm) return setError(tx('Passwords do not match.'));
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -39,14 +41,14 @@ export default function ResetPassword({ onDone, session }) {
       setSuccess(true);
       setTimeout(() => onDone(), 2000);
     } catch (err) {
-      setError(err.message || 'Failed to update password. Please try again.');
+      setError(err.message || tx('Failed to update password. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
+    (<div style={{
       position: 'fixed', inset: 0, background: 'var(--bg)', display: 'flex',
       alignItems: 'center', justifyContent: 'center', padding: 20,
     }}>
@@ -58,32 +60,32 @@ export default function ResetPassword({ onDone, session }) {
         }}>●</div>
 
         <div className="font-serif" style={{ fontSize: 32, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
-          Set new password.
+          {tx('Set new password.')}
         </div>
         <div className="muted" style={{ fontSize: 13, marginTop: 6, marginBottom: 22, lineHeight: 1.5 }}>
-          Choose a strong password for your Imari account.
+          {tx('Choose a strong password for your Imari account.')}
         </div>
 
         {!ready ? (
           <div style={{ padding: 14, borderRadius: 10, background: 'var(--paper-2)', color: 'var(--ink-3)', fontSize: 13, textAlign: 'center' }}>
-            Verifying your reset link…
+            {tx('Verifying your reset link…')}
           </div>
         ) : success ? (
           <div style={{ padding: 14, borderRadius: 10, background: 'var(--up-soft)', color: 'var(--up)', fontSize: 13, textAlign: 'center' }}>
-            ✅ Password updated! Signing you in…
+            {tx('✅ Password updated! Signing you in…')}
           </div>
         ) : (
           <form onSubmit={submit} className="col" style={{ gap: 12 }}>
             <input
               type="password" required value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="New password (min. 8 characters)"
+              placeholder={tx('New password (min. 8 characters)')}
               autoComplete="new-password" style={inputStyle}
             />
             <input
               type="password" required value={confirm}
               onChange={e => setConfirm(e.target.value)}
-              placeholder="Confirm new password"
+              placeholder={tx('Confirm new password')}
               autoComplete="new-password" style={inputStyle}
             />
             {error && (
@@ -92,7 +94,7 @@ export default function ResetPassword({ onDone, session }) {
               </div>
             )}
             <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: 6 }}>
-              {loading ? 'Updating…' : 'Set new password →'}
+              {loading ? tx('Updating…') : tx('Set new password →')}
             </button>
           </form>
         )}
@@ -100,11 +102,11 @@ export default function ResetPassword({ onDone, session }) {
 
         <div style={{ marginTop: 24, textAlign: 'center' }}>
           <div className="muted" style={{ fontSize: 10, marginBottom: 8, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            Powered by
+            {tx('Powered by')}
           </div>
           <MaxventuresWordmark />
         </div>
       </Reveal>
-    </div>
+    </div>)
   );
 }

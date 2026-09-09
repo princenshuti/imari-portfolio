@@ -5,6 +5,8 @@ import {
 } from '../data.js';
 import { Reveal, Stagger, StaggerItem } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 // ─── Helpers ──────────────────────────────────────────────────
 
 function Section({ title, sub, children, accent = 'var(--brand)', printBreak = false }) {
@@ -207,14 +209,13 @@ export default function TaxReportView({ state, dispatch }) {
 
   // ─── Render ───────────────────────────────────────────────────
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div className="font-serif" style={{ fontSize: 28 }}>Tax Report {year}</div>
+          <div className="font-serif" style={{ fontSize: 28 }}>{tx('Tax Report')} {year}</div>
           <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
-            Rwanda Revenue Authority · Based on asset values as at {today.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}
+            {tx('Rwanda Revenue Authority · Based on asset values as at')} {today.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}
           </div>
         </div>
         <button
@@ -229,25 +230,25 @@ export default function TaxReportView({ state, dispatch }) {
           className="btn btn-ghost"
           style={{ fontSize: 12 }}
         >
-          🖨 Print / Save PDF
+          {tx('🖨 Print / Save PDF')}
         </button>
       </div>
-
       {/* §6 — RRA EBM VAT input credit (when EBM-sourced cashflows exist) */}
       {ebm && (
-        <Section title="RRA EBM — VAT input credit" sub="From certified EBM 2.1 invoices on your TIN" accent="var(--gold)">
+        <Section title={tx('RRA EBM — VAT input credit')} sub={tx('From certified EBM 2.1 invoices on your TIN')} accent="var(--gold)">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
-            <KpiCard label="EBM purchases" value={fmtBase(ebm.purchaseTotal, profile.displayCurrency, { compact: true })} sub={`${ebm.count} certified invoices`} />
-            <KpiCard label="VAT input credit" value={fmtBase(ebm.vatCredit, profile.displayCurrency, { compact: true })} color="var(--up)" highlight sub="claimable at filing" />
-            {ebm.turnover > 0 && <KpiCard label="Turnover (EBM sales)" value={fmtBase(ebm.turnover, profile.displayCurrency, { compact: true })} />}
-            {ebm.unmatched > 0 && <KpiCard label="Unmatched purchases" value={String(ebm.unmatched)} color="var(--gold)" sub="reconcile to a supplier" />}
+            <KpiCard label={tx('EBM purchases')} value={fmtBase(ebm.purchaseTotal, profile.displayCurrency, { compact: true })} sub={tx('{0} certified invoices', [ebm.count])} />
+            <KpiCard label={tx('VAT input credit')} value={fmtBase(ebm.vatCredit, profile.displayCurrency, { compact: true })} color="var(--up)" highlight sub={tx('claimable at filing')} />
+            {ebm.turnover > 0 && <KpiCard label={tx('Turnover (EBM sales)')} value={fmtBase(ebm.turnover, profile.displayCurrency, { compact: true })} />}
+            {ebm.unmatched > 0 && <KpiCard label={tx('Unmatched purchases')} value={String(ebm.unmatched)} color="var(--gold)" sub={tx('reconcile to a supplier')} />}
           </div>
           <div className="muted" style={{ fontSize: 11, marginTop: 12, lineHeight: 1.5 }}>
-            v1 reconciles EBM e-receipt / EIS export files you import. A live VSDC API pull requires RRA accreditation — TIN consent is captured before any sync and is revocable.
+            {tx(
+              'v1 reconciles EBM e-receipt / EIS export files you import. A live VSDC API pull requires RRA accreditation — TIN consent is captured before any sync and is revocable.'
+            )}
           </div>
         </Section>
       )}
-
       {/* Deadline countdown + missing-data audit ────────────────────────
           Two compact alert cards above the summary so the user sees
           actionable items first. (UX review #45 + #46.) */}
@@ -255,8 +256,8 @@ export default function TaxReportView({ state, dispatch }) {
         // Next deadlines: FAT 31 March, Vehicle Road Levy 31 December.
         const yr = today.getFullYear();
         const candidates = [
-          { label: 'Fixed Asset Tax',     date: new Date(yr, 2, 31), amount: totalPropertyTax },
-          { label: 'Vehicle Road Levy',   date: new Date(yr, 11, 31), amount: totalVehicleLevy },
+          { label: tx('Fixed Asset Tax'),     date: new Date(yr, 2, 31), amount: totalPropertyTax },
+          { label: tx('Vehicle Road Levy'),   date: new Date(yr, 11, 31), amount: totalVehicleLevy },
         ].map(d => ({ ...d, date: d.date < today ? new Date(d.date.getFullYear() + 1, d.date.getMonth(), d.date.getDate()) : d.date }))
           .sort((a, b) => a.date - b.date);
         const next = candidates.find(d => d.amount > 0);
@@ -286,21 +287,21 @@ export default function TaxReportView({ state, dispatch }) {
 
         if (!next && missing.length === 0) return null;
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: missing.length > 0 ? '1fr 1.4fr' : '1fr', gap: 12, marginBottom: 22 }}>
+          (<div style={{ display: 'grid', gridTemplateColumns: missing.length > 0 ? '1fr 1.4fr' : '1fr', gap: 12, marginBottom: 22 }}>
             {next && (
               <div className="card" style={{ padding: '14px 18px', borderLeft: '3px solid var(--gold)' }}>
                 <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-                  Next deadline
+                  {tx('Next deadline')}
                 </div>
                 <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
                   <div>
-                    <div className="font-serif" style={{ fontSize: 19, lineHeight: 1.2 }}>{next.label}</div>
+                    <div className="font-serif" style={{ fontSize: 19, lineHeight: 1.2 }}>{tx(next.label)}</div>
                     <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
                       {next.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                       {' · '}
                       <strong style={{ color: 'var(--down)' }}>
                         {Math.max(0, Math.ceil((next.date - today) / 86400000))} days
-                      </strong> from today
+                      </strong> {tx('from today')}
                     </div>
                   </div>
                   <div className="num" style={{ fontSize: 17, fontWeight: 700, color: 'var(--down)' }}>
@@ -312,7 +313,7 @@ export default function TaxReportView({ state, dispatch }) {
             {missing.length > 0 && (
               <div className="card" style={{ padding: '14px 18px', borderLeft: '3px solid var(--clay)' }}>
                 <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-                  What's missing — affects this report
+                  {tx('What\'s missing — affects this report')}
                 </div>
                 <div className="col" style={{ gap: 4 }}>
                   {missing.slice(0, 4).map(m => (
@@ -331,81 +332,85 @@ export default function TaxReportView({ state, dispatch }) {
                     </button>
                   ))}
                   {missing.length > 4 && (
-                    <span className="muted" style={{ fontSize: 11, marginTop: 4 }}>+{missing.length - 4} more issues — fix on the Assets page</span>
+                    <span className="muted" style={{ fontSize: 11, marginTop: 4 }}>+{missing.length - 4} {tx('more issues — fix on the Assets page')}</span>
                   )}
                 </div>
               </div>
             )}
-          </div>
+          </div>)
         );
       })()}
-
       {/* ── Summary KPIs ──────────────────────────────────────── */}
       <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 28 }}>
         <StaggerItem>
           <KpiCard
-            label="Fixed asset tax (annual)"
+            label={tx('Fixed asset tax (annual)')}
             value={fmtBase(totalPropertyTax, c, { compact: true })}
-            sub="Real estate · due 31 March"
+            sub={tx('Real estate · due 31 March')}
             color="var(--down)"
             highlight={totalPropertyTax > 0}
           />
         </StaggerItem>
         <StaggerItem>
           <KpiCard
-            label="Vehicle road levy (annual)"
+            label={tx('Vehicle road levy (annual)')}
             value={fmtBase(totalVehicleLevy, c, { compact: true })}
-            sub="Per vehicle · due 31 December"
+            sub={tx('Per vehicle · due 31 December')}
             color="var(--clay)"
             highlight={totalVehicleLevy > 0}
           />
         </StaggerItem>
         <StaggerItem>
           <KpiCard
-            label="Total annual obligations"
+            label={tx('Total annual obligations')}
             value={fmtBase(totalAnnual, c, { compact: true })}
-            sub="Fixed recurring tax per year"
+            sub={tx('Fixed recurring tax per year')}
             color="var(--down)"
             highlight
           />
         </StaggerItem>
         <StaggerItem>
           <KpiCard
-            label="Est. CGT if you sold everything today"
+            label={tx('Est. CGT if you sold everything today')}
             value={fmtBase(totalCGTAll, c, { compact: true })}
-            sub="Hypothetical — CGT only fires on actual sale"
+            sub={tx('Hypothetical — CGT only fires on actual sale')}
             color="var(--ink-3)"
           />
         </StaggerItem>
       </Stagger>
-
       {/* ══════════════════════════════════════════════════════════
           SECTION A: FIXED ASSET TAX
       ══════════════════════════════════════════════════════════ */}
       <Section
-        title="Fixed Asset Tax"
-        sub="Annual obligation on immovable property · RRA"
+        title={tx('Fixed Asset Tax')}
+        sub={tx('Annual obligation on immovable property · RRA')}
         accent="var(--down)"
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
           <LawBadge law="RRA · Fixed Asset Tax Law" />
-          <span className="muted" style={{ fontSize: 11 }}>Declaration & payment deadline: 31 March · Late interest: 1.5%/month + 10% surcharge (max RWF 100,000)</span>
+          <span className="muted" style={{ fontSize: 11 }}>{tx(
+            'Declaration & payment deadline: 31 March · Late interest: 1.5%/month + 10% surcharge (max RWF 100,000)'
+          )}</span>
         </div>
 
         <FormulaBox>
-          {'Annual tax  =  taxable base  ×  category rate\n\n'}
-          {'Residential:                  0.1% · first RWF 3,000,000 exempt\n'}
-          {'Commercial:                   0.3% · no exemption\n'}
-          {'Industrial:                   0.3% · no exemption\n'}
-          {'Agricultural ≤ 2 ha (20,000 m²):  EXEMPT  (auto, when size is set)\n'}
-          {'Agricultural > 2 ha:          0.1% · verify with RRA\n'}
-          {'Micro-Enterprise / SME:       0.1% · reduced rate per RRA SME framework\n\n'}
-          {'Rates as commonly cited by RRA — verify with rra.gov.rw before filing; rates change.'}
+          {tx('Annual tax  =  taxable base  ×  category rate\n\n')}
+          {tx('Residential:                  0.1% · first RWF 3,000,000 exempt\n')}
+          {tx('Commercial:                   0.3% · no exemption\n')}
+          {tx('Industrial:                   0.3% · no exemption\n')}
+          {tx('Agricultural ≤ 2 ha (20,000 m²):  EXEMPT  (auto, when size is set)\n')}
+          {tx('Agricultural > 2 ha:          0.1% · verify with RRA\n')}
+          {tx(
+            'Micro-Enterprise / SME:       0.1% · reduced rate per RRA SME framework\n\n'
+          )}
+          {tx(
+            'Rates as commonly cited by RRA — verify with rra.gov.rw before filing; rates change.'
+          )}
         </FormulaBox>
 
         {propertyTaxRows.length === 0 ? (
           <div className="card" style={{ padding: 24, textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: 13 }}>No real estate assets in your portfolio yet.</div>
+            <div className="muted" style={{ fontSize: 13 }}>{tx('No real estate assets in your portfolio yet.')}</div>
           </div>
         ) : (
           <TaxTable
@@ -436,44 +441,45 @@ export default function TaxReportView({ state, dispatch }) {
 
         {/* Late payment calculator */}
         <div className="card" style={{ padding: '16px 20px', marginTop: 12 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Late payment penalty estimator</div>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>{tx('Late payment penalty estimator')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, fontSize: 12 }}>
             {[
-              { label: '< 1 month late',  rate: 0.10 },
-              { label: '1–2 months late', rate: 0.20 },
-              { label: '2–3 months late', rate: 0.30 },
-              { label: '> 3 months late', rate: 0.40 },
+              { label: tx('< 1 month late'),  rate: 0.10 },
+              { label: tx('1–2 months late'), rate: 0.20 },
+              { label: tx('2–3 months late'), rate: 0.30 },
+              { label: tx('> 3 months late'), rate: 0.40 },
             ].map(b => (
               <div key={b.label} style={{ padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8 }}>
-                <div className="muted" style={{ fontSize: 10, marginBottom: 4 }}>{b.label}</div>
+                <div className="muted" style={{ fontSize: 10, marginBottom: 4 }}>{tx(b.label)}</div>
                 <div className="num" style={{ fontWeight: 600, color: 'var(--down)' }}>
                   + {fmt(Math.round(totalPropertyTax * b.rate), 'RWF', { compact: true })}
                 </div>
-                <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{(b.rate * 100).toFixed(0)}% surcharge</div>
+                <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{(b.rate * 100).toFixed(0)}{tx('% surcharge')}</div>
               </div>
             ))}
           </div>
           <div className="muted" style={{ fontSize: 10, marginTop: 8, lineHeight: 1.5 }}>
-            Surcharge bands above are <strong>cumulative</strong> with the 1.5%/month late
-            interest from 31 March: total owed = base tax + band surcharge + (1.5% × months late × base tax).
-            The surcharge itself is capped at <strong>RWF 100,000</strong>; monthly interest has no cap.
+            {tx('Surcharge bands above are')} <strong>cumulative</strong> {tx(
+              'with the 1.5%/month late\n            interest from 31 March: total owed = base tax + band surcharge + (1.5% × months late × base tax).\n            The surcharge itself is capped at'
+            )} <strong>{tx('RWF 100,000')}</strong>{tx('; monthly interest has no cap.')}
           </div>
         </div>
       </Section>
-
       {/* ══════════════════════════════════════════════════════════
           SECTION B: VEHICLE ROAD MAINTENANCE LEVY
       ══════════════════════════════════════════════════════════ */}
       <Section
-        title="Vehicle Road Maintenance Levy"
-        sub="Annual obligation per vehicle · Law 013/2025 of 27/05/2025"
+        title={tx('Vehicle Road Maintenance Levy')}
+        sub={tx('Annual obligation per vehicle · Law 013/2025 of 27/05/2025')}
         accent="var(--clay)"
         printBreak
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
           <LawBadge law="Law 013/2025 · Art. 2(2)" />
           <span className="muted" style={{ fontSize: 11 }}>
-            Declared and paid to RRA by 31 December each year · Fuel levy (15% petrol/gas oil CIF) collected at customs separately
+            {tx(
+              'Declared and paid to RRA by 31 December each year · Fuel levy (15% petrol/gas oil CIF) collected at customs separately'
+            )}
           </span>
         </div>
 
@@ -484,18 +490,18 @@ export default function TaxReportView({ state, dispatch }) {
               padding: '10px 14px', borderRadius: 9,
               background: 'var(--bg-2)', border: '0.5px solid var(--line)',
             }}>
-              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--ink-2)' }}>{cat.label}</div>
+              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--ink-2)' }}>{tx(cat.label)}</div>
               <div className="num" style={{ fontSize: 15, fontWeight: 700, marginTop: 2, color: 'var(--clay)' }}>
                 {fmt(cat.levy, 'RWF', { compact: false })}
               </div>
-              <div className="muted" style={{ fontSize: 10 }}>per year</div>
+              <div className="muted" style={{ fontSize: 10 }}>{tx('per year')}</div>
             </div>
           ))}
         </div>
 
         {vehicleLevyRows.length === 0 ? (
           <div className="card" style={{ padding: 24, textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: 13 }}>No vehicles in your portfolio.</div>
+            <div className="muted" style={{ fontSize: 13 }}>{tx('No vehicles in your portfolio.')}</div>
           </div>
         ) : (
           <TaxTable
@@ -514,37 +520,44 @@ export default function TaxReportView({ state, dispatch }) {
         )}
 
         <div style={{ marginTop: 12, padding: '12px 16px', borderRadius: 10, background: 'var(--bg-2)', fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-          <strong style={{ color: 'var(--ink-2)' }}>Exempt:</strong> Government of Rwanda vehicles · Embassy and diplomatic mission vehicles · International organization vehicles with bilateral agreement (Art. 5, Law 013/2025)
+          <strong style={{ color: 'var(--ink-2)' }}>{tx('Exempt:')}</strong> {tx(
+            'Government of Rwanda vehicles · Embassy and diplomatic mission vehicles · International organization vehicles with bilateral agreement (Art. 5, Law 013/2025)'
+          )}
           <br />
-          <strong style={{ color: 'var(--ink-2)' }}>Fuel levy note:</strong> The 15% levy on petrol and gas oil (Art. 2(1)) is collected at the EAC customs point and is already embedded in pump prices — no separate filing required by individual taxpayers.
+          <strong style={{ color: 'var(--ink-2)' }}>{tx('Fuel levy note:')}</strong> {tx(
+            'The 15% levy on petrol and gas oil (Art. 2(1)) is collected at the EAC customs point and is already embedded in pump prices — no separate filing required by individual taxpayers.'
+          )}
         </div>
       </Section>
-
       {/* ══════════════════════════════════════════════════════════
           SECTION C: CAPITAL GAINS TAX (on disposal)
       ══════════════════════════════════════════════════════════ */}
       <Section
-        title="Capital Gains Tax — on disposal"
-        sub="CGT is only triggered when you sell an asset · estimated at current unrealised gains"
+        title={tx('Capital Gains Tax — on disposal')}
+        sub={tx(
+          'CGT is only triggered when you sell an asset · estimated at current unrealised gains'
+        )}
         accent="var(--gold)"
         printBreak
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
           <LawBadge law="Rwanda Income Tax Law · RRA CGT" />
-          <span className="muted" style={{ fontSize: 11 }}>5% on realised gains for most asset classes · withholding 15% on investment income</span>
+          <span className="muted" style={{ fontSize: 11 }}>{tx(
+            '5% on realised gains for most asset classes · withholding 15% on investment income'
+          )}</span>
         </div>
 
         <FormulaBox>
-          {'CGT  =  max(0,  disposal price − cost basis)  ×  rate\n\n'}
-          {'Land, house, stocks, crypto, other:  5% of realised gain\n'}
-          {'T-bonds / T-bills:                   Tax-exempt (capital gains)\n'}
-          {'Withholding tax on investment income: 15% at source'}
+          {tx('CGT  =  max(0,  disposal price − cost basis)  ×  rate\n\n')}
+          {tx('Land, house, stocks, crypto, other:  5% of realised gain\n')}
+          {tx('T-bonds / T-bills:                   Tax-exempt (capital gains)\n')}
+          {tx('Withholding tax on investment income: 15% at source')}
         </FormulaBox>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
-          <KpiCard label="Unrealised gains"   value={fmtBase(totalGain, c, { compact:true })}  color="var(--up)" />
-          <KpiCard label="Estimated CGT"       value={fmtBase(totalCGT, c, { compact:true })}   color="var(--down)" />
-          <KpiCard label="Withholding tax"      value={fmtBase(totalWithholding, c, { compact:true })} color="var(--gold)" />
+          <KpiCard label={tx('Unrealised gains')}   value={fmtBase(totalGain, c, { compact:true })}  color="var(--up)" />
+          <KpiCard label={tx('Estimated CGT')}       value={fmtBase(totalCGT, c, { compact:true })}   color="var(--down)" />
+          <KpiCard label={tx('Withholding tax')}      value={fmtBase(totalWithholding, c, { compact:true })} color="var(--gold)" />
         </div>
 
         <TaxTable
@@ -579,23 +592,23 @@ export default function TaxReportView({ state, dispatch }) {
           ]}
         />
       </Section>
-
       {/* ── Disclaimer ────────────────────────────────────────── */}
       <div style={{
         padding: '16px 18px', borderRadius: 12,
         background: 'var(--bg-2)', border: '0.5px solid var(--line)',
         fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.7, marginTop: 8,
       }}>
-        <strong style={{ color: 'var(--ink-2)' }}>Disclaimer</strong>
+        <strong style={{ color: 'var(--ink-2)' }}>{tx('Disclaimer')}</strong>
         {' · '}
-        Tax calculations are estimates based on current asset values and Rwanda tax law as understood at the time of publication.
-        Fixed Asset Tax formula: 1/1000 × taxable value (RRA); residential exemption: first RWF 3,000,000.
-        Road Maintenance Levy per Law 013/2025 of 27/05/2025 (Official Gazette Special, 29/05/2025).
-        CGT is realised only upon disposal of an asset. Withholding tax is deducted at source by the payer.
+        {tx(
+          'Tax calculations are estimates based on current asset values and Rwanda tax law as understood at the time of publication.\n        Fixed Asset Tax formula: 1/1000 × taxable value (RRA); residential exemption: first RWF 3,000,000.\n        Road Maintenance Levy per Law 013/2025 of 27/05/2025 (Official Gazette Special, 29/05/2025).\n        CGT is realised only upon disposal of an asset. Withholding tax is deducted at source by the payer.'
+        )}
         {' '}
-        <strong style={{ color: 'var(--ink-2)' }}>Consult a licensed Rwanda tax advisor or contact RRA directly before filing.</strong>
-        {' · rra.gov.rw · +250 788 185 500'}
+        <strong style={{ color: 'var(--ink-2)' }}>{tx(
+          'Consult a licensed Rwanda tax advisor or contact RRA directly before filing.'
+        )}</strong>
+        {tx(' · rra.gov.rw · +250 788 185 500')}
       </div>
-    </div>
+    </div>)
   );
 }

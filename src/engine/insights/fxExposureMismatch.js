@@ -8,6 +8,8 @@ import { grossValueRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { toBase } from '../../data.js';
 import { monthlyEquivalent } from '../recurrence.js';
 
+import { tx } from '../../i18n/tx.js';
+
 const SCENARIO_DEPRECIATION_PCT = 5;
 const MATERIALITY_RWF = 1_000_000;
 const RWF_INCOME_SHARE_MIN = 0.7;
@@ -44,13 +46,25 @@ export default function fxExposureMismatch(state, { now = new Date(), refs = REF
     id: 'fx-debt-exposure',
     type: 'surprise',
     category: 'debt',
-    headline: `${rwf(fxDebtRWF)} of debt in ${ccyList}, income in RWF`,
-    body: `You owe ${rwf(fxDebtRWF)} in ${ccyList} while ${Math.round((rwfIncome / totalIncome) * 100)}% of your recorded income is RWF. If the franc weakens, the debt grows in the money you earn — a ${SCENARIO_DEPRECIATION_PCT}% depreciation (modeled scenario, not a forecast) adds ~${rwf(scenarioCost)} to what you owe.`,
+    headline: tx('{0} of debt in {1}, income in RWF', [rwf(fxDebtRWF), ccyList]),
+    body: tx(
+      'You owe {0} in {1} while {2}% of your recorded income is RWF. If the franc weakens, the debt grows in the money you earn — a {3}% depreciation (modeled scenario, not a forecast) adds ~{4} to what you owe.',
+      [
+        rwf(fxDebtRWF),
+        ccyList,
+        Math.round((rwfIncome / totalIncome) * 100),
+        SCENARIO_DEPRECIATION_PCT,
+        rwf(scenarioCost)
+      ]
+    ),
     costOfAbsence: {
       severity: sharePct > 10 ? 'warning' : 'info',
       amount: scenarioCost,
-      costStatement: `A ${SCENARIO_DEPRECIATION_PCT}% RWF slide makes this debt ~${rwf(scenarioCost)} heavier in RWF terms. Consider prioritising its repayment or matching it with ${ccyList} income/assets.`,
-      action: { label: 'Review liabilities', to: 'liabilities' },
+      costStatement: tx(
+        'A {0}% RWF slide makes this debt ~{1} heavier in RWF terms. Consider prioritising its repayment or matching it with {2} income/assets.',
+        [SCENARIO_DEPRECIATION_PCT, rwf(scenarioCost), ccyList]
+      ),
+      action: { label: tx('Review liabilities'), to: 'liabilities' },
     },
     sourceRefs: [...debtIds, ...incomeIds],
     dataAsOf: inputsAsOf(state, [], now),

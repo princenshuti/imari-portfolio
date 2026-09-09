@@ -4,6 +4,8 @@ import { useT } from '../contexts/I18nContext.jsx';
 import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 import { Reveal } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 export default function Login({ pendingInvite, initialMode = 'signin' }) {
   const { t } = useT();
   const [mode, setMode] = useState(initialMode);
@@ -28,15 +30,21 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
       if (mode === 'forgot') {
         try {
           await resetPassword(email);
-          setMessage('If an account exists for that email, a reset link has been sent. Check your inbox.');
+          setMessage(tx(
+            'If an account exists for that email, a reset link has been sent. Check your inbox.'
+          ));
         } catch (resetErr) {
           const m = resetErr.message || '';
           if (m.toLowerCase().includes('rate limit') || m.toLowerCase().includes('email rate')) {
-            setError('Too many reset attempts. Please wait a few minutes and try again.');
+            setError(tx('Too many reset attempts. Please wait a few minutes and try again.'));
           } else if (m.toLowerCase().includes('sending') || m.toLowerCase().includes('smtp') || m.toLowerCase().includes('email')) {
-            setError('Email service is temporarily unavailable. Please try again later or contact the admin.');
+            setError(tx(
+              'Email service is temporarily unavailable. Please try again later or contact the admin.'
+            ));
           } else {
-            setError('Unable to send reset email. Please double-check the address and try again.');
+            setError(tx(
+              'Unable to send reset email. Please double-check the address and try again.'
+            ));
           }
         }
         return;
@@ -44,7 +52,7 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
       if (mode === 'signin') {
         await signIn(email, password);
       } else {
-        if (password.length < 8) throw new Error('Password must be at least 8 characters.');
+        if (password.length < 8) throw new Error(tx('Password must be at least 8 characters.'));
         const data = await signUp(email, password);
         // Supabase answers a repeated sign-up with a placeholder user that has
         // no identities (so the API itself never reveals existing e-mails).
@@ -53,27 +61,35 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
         if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
           setMode('signin');
           window.location.hash = 'login';
-          setError('An account with this email already exists. Sign in, or use “Forgot password” to reset it.');
+          setError(tx(
+            'An account with this email already exists. Sign in, or use “Forgot password” to reset it.'
+          ));
           return;
         }
         if (data.user && !data.session) {
-          setMessage('Almost there — check your inbox for a confirmation link to finish creating your account. It expires in one hour.');
+          setMessage(tx(
+            'Almost there — check your inbox for a confirmation link to finish creating your account. It expires in one hour.'
+          ));
         }
       }
     } catch (err) {
       // Map raw Supabase errors to user-friendly messages
       const msg = err.message || '';
       if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('email rate')) {
-        setError('Too many attempts right now. Please try again in a few minutes.');
+        setError(tx('Too many attempts right now. Please try again in a few minutes.'));
       } else if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
-        setError('Incorrect email or password. Please check your details and try again.');
+        setError(tx('Incorrect email or password. Please check your details and try again.'));
       } else if (msg.toLowerCase().includes('email not confirmed')) {
-        setError('Please confirm your email first — check your inbox for a confirmation link.');
+        setError(tx(
+          'Please confirm your email first — check your inbox for a confirmation link.'
+        ));
       } else if (msg.toLowerCase().includes('user already registered')) {
-        setError('An account with this email already exists. Try signing in instead.');
+        setError(tx('An account with this email already exists. Try signing in instead.'));
         setMode('signin');
       } else if (msg.toLowerCase().includes('sending') || msg.toLowerCase().includes('confirmation email') || msg.toLowerCase().includes('smtp')) {
-        setError('Account created but the confirmation email could not be sent right now. Please contact the admin or try signing in directly.');
+        setError(tx(
+          'Account created but the confirmation email could not be sent right now. Please contact the admin or try signing in directly.'
+        ));
       } else {
         setError(msg);
       }
@@ -84,21 +100,21 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
 
   if (!isConfigured) {
     return (
-      <div style={{
+      (<div style={{
         position:'fixed', inset:0, background:'var(--bg)', display:'flex',
         alignItems:'center', justifyContent:'center', padding:20,
       }}>
         <div className="card" style={{ padding: 32, maxWidth: 480 }}>
-          <h1 className="font-serif" style={{ fontSize: 26, marginBottom: 8, marginTop: 0, fontWeight: 400 }}>Configuration required</h1>
+          <h1 className="font-serif" style={{ fontSize: 26, marginBottom: 8, marginTop: 0, fontWeight: 400 }}>{tx('Configuration required')}</h1>
           <div className="muted" style={{ fontSize: 13, lineHeight: 1.55, marginBottom: 16 }}>
-            Imari is not connected to a backend. Set <code>VITE_SUPABASE_URL</code> and{' '}
-            <code>VITE_SUPABASE_ANON_KEY</code> at build time to enable login and shared portfolios.
+            {tx('Imari is not connected to a backend. Set')} <code>VITE_SUPABASE_URL</code>and{' '}
+            <code>VITE_SUPABASE_ANON_KEY</code> {tx('at build time to enable login and shared portfolios.')}
           </div>
           <div className="muted" style={{ fontSize: 12 }}>
-            See <code>supabase-schema.sql</code> in the repo for the database schema.
+            {tx('See')} <code>{tx('supabase-schema.sql')}</code> {tx('in the repo for the database schema.')}
           </div>
         </div>
-      </div>
+      </div>)
     );
   }
 
@@ -115,7 +131,7 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
   const messageId = 'login-message';
 
   return (
-    <div style={{
+    (<div style={{
       position:'fixed', inset:0, background:'var(--bg)', display:'flex',
       alignItems:'center', justifyContent:'center', padding:20,
     }}>
@@ -158,7 +174,7 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
           <input
             id="login-email"
             type="email" required value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="you@example.com" autoComplete="email" style={error ? errInputStyle : inputStyle}
+            placeholder={tx('you@example.com')} autoComplete="email" style={error ? errInputStyle : inputStyle}
             disabled={!!pendingInvite?.email}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : message ? messageId : undefined}
@@ -212,13 +228,13 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
 
         <div style={{ marginTop: 24, textAlign:'center' }}>
           <div className="muted" style={{ fontSize: 10, marginBottom: 8, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            Powered by
+            {tx('Powered by')}
           </div>
           {/* Monochrome wordmark — the color bitmap carried a baked-in white
               box that clashed with the cream surface (design review #16). */}
           <MaxventuresWordmark />
         </div>
       </Reveal>
-    </div>
+    </div>)
   );
 }

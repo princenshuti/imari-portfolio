@@ -25,6 +25,7 @@ import NamePrompt from './views/NamePrompt.jsx';
 import Onboarding from './views/Onboarding.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
 import { I18nProvider } from './contexts/I18nContext.jsx';
+import { tx } from './i18n/tx.js';
 // All views — lazy loaded on first navigation
 const DashboardView   = lazy(() => import('./views/Dashboard.jsx'));
 const AssetsView      = lazy(() => import('./views/Assets.jsx'));
@@ -56,7 +57,7 @@ const FamilyBridge    = lazy(() => import('./family/FamilyBridge.jsx'));
 // ─ Shared UI primitives ───────────────────────────────────────
 function FullScreenLoader({ message = 'Loading…' }) {
   return (
-    <div style={{
+    (<div style={{
       position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', background: 'var(--bg)',
       gap: 14,
@@ -68,7 +69,7 @@ function FullScreenLoader({ message = 'Loading…' }) {
       }} />
       <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>{message}</div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+    </div>)
   );
 }
 
@@ -78,19 +79,19 @@ class ErrorBoundary extends Component {
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div style={{
+      (<div style={{
         position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 32, textAlign: 'center',
       }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>⚠</div>
-        <div className="font-serif" style={{ fontSize: 20, marginBottom: 8 }}>Something went wrong</div>
+        <div className="font-serif" style={{ fontSize: 20, marginBottom: 8 }}>{tx('Something went wrong')}</div>
         <div className="muted" style={{ fontSize: 12, marginBottom: 20, maxWidth: 420, lineHeight: 1.6 }}>
           {this.state.error.message}
         </div>
         <button onClick={() => window.location.reload()} className="btn btn-primary">
-          Reload app
+          {tx('Reload app')}
         </button>
-      </div>
+      </div>)
     );
   }
 }
@@ -370,8 +371,8 @@ export default function App() {
   // Last-resort error handling: anything that escapes a component or a promise
   // becomes a visible toast (with the message) instead of a silent console line.
   useEffect(() => {
-    const onRejection = (e) => { const m = e?.reason?.message || String(e?.reason || 'Unexpected error'); showToast(`Something went wrong: ${m.slice(0, 160)}`, 'error'); };
-    const onError = (e) => { if (e?.message) showToast(`Something went wrong: ${String(e.message).slice(0, 160)}`, 'error'); };
+    const onRejection = (e) => { const m = e?.reason?.message || String(e?.reason || 'Unexpected error'); showToast(tx('Something went wrong: {0}', [m.slice(0, 160)]), 'error'); };
+    const onError = (e) => { if (e?.message) showToast(tx('Something went wrong: {0}', [String(e.message).slice(0, 160)]), 'error'); };
     window.addEventListener('unhandledrejection', onRejection);
     window.addEventListener('error', onError);
     return () => { window.removeEventListener('unhandledrejection', onRejection); window.removeEventListener('error', onError); };
@@ -438,7 +439,7 @@ export default function App() {
           skipNextSave.current = true;
           if (fresh.state.fx) Object.assign(FX, fresh.state.fx);
           dispatch({ type: 'replaceAll', state: fresh.state });
-          showToast('Another session saved newer changes — refreshed to the latest data.', 'warning');
+          showToast(tx('Another session saved newer changes — refreshed to the latest data.'), 'warning');
         }).catch(e => {
           showToast('Auto-save failed — ' + e.message, 'error');
         });
@@ -531,7 +532,10 @@ export default function App() {
     // Subsequent runs — only toast milestones genuinely crossed right now.
     thresholds.forEach(m => {
       if (!reached.has(m) && prev < m && netWorth >= m) {
-        showToast(`🎉 Milestone reached: ${fmtBase(m, state.profile.displayCurrency, { compact: true })} net worth!`, 'success');
+        showToast(tx(
+          '🎉 Milestone reached: {0} net worth!',
+          [fmtBase(m, state.profile.displayCurrency, { compact: true })]
+        ), 'success');
         dispatch({ type: 'reachMilestone', value: m });
       }
     });
@@ -553,10 +557,10 @@ export default function App() {
         const d = new Date(dateStr);
         const days = Math.ceil((d - today) / 86400000);
         if (days < 0) {
-          showToast(`⚠ "${a.name}" ${label} ${Math.abs(days)} days ago`, 'warning');
+          showToast(tx('⚠ "{0}" {1} {2} days ago', [a.name, label, Math.abs(days)]), 'warning');
           alertedMaturitiesRef.current.add(key);
         } else if (days <= WARN_DAYS) {
-          showToast(`⏰ "${a.name}" ${label} in ${days} days`, 'info');
+          showToast(tx('⏰ "{0}" {1} in {2} days', [a.name, label, days]), 'info');
           alertedMaturitiesRef.current.add(key);
         }
       };
@@ -594,7 +598,7 @@ export default function App() {
     </I18nProvider>
   );
 
-  if (session === undefined) return i18nWrap(<FullScreenLoader message="Checking session…" />);
+  if (session === undefined) return i18nWrap(<FullScreenLoader message={tx('Checking session…')} />);
   if (isRecoveryMode) return i18nWrap(<ResetPassword session={session} onDone={() => { setIsRecoveryMode(false); }} />);
 
   // Force-preview the landing at any time via #landing (signed in or not).
@@ -608,7 +612,7 @@ export default function App() {
     }
     return i18nWrap(<Landing onSignIn={() => setAuthPage('login')} />);
   }
-  if (!stateReady) return i18nWrap(<FullScreenLoader message="Loading your portfolio…" />);
+  if (!stateReady) return i18nWrap(<FullScreenLoader message={tx('Loading your portfolio…')} />);
 
   // Wrap dispatch in a read-only guard for viewers — declared early so the
   // Onboarding gate below can use it.
@@ -624,7 +628,7 @@ export default function App() {
       'reachMilestone','appendChat','clearChat','setInsight',
     ]);
     if (role === 'viewer' && writeActions.has(action.type)) {
-      showToast('You have view-only access to this portfolio.', 'warning');
+      showToast(tx('You have view-only access to this portfolio.'), 'warning');
       return;
     }
     dispatch(action);
@@ -655,28 +659,30 @@ export default function App() {
     || (typeof localStorage !== 'undefined' && localStorage.getItem('imari:locale'))
     || 'en';
   const titles = {
-    dashboard:   { title: `${greetingFor(activeLocale)}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
-    accounts:    { title: 'Accounts', subtitle: `${accountCount} bank / mobile money` },
-    assets:      { title: 'Your assets', subtitle: `${state.assets.length} positions tracked` },
-    trends:      { title: 'Markets & trends', subtitle: 'Domains you watch' },
-    advisor:     { title: 'AI Advisor', subtitle: 'Grounded in your portfolio' },
-    settings:    { title: 'Settings', subtitle: 'Profile · FX · members · backup' },
-    liabilities: { title: 'Liabilities', subtitle: `${(state.liabilities||[]).length} debts tracked` },
-    goals:       { title: 'Goals', subtitle: `${(state.goals||[]).filter(g=>!g.achieved).length} active goals` },
-    cashflow:    { title: 'Cash Flow', subtitle: 'Income · Expenses · Savings rate' },
-    tax:         { title: 'Tax Report', subtitle: `${new Date().getFullYear()} · Rwanda RRA estimate` },
-    balancesheet:{ title: 'Balance Sheet', subtitle: 'Assets − liabilities = net worth' },
-    projections: { title: 'Fast Forward', subtitle: 'Net-worth projection · modeled' },
-    retirement:  { title: 'Retirement readiness', subtitle: 'RSSB / Ejo Heza pension projection' },
-    yearreview:  { title: 'Year in Review', subtitle: 'Your net worth, month by month' },
-    reports:     { title: 'Monthly Report', subtitle: 'Auto-generated from your entries' },
-    family:      { title: 'Family Home', subtitle: 'Money · this week · milestones · shared plan' },
-    scorecard:   { title: 'Weekly scorecard', subtitle: '33 habits · 7 areas · shared with your members' },
-    calendar:    { title: 'Family calendar', subtitle: 'Events · renewals · bills · deadlines · statutory dates' },
-    household:   { title: 'Household', subtitle: 'Tasks and recurring bills' },
-    insurance:   { title: 'Insurance', subtitle: 'Policies · cover · renewals · gaps' },
-    documents:   { title: 'Documents vault', subtitle: 'IDs, titles, contracts · private files · expiry dates' },
-    wishlist:    { title: 'Wish list', subtitle: 'What you want, and when it fits' },
+    dashboard:   { title: `${greetingFor(activeLocale)}, ${state.profile.name.split(' ')[0]}.`, subtitle: tx('Today · {0}', [
+      new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })
+    ]) },
+    accounts:    { title: tx('Accounts'), subtitle: tx('{0} bank / mobile money', [accountCount]) },
+    assets:      { title: tx('Your assets'), subtitle: tx('{0} positions tracked', [state.assets.length]) },
+    trends:      { title: tx('Markets & trends'), subtitle: tx('Domains you watch') },
+    advisor:     { title: tx('AI Advisor'), subtitle: tx('Grounded in your portfolio') },
+    settings:    { title: tx('Settings'), subtitle: tx('Profile · FX · members · backup') },
+    liabilities: { title: tx('Liabilities'), subtitle: tx('{0} debts tracked', [(state.liabilities||[]).length]) },
+    goals:       { title: tx('Goals'), subtitle: tx('{0} active goals', [(state.goals||[]).filter(g=>!g.achieved).length]) },
+    cashflow:    { title: tx('Cash Flow'), subtitle: tx('Income · Expenses · Savings rate') },
+    tax:         { title: tx('Tax Report'), subtitle: tx('{0} · Rwanda RRA estimate', [new Date().getFullYear()]) },
+    balancesheet:{ title: tx('Balance Sheet'), subtitle: tx('Assets − liabilities = net worth') },
+    projections: { title: tx('Fast Forward'), subtitle: tx('Net-worth projection · modeled') },
+    retirement:  { title: tx('Retirement readiness'), subtitle: tx('RSSB / Ejo Heza pension projection') },
+    yearreview:  { title: tx('Year in Review'), subtitle: tx('Your net worth, month by month') },
+    reports:     { title: tx('Monthly Report'), subtitle: tx('Auto-generated from your entries') },
+    family:      { title: tx('Family Home'), subtitle: tx('Money · this week · milestones · shared plan') },
+    scorecard:   { title: tx('Weekly scorecard'), subtitle: tx('33 habits · 7 areas · shared with your members') },
+    calendar:    { title: tx('Family calendar'), subtitle: tx('Events · renewals · bills · deadlines · statutory dates') },
+    household:   { title: tx('Household'), subtitle: tx('Tasks and recurring bills') },
+    insurance:   { title: tx('Insurance'), subtitle: tx('Policies · cover · renewals · gaps') },
+    documents:   { title: tx('Documents vault'), subtitle: tx('IDs, titles, contracts · private files · expiry dates') },
+    wishlist:    { title: tx('Wish list'), subtitle: tx('What you want, and when it fits') },
   };
 
   const view = (() => {
@@ -713,7 +719,7 @@ export default function App() {
     <ErrorBoundary>
       <InsightsProvider state={state} dispatch={guardedDispatch} family={family}>
       {familyEnabled && <Suspense fallback={null}><FamilyBridge portfolioId={portfolioId} role={role} onChange={setFamily} /></Suspense>}
-      <a href="#main-content" className="skip-to-main">Skip to main content</a>
+      <a href="#main-content" className="skip-to-main">{tx('Skip to main content')}</a>
       <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
         <Sidebar
           active={nav} onNav={navigateTo}
@@ -725,8 +731,8 @@ export default function App() {
           {showTopBar && (
             <div data-noprint>
               <TopBar
-                title={titles[nav].title}
-                subtitle={titles[nav].subtitle}
+                title={tx(titles[nav].title)}
+                subtitle={tx(titles[nav].subtitle)}
                 profile={state.profile}
                 displayCurrency={state.profile.displayCurrency}
                 onCurrency={c => guardedDispatch({ type:'setProfile', patch: { displayCurrency: c } })}

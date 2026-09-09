@@ -7,6 +7,8 @@ import { REFERENCE } from './refs.js';
 import { classOf, makeInsight, inputsAsOf } from './_shared.js';
 import { valueRWF } from '../../data.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export default function concentrationRisk(state, { now = new Date(), refs = REFERENCE } = {}) {
   const assets = state.assets || [];
   const total = assets.reduce((s, a) => s + valueRWF(a, now), 0);
@@ -48,15 +50,27 @@ export default function concentrationRisk(state, { now = new Date(), refs = REFE
     id: 'concentration-risk',
     type: 'surprise',
     category: 'allocation',
-    headline: `${pctStr}% of your assets in ${kind === 'group' ? label : 'one asset'}`,
+    headline: tx(
+      '{0}% of your assets in {1}',
+      [pctStr, kind === 'group' ? label : 'one asset']
+    ),
     body: kind === 'group'
-      ? `Your ${label} holdings are ${pctStr}% of total assets — above the 25% concentration guide.`
-      : `"${label}" alone is ${pctStr}% of total assets — above the 25% concentration guide.`,
+      ? tx(
+      'Your {0} holdings are {1}% of total assets — above the 25% concentration guide.',
+      [label, pctStr]
+    )
+      : tx(
+      '"{0}" alone is {1}% of total assets — above the 25% concentration guide.',
+      [label, pctStr]
+    ),
     costOfAbsence: {
       severity,
       amount: pct,
-      costStatement: `A single shock to ${kind === 'group' ? label : `"${label}"`} would move ${pctStr}% of your wealth at once. Diversifying spreads that risk.`,
-      action: { label: 'Review allocation', to: 'assets' },
+      costStatement: tx(
+        'A single shock to {0} would move {1}% of your wealth at once. Diversifying spreads that risk.',
+        [kind === 'group' ? label : `"${label}"`, pctStr]
+      ),
+      action: { label: tx('Review allocation'), to: 'assets' },
     },
     sourceRefs: refsIds,
     dataAsOf: inputsAsOf(state, refsIds, now),

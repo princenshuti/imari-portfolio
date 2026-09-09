@@ -7,6 +7,8 @@ import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import LoanAnalysis from '../components/LoanAnalysis.jsx';
 import { Stagger, StaggerItem, Reveal } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 const EMPTY_LIABILITY = {
   kind: 'personal-loan', name: '', currency: 'RWF',
   originalAmount: '', remainingAmount: '', interestRate: '',
@@ -30,85 +32,81 @@ function LiabilityEditor({ liability, onSave, onCancel }) {
   };
 
   return (
-    <Modal open onClose={onCancel} maxWidth={640} title={isNew ? 'Add liability' : 'Edit liability'}>
-        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
-          <div>
-            <div className="muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {isNew ? 'Add liability' : 'Edit liability'}
-            </div>
-            <h2 className="font-serif" style={{ fontSize: 24, marginTop: 2, margin: 0, fontWeight: 400 }}>{l.name || 'Untitled debt'}</h2>
+    (<Modal open onClose={onCancel} maxWidth={640} title={isNew ? tx('Add liability') : tx('Edit liability')}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <div className="muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            {isNew ? tx('Add liability') : tx('Edit liability')}
           </div>
-          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
-            <span aria-hidden="true">×</span>
-          </button>
+          <h2 className="font-serif" style={{ fontSize: 24, marginTop: 2, margin: 0, fontWeight: 400 }}>{l.name || tx('Untitled debt')}</h2>
         </div>
-
-        {/* Liability type selector */}
-        <Field label="Type">
-          <div role="radiogroup" aria-label="Liability type" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-            {LIABILITY_TYPES.map(t => {
-              const selected = t.kind === l.kind;
-              return (
-                <button
-                  key={t.kind}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => u('kind', t.kind)}
-                  style={{
-                    padding: '9px 12px', borderRadius: 9, cursor: 'pointer', fontSize: 12, fontWeight: 500,
-                    background: selected ? 'var(--down-soft)' : 'var(--bg-2)',
-                    color: selected ? 'var(--down-ink)' : 'var(--ink-2)',
-                    border: selected ? '1px solid var(--down-soft)' : '1px solid transparent',
-                    fontFamily: 'inherit', textAlign: 'left',
-                  }}
-                >{t.label}</button>
-              );
-            })}
-          </div>
+        <button type="button" onClick={onCancel} aria-label={tx('Close dialog')} className="btn-icon-sm">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      {/* Liability type selector */}
+      <Field label={tx('Type')}>
+        <div role="radiogroup" aria-label={tx('Liability type')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {LIABILITY_TYPES.map(t => {
+            const selected = t.kind === l.kind;
+            return (
+              (<button
+                key={t.kind}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => u('kind', t.kind)}
+                style={{
+                  padding: '9px 12px', borderRadius: 9, cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                  background: selected ? 'var(--down-soft)' : 'var(--bg-2)',
+                  color: selected ? 'var(--down-ink)' : 'var(--ink-2)',
+                  border: selected ? '1px solid var(--down-soft)' : '1px solid transparent',
+                  fontFamily: 'inherit', textAlign: 'left',
+                }}
+              >{tx(t.label)}</button>)
+            );
+          })}
+        </div>
+      </Field>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 4 }}>
+        <Field label={tx('Name')}>
+          <input value={l.name} onChange={e => u('name', e.target.value)} placeholder={tx('e.g. BK Home Loan')} style={inputStyle} />
         </Field>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 4 }}>
-          <Field label="Name">
-            <input value={l.name} onChange={e => u('name', e.target.value)} placeholder="e.g. BK Home Loan" style={inputStyle} />
-          </Field>
-          <Field label="Lender / Institution">
-            <input value={l.lender} onChange={e => u('lender', e.target.value)} placeholder="e.g. Bank of Kigali" style={inputStyle} />
-          </Field>
-          <Field label="Currency">
-            <select value={l.currency} onChange={e => u('currency', e.target.value)} style={inputStyle}>
-              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-            </select>
-          </Field>
-          <Field label="Interest rate (%/yr)">
-            <input type="number" value={l.interestRate} onChange={e => u('interestRate', e.target.value)} placeholder="e.g. 17.5" style={inputStyle} />
-          </Field>
-          <Field label="Original loan amount">
-            <input type="number" value={l.originalAmount} onChange={e => u('originalAmount', e.target.value)} placeholder="0" style={inputStyle} />
-          </Field>
-          <Field label="Remaining balance">
-            <input type="number" value={l.remainingAmount} onChange={e => u('remainingAmount', e.target.value)} placeholder="0" style={inputStyle} />
-          </Field>
-          <Field label="Start date">
-            <input type="date" value={l.startDate} onChange={e => u('startDate', e.target.value)} style={inputStyle} />
-          </Field>
-          <Field label="End date (maturity)">
-            <input type="date" value={l.endDate} onChange={e => u('endDate', e.target.value)} style={inputStyle} />
-          </Field>
-        </div>
-
-        <Field label="Notes" top={14}>
-          <textarea value={l.notes} onChange={e => u('notes', e.target.value)} placeholder="optional"
-            style={{ ...inputStyle, minHeight: 52, fontFamily: 'inherit', resize: 'vertical', paddingTop: 8 }} />
+        <Field label={tx('Lender / Institution')}>
+          <input value={l.lender} onChange={e => u('lender', e.target.value)} placeholder={tx('e.g. Bank of Kigali')} style={inputStyle} />
         </Field>
-
-        <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
-          <button type="button" onClick={handleSave} className="btn btn-danger" disabled={!l.name}>
-            {isNew ? 'Add liability' : 'Save changes'}
-          </button>
-        </div>
-    </Modal>
+        <Field label={tx('Currency')}>
+          <select value={l.currency} onChange={e => u('currency', e.target.value)} style={inputStyle}>
+            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+          </select>
+        </Field>
+        <Field label={tx('Interest rate (%/yr)')}>
+          <input type="number" value={l.interestRate} onChange={e => u('interestRate', e.target.value)} placeholder={tx('e.g. 17.5')} style={inputStyle} />
+        </Field>
+        <Field label={tx('Original loan amount')}>
+          <input type="number" value={l.originalAmount} onChange={e => u('originalAmount', e.target.value)} placeholder="0" style={inputStyle} />
+        </Field>
+        <Field label={tx('Remaining balance')}>
+          <input type="number" value={l.remainingAmount} onChange={e => u('remainingAmount', e.target.value)} placeholder="0" style={inputStyle} />
+        </Field>
+        <Field label={tx('Start date')}>
+          <input type="date" value={l.startDate} onChange={e => u('startDate', e.target.value)} style={inputStyle} />
+        </Field>
+        <Field label={tx('End date (maturity)')}>
+          <input type="date" value={l.endDate} onChange={e => u('endDate', e.target.value)} style={inputStyle} />
+        </Field>
+      </div>
+      <Field label={tx('Notes')} top={14}>
+        <textarea value={l.notes} onChange={e => u('notes', e.target.value)} placeholder="optional"
+          style={{ ...inputStyle, minHeight: 52, fontFamily: 'inherit', resize: 'vertical', paddingTop: 8 }} />
+      </Field>
+      <div className="row" style={{ gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+        <button type="button" onClick={onCancel} className="btn btn-ghost">{tx('Cancel')}</button>
+        <button type="button" onClick={handleSave} className="btn btn-danger" disabled={!l.name}>
+          {isNew ? tx('Add liability') : tx('Save changes')}
+        </button>
+      </div>
+    </Modal>)
   );
 }
 
@@ -146,28 +144,25 @@ export default function LiabilitiesView({ state, dispatch }) {
   };
 
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
-
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       {/* ── Summary strip ── */}
       <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}>
         {[
-          { label: 'Total liabilities', value: fmtBase(totalDebt, profile.displayCurrency, { compact: true }), sub: `${liabilities.length} debt${liabilities.length === 1 ? '' : 's'}`, color: 'var(--down)', bg: 'var(--down-soft)' },
-          { label: 'Total assets', value: fmtBase(totalAssets, profile.displayCurrency, { compact: true }), sub: 'gross', color: 'var(--brand)', bg: 'var(--paper)' },
-          { label: 'True net worth', value: fmtBase(trueNetWorth, profile.displayCurrency, { compact: true }), sub: 'assets minus debts', color: trueNetWorth >= 0 ? 'var(--up)' : 'var(--down)', bg: trueNetWorth >= 0 ? 'var(--up-soft)' : 'var(--down-soft)' },
+          { label: tx('Total liabilities'), value: fmtBase(totalDebt, profile.displayCurrency, { compact: true }), sub: tx('{0} debt{1}', [liabilities.length, liabilities.length === 1 ? '' : 's']), color: 'var(--down)', bg: 'var(--down-soft)' },
+          { label: tx('Total assets'), value: fmtBase(totalAssets, profile.displayCurrency, { compact: true }), sub: 'gross', color: 'var(--brand)', bg: 'var(--paper)' },
+          { label: tx('True net worth'), value: fmtBase(trueNetWorth, profile.displayCurrency, { compact: true }), sub: tx('assets minus debts'), color: trueNetWorth >= 0 ? 'var(--up)' : 'var(--down)', bg: trueNetWorth >= 0 ? 'var(--up-soft)' : 'var(--down-soft)' },
         ].map((c, i) => (
           <StaggerItem key={i} style={{ padding: '16px 20px', borderRadius: 'var(--r-md)', background: c.bg, border: '0.5px solid var(--line)' }}>
-            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{c.label}</div>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{tx(c.label)}</div>
             <div className="num" style={{ fontSize: 24, fontWeight: 700, color: c.color, letterSpacing: '-0.02em' }}>{c.value}</div>
-            <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{c.sub}</div>
+            <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>{tx(c.sub)}</div>
           </StaggerItem>
         ))}
       </Stagger>
-
       {/* ── Actions ── */}
       <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 16 }}>
-        <button type="button" onClick={() => setEditing({})} className="btn btn-primary">＋ Add liability</button>
+        <button type="button" onClick={() => setEditing({})} className="btn btn-primary">{tx('＋ Add liability')}</button>
       </div>
-
       {/* ── Liability groups ── */}
       {grouped.map(g => (
         <Reveal key={g.group} className="card" style={{ marginBottom: 14, padding: 0 }}>
@@ -191,17 +186,17 @@ export default function LiabilitiesView({ state, dispatch }) {
             const daysLeft  = daysUntil(l.endDate);
 
             return (
-              <div key={l.id}>
+              (<div key={l.id}>
                 {i > 0 && <div className="hr" style={{ margin: '0 20px' }} />}
                 <div className="hover-actions" style={{ padding: '14px 20px' }}>
                   <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
                     <div className="col" style={{ gap: 3 }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{l.name}</div>
                       <div className="muted" style={{ fontSize: 11 }}>
-                        {lt?.label} · {l.lender || '—'} · {l.interestRate || 0}% p.a.
+                        {tx(lt?.label)}· {l.lender || '—'}· {l.interestRate || 0}{tx('% p.a.')}
                         {daysLeft !== null && (
                           <span style={{ color: daysLeft < 30 ? 'var(--down)' : 'var(--ink-3)', marginLeft: 8 }}>
-                            · {daysLeft < 0 ? 'Matured' : `${daysLeft}d left`}
+                            · {daysLeft < 0 ? tx('Matured') : tx('{0}d left', [daysLeft])}
                           </span>
                         )}
                       </div>
@@ -216,11 +211,11 @@ export default function LiabilitiesView({ state, dispatch }) {
                         </div>
                       </div>
                       <div className="row row-actions" style={{ gap: 6 }}>
-                        <button type="button" onClick={() => setEditing(l)} aria-label={`Edit ${l.name}`} className="btn btn-ghost btn-xs">Edit</button>
+                        <button type="button" onClick={() => setEditing(l)} aria-label={tx('Edit {0}', [l.name])} className="btn btn-ghost btn-xs">{tx('Edit')}</button>
                         <button type="button" onClick={() => setPendingDelete(l)}
-                          aria-label={`Delete ${l.name}`} className="btn btn-xs" style={{
+                          aria-label={tx('Delete {0}', [l.name])} className="btn btn-xs" style={{
                           border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down-ink)',
-                        }}>Delete</button>
+                        }}>{tx('Delete')}</button>
                       </div>
                     </div>
                   </div>
@@ -231,7 +226,7 @@ export default function LiabilitiesView({ state, dispatch }) {
                         <div style={{ height: '100%', width: paidPct + '%', background: 'var(--up)', borderRadius: 3, transition: 'width 0.4s ease' }} />
                       </div>
                       <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>
-                        {paidPct.toFixed(0)}% paid off ({fmt((l.originalAmount || 0) - (l.remainingAmount || 0), l.currency, { compact: true })} paid)
+                        {paidPct.toFixed(0)}{tx('% paid off (')}{fmt((l.originalAmount || 0) - (l.remainingAmount || 0), l.currency, { compact: true })} {tx('paid)')}
                       </div>
                     </div>
                   )}
@@ -239,25 +234,25 @@ export default function LiabilitiesView({ state, dispatch }) {
                       so the row stays compact for users skimming the list. */}
                   <LoanAnalysis liability={l} displayCurrency={profile.displayCurrency} />
                 </div>
-              </div>
+              </div>)
             );
           })}
         </Reveal>
       ))}
-
       {liabilities.length === 0 && (
         <div className="card" style={{ padding: 60, textAlign: 'center' }}>
-          <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>No liabilities recorded</div>
+          <div className="font-serif" style={{ fontSize: 22, marginBottom: 8 }}>{tx('No liabilities recorded')}</div>
           <div className="muted" style={{ fontSize: 13, marginBottom: 20 }}>
-            Track your loans, mortgages, and debt to see your true net worth (assets minus liabilities).
+            {tx(
+              'Track your loans, mortgages, and debt to see your true net worth (assets minus liabilities).'
+            )}
           </div>
           <button onClick={() => setEditing({})} className="btn" style={{
             background: 'var(--down)', color: '#fff', border: 0, padding: '10px 20px',
             borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600,
-          }}>＋ Add your first liability</button>
+          }}>{tx('＋ Add your first liability')}</button>
         </div>
       )}
-
       {editing !== null && (
         <LiabilityEditor
           liability={editing}
@@ -265,7 +260,6 @@ export default function LiabilitiesView({ state, dispatch }) {
           onCancel={() => setEditing(null)}
         />
       )}
-
       <ConfirmDestructive
         open={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
@@ -273,17 +267,19 @@ export default function LiabilitiesView({ state, dispatch }) {
           dispatch({ type: 'deleteLiability', id: pendingDelete.id });
           setPendingDelete(null);
         }}
-        title="Delete this liability?"
+        title={tx('Delete this liability?')}
         description={pendingDelete && (
           <span>
             <strong style={{ color: 'var(--ink)' }}>{pendingDelete.name}</strong>
             {pendingDelete.remainingAmount ? <> · <span className="num">{fmt(pendingDelete.remainingAmount, pendingDelete.currency || 'RWF')}</span> remaining</> : null}
             <br />
-            This removes the debt from your portfolio permanently. You can't undo this.
+            {tx(
+              'This removes the debt from your portfolio permanently. You can\'t undo this.'
+            )}
           </span>
         )}
-        confirmLabel="Delete liability"
+        confirmLabel={tx('Delete liability')}
       />
-    </div>
+    </div>)
   );
 }

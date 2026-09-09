@@ -1,6 +1,8 @@
 import { supabase, isConfigured } from './supabase.js';
 import { FX, SEED_ASSETS } from './data.js';
 
+import { tx } from './i18n/tx.js';
+
 export { isConfigured };
 
 // ─── Auth ─────────────────────────────────────────────────────
@@ -16,7 +18,7 @@ function appRedirectURL() {
 }
 
 export async function signUp(email, password) {
-  if (!supabase) throw new Error('Auth not configured');
+  if (!supabase) throw new Error(tx('Auth not configured'));
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -27,14 +29,14 @@ export async function signUp(email, password) {
 }
 
 export async function signIn(email, password) {
-  if (!supabase) throw new Error('Auth not configured');
+  if (!supabase) throw new Error(tx('Auth not configured'));
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }
 
 export async function resetPassword(email) {
-  if (!supabase) throw new Error('Auth not configured');
+  if (!supabase) throw new Error(tx('Auth not configured'));
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: appRedirectURL(),
   });
@@ -70,7 +72,7 @@ function emptyPortfolio(email) {
 }
 
 export async function loadOrCreatePortfolio(user) {
-  if (!supabase) throw new Error('Not configured');
+  if (!supabase) throw new Error(tx('Not configured'));
 
   // 1. List portfolios the user is a member of (via RLS this only returns ones they can see).
   const { data: memberRows, error: memErr } = await supabase
@@ -91,7 +93,7 @@ export async function loadOrCreatePortfolio(user) {
     // the JWT is active — a stale getSession() result causes auth.uid() to be null
     // in the DB, which violates the INSERT RLS policy (auth.uid() = owner_id).
     const { data: authData, error: authErr } = await supabase.auth.getUser();
-    if (authErr || !authData?.user) throw new Error('Session expired. Please sign in again.');
+    if (authErr || !authData?.user) throw new Error(tx('Session expired. Please sign in again.'));
     const verifiedUser = authData.user;
 
     const seed = emptyPortfolio(verifiedUser.email || user.email);
@@ -237,14 +239,14 @@ const VALID_ROLES = new Set(['owner', 'editor', 'viewer']);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function removeMember(memberId) {
-  if (!UUID_RE.test(memberId)) throw new Error('Invalid member ID');
+  if (!UUID_RE.test(memberId)) throw new Error(tx('Invalid member ID'));
   const { error } = await supabase.from('portfolio_members').delete().eq('id', memberId);
   if (error) throw error;
 }
 
 export async function updateMemberRole(memberId, role) {
-  if (!UUID_RE.test(memberId))  throw new Error('Invalid member ID');
-  if (!VALID_ROLES.has(role))   throw new Error(`Invalid role "${role}" — must be owner, editor, or viewer`);
+  if (!UUID_RE.test(memberId))  throw new Error(tx('Invalid member ID'));
+  if (!VALID_ROLES.has(role))   throw new Error(tx('Invalid role "{0}" — must be owner, editor, or viewer', [role]));
   const { error } = await supabase.from('portfolio_members').update({ role }).eq('id', memberId);
   if (error) throw error;
 }
@@ -269,7 +271,7 @@ export const MAX_INVITES = 2;
 export async function createInvitation(portfolioId, email, role) {
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user;
-  if (!user) throw new Error('Session expired. Please sign in again.');
+  if (!user) throw new Error(tx('Session expired. Please sign in again.'));
 
   // Pre-check the cap so we don't insert an orphan over-limit row. The edge
   // function re-checks authoritatively (don't rely on the client alone).
@@ -279,7 +281,10 @@ export async function createInvitation(portfolioId, email, role) {
   ]);
   const invitedCount = existingMembers.filter(m => m.role !== 'owner').length + pending.length;
   if (invitedCount >= MAX_INVITES) {
-    throw new Error(`Invite limit reached — a portfolio allows the owner plus ${MAX_INVITES} members. Remove someone or revoke a pending invite first.`);
+    throw new Error(tx(
+      'Invite limit reached — a portfolio allows the owner plus {0} members. Remove someone or revoke a pending invite first.',
+      [MAX_INVITES]
+    ));
   }
 
   const { data, error } = await supabase
@@ -299,7 +304,10 @@ export async function createInvitation(portfolioId, email, role) {
   try {
     await sendInvitationEmail(data.id);
   } catch (e) {
-    const err = new Error(`Invitation created but email failed to send: ${e.message}. Use "Resend" or copy the link manually.`);
+    const err = new Error(tx(
+      'Invitation created but email failed to send: {0}. Use "Resend" or copy the link manually.',
+      [e.message]
+    ));
     err.invitation = data;
     throw err;
   }
@@ -307,7 +315,7 @@ export async function createInvitation(portfolioId, email, role) {
 }
 
 export async function revokeInvitation(invitationId) {
-  if (!UUID_RE.test(invitationId)) throw new Error('Invalid invitation ID');
+  if (!UUID_RE.test(invitationId)) throw new Error(tx('Invalid invitation ID'));
   const { error } = await supabase.from('portfolio_invitations').delete().eq('id', invitationId);
   if (error) throw error;
 }
@@ -317,8 +325,8 @@ export async function revokeInvitation(invitationId) {
  * createInvitation and by the "Resend" button for pending invites.
  */
 export async function sendInvitationEmail(invitationId) {
-  if (!supabase) throw new Error('Not configured');
-  if (!UUID_RE.test(invitationId)) throw new Error('Invalid invitation ID');
+  if (!supabase) throw new Error(tx('Not configured'));
+  if (!UUID_RE.test(invitationId)) throw new Error(tx('Invalid invitation ID'));
   const { data, error } = await supabase.functions.invoke('send-invitation', {
     body: { invitationId },
   });
@@ -345,7 +353,7 @@ export async function peekInvitation(token) {
 }
 
 export async function acceptInvitation(token) {
-  if (!supabase) throw new Error('Not configured');
+  if (!supabase) throw new Error(tx('Not configured'));
   const { data, error } = await supabase.rpc('accept_invitation', { invitation_token: token });
   if (error) throw error;
   return data;
@@ -365,10 +373,10 @@ export async function listMessages(portfolioId) {
 }
 
 export async function sendMessage(portfolioId, body) {
-  if (!supabase) throw new Error('Not configured');
+  if (!supabase) throw new Error(tx('Not configured'));
   const { data: authData } = await supabase.auth.getUser();
   const user = authData?.user;
-  if (!user) throw new Error('Session expired. Please sign in again.');
+  if (!user) throw new Error(tx('Session expired. Please sign in again.'));
   const clean = String(body || '').trim().slice(0, 2000);
   if (!clean) return;
   const { error } = await supabase

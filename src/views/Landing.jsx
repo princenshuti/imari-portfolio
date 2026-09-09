@@ -5,6 +5,8 @@ import { REFERENCE } from '../engine/insights/refs.js';
 import { fmtNum } from '../data.js';
 import { MaxventuresWordmark } from '../components/ImariMark.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 // Inline SVG icon set — Heroicons-style outline at 24x24
 function Icon({ name }) {
   // Decorative — every icon sits next to its own text label.
@@ -184,13 +186,13 @@ const MOCK_KPIS = [
 function DashboardMock() {
   const nw = useCountUp(204);
   return (
-    <div className="landing-mock">
+    (<div className="landing-mock">
       <div className="landing-mock-head">
         <div>
-          <div className="landing-mock-label">{'Net worth'}</div>
+          <div className="landing-mock-label">{tx('Net worth')}</div>
           <div className="landing-mock-amount font-serif">RWF {nw}M</div>
           {/* 30 ÷ (204 − 30) = +17.2% — keep the arithmetic honest even in a mock */}
-          <span className="landing-mock-delta num">▲ +RWF 30M (+17.2%) past 3M</span>
+          <span className="landing-mock-delta num">{tx('▲ +RWF 30M (+17.2%) past 3M')}</span>
         </div>
         <div className="landing-mock-ranges num">
           {['1M', '3M', '6M', '1Y'].map(r => (
@@ -221,7 +223,7 @@ function DashboardMock() {
           </div>
         ))}
       </div>
-    </div>
+    </div>)
   );
 }
 
@@ -235,42 +237,45 @@ function AdvisorMock() {
   const bnrUSD = market?.bnrRates?.USD;
   const pulse = [
     bnrUSD
-      ? { label: 'USD/RWF (BNR)', value: `${fmtNum(bnrUSD.buy, 0)} / ${fmtNum(bnrUSD.sell, 0)}`, sub: `buy / sell · ${bnrUSD.date}`, live: true }
-      : { label: 'USD/RWF', value: `≈ ${fmtNum(market?.usdRwf ?? 1300, 0)}`, sub: 'reference · BNR live loads shortly', live: false },
-    { label: 'T-bill yield', value: `${REFERENCE.tBillYieldPct}%`, sub: 'BNR auction · reference', live: false },
-    { label: 'Inflation (CPI)', value: `${REFERENCE.cpiYoYPct}%`, sub: 'NISR · reference', live: false },
+      ? { label: tx('USD/RWF (BNR)'), value: `${fmtNum(bnrUSD.buy, 0)} / ${fmtNum(bnrUSD.sell, 0)}`, sub: tx('buy / sell · {0}', [bnrUSD.date]), live: true }
+      : { label: 'USD/RWF', value: `≈ ${fmtNum(market?.usdRwf ?? 1300, 0)}`, sub: tx('reference · BNR live loads shortly'), live: false },
+    { label: tx('T-bill yield'), value: `${REFERENCE.tBillYieldPct}%`, sub: tx('BNR auction · reference'), live: false },
+    { label: tx('Inflation (CPI)'), value: `${REFERENCE.cpiYoYPct}%`, sub: tx('NISR · reference'), live: false },
   ];
   return (
-    <div className="landing-advisor-mock" aria-hidden>
+    (<div className="landing-advisor-mock" aria-hidden>
       <div className="landing-pulse">
         {pulse.map((p, i) => (
           <div key={p.label} className="landing-pulse-card" style={{ '--reveal-delay': `${i * 90}ms` }}>
             <div className="landing-pulse-top">
-              <span className="landing-pulse-label">{p.label}</span>
+              <span className="landing-pulse-label">{tx(p.label)}</span>
               <span className={`landing-pulse-pill ${p.live ? 'is-live' : ''}`}>{p.live ? 'live' : 'ref'}</span>
             </div>
             <div className="landing-pulse-val num">{p.value}</div>
-            <div className="landing-pulse-sub">{p.sub}</div>
+            <div className="landing-pulse-sub">{tx(p.sub)}</div>
           </div>
         ))}
       </div>
       <div className="landing-advisor-q">
-        Am I too concentrated in any single asset?
+        {tx('Am I too concentrated in any single asset?')}
       </div>
       <div className="landing-advisor-a">
-        <span className="landing-advisor-sev">{'Warning'}</span>
-        <div className="landing-advisor-headline font-serif">42% of your assets sit in one holding</div>
+        <span className="landing-advisor-sev">{tx('Warning')}</span>
+        <div className="landing-advisor-headline font-serif">{tx('42% of your assets sit in one holding')}</div>
         <p>
-          Your equity position is 42% of total assets — above the 25% concentration guide.
-          A single shock would move 42% of your wealth at once; diversifying spreads that risk.
+          {tx(
+            'Your equity position is 42% of total assets — above the 25% concentration guide.\n          A single shock would move 42% of your wealth at once; diversifying spreads that risk.'
+          )}
         </p>
-        <div className="landing-advisor-cost num">{'Cost of absence: a 15% drawdown ≈ −RWF 12.8M'}</div>
-        <span className="landing-advisor-action"><span aria-hidden>✦</span>{' Discuss this'}</span>
+        <div className="landing-advisor-cost num">{tx('Cost of absence: a 15% drawdown ≈ −RWF 12.8M')}</div>
+        <span className="landing-advisor-action"><span aria-hidden>✦</span>{tx(' Discuss this')}</span>
       </div>
       <div className="landing-advisor-note">
-        Every figure computed by the engine — the AI only phrases it. Not professional advice.
+        {tx(
+          'Every figure computed by the engine — the AI only phrases it. Not professional advice.'
+        )}
       </div>
-    </div>
+    </div>)
   );
 }
 
@@ -315,13 +320,15 @@ function SplineShowcase() {
   if (skipped) return null;
 
   return (
-    <section className="landing-section landing-section--spline">
+    (<section className="landing-section landing-section--spline">
       <div className="landing-spline-card" ref={hostRef}>
         <div className="landing-spline-copy">
-          <span className="landing-section-eyebrow">{'Meet your advisor'}</span>
-          <h2 className="font-serif landing-section-title">{'A money mind that never sleeps.'}</h2>
+          <span className="landing-section-eyebrow">{tx('Meet your advisor')}</span>
+          <h2 className="font-serif landing-section-title">{tx('A money mind that never sleeps.')}</h2>
           <p className="landing-section-sub">
-            {'Drag the scene. The advisor behind Imari watches your numbers the same way — always on, never tired, never guessing.'}
+            {tx(
+              'Drag the scene. The advisor behind Imari watches your numbers the same way — always on, never tired, never guessing.'
+            )}
           </p>
         </div>
         <div className="landing-spline-stage" aria-hidden>
@@ -330,7 +337,7 @@ function SplineShowcase() {
             : <div className="landing-spline-poster" />}
         </div>
       </div>
-    </section>
+    </section>)
   );
 }
 
@@ -400,17 +407,17 @@ export default function Landing({ onSignIn }) {
   const goTop = (e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return (
-    <div className={`landing-root landing-root--${theme}`}>
+    (<div className={`landing-root landing-root--${theme}`}>
       {/* Nav */}
       <nav className={`landing-nav ${scrolled ? 'is-scrolled' : ''}`} data-noprint>
         <div className="landing-nav-inner">
-          <a href="#" onClick={goTop} className="landing-brand" aria-label="Imari home">
+          <a href="#" onClick={goTop} className="landing-brand" aria-label={tx('Imari home')}>
             <span className="landing-brand-mark" aria-hidden>●</span>
-            <span className="landing-brand-name font-serif">Imari</span>
+            <span className="landing-brand-name font-serif">{tx('Imari')}</span>
           </a>
           <div className="landing-nav-actions">
             <a href="#cost" className="landing-link">{COST_HEAD.eyebrow}</a>
-            <a href="#advisor" className="landing-link">{'AI Advisor'}</a>
+            <a href="#advisor" className="landing-link">{tx('AI Advisor')}</a>
             <a href="#features" className="landing-link">{t('landing.nav.features')}</a>
             <a href="#security" className="landing-link">{t('landing.nav.security')}</a>
             <select
@@ -427,8 +434,8 @@ export default function Landing({ onSignIn }) {
             <button
               onClick={toggleTheme}
               className="landing-theme-toggle"
-              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-              title={theme === 'dark' ? 'Light theme' : 'Dark theme'}
+              aria-label={theme === 'dark' ? tx('Switch to light theme') : tx('Switch to dark theme')}
+              title={theme === 'dark' ? tx('Light theme') : tx('Dark theme')}
             >
               <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
             </button>
@@ -436,7 +443,6 @@ export default function Landing({ onSignIn }) {
           </div>
         </div>
       </nav>
-
       {/* Hero */}
       <header className="landing-hero">
         <div className="landing-hero-inner">
@@ -470,21 +476,23 @@ export default function Landing({ onSignIn }) {
               {['#E0635C', '#E5BC55', '#3FB889'].map(c => (
                 <span key={c} className="landing-frame-dot" style={{ background: c }} />
               ))}
-              <span className="num landing-frame-url">{'Imari · Dashboard'}</span>
+              <span className="num landing-frame-url">{tx('Imari · Dashboard')}</span>
             </div>
             <DashboardMock />
           </div>
           <div className="landing-preview-costchip">
             <span className="landing-preview-costglyph">!</span>
             {/* 5M × tBillYieldPct / 12 — same reference the engine computes with */}
-            <span>{`RWF 5M idle — ~RWF ${Math.round(5_000_000 * REFERENCE.tBillYieldPct / 100 / 12 / 1000)}K/mo forgone vs T-bills`}</span>
+            <span>{tx(
+              'RWF 5M idle — ~RWF {0}K/mo forgone vs T-bills',
+              [Math.round(5_000_000 * REFERENCE.tBillYieldPct / 100 / 12 / 1000)]
+            )}</span>
           </div>
         </div>
       </header>
-
       {/* Rails marquee — institutional credibility, before any pitch */}
       <div className="landing-rails">
-        <span className="landing-rails-label">{'Wired into the rails you already use'}</span>
+        <span className="landing-rails-label">{tx('Wired into the rails you already use')}</span>
         <div className="landing-rails-items">
           <div className="landing-rails-track">
             {[0, 1].map(dup => (
@@ -495,39 +503,37 @@ export default function Landing({ onSignIn }) {
           </div>
         </div>
       </div>
-
       {/* Cost of Absence — the signature idea */}
       <section id="cost" className="landing-section landing-section--cost">
         <div className="landing-section-head">
           <span className="landing-section-eyebrow">{COST_HEAD.eyebrow}</span>
-          <h2 className="font-serif landing-section-title">{COST_HEAD.title}</h2>
-          <p className="landing-section-sub">{COST_HEAD.sub}</p>
+          <h2 className="font-serif landing-section-title">{tx(COST_HEAD.title)}</h2>
+          <p className="landing-section-sub">{tx(COST_HEAD.sub)}</p>
         </div>
         <div className="landing-costs">
           {COSTS.map((c, i) => {
             const s = SEV[c.sev];
             return (
-              <article key={c.label} data-reveal className="landing-cost landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 60, 220)}ms`, '--cost-accent': s.color }}>
+              (<article key={c.label} data-reveal className="landing-cost landing-reveal" style={{ '--reveal-delay': `${Math.min(i * 60, 220)}ms`, '--cost-accent': s.color }}>
                 <span className="landing-cost-sev">
                   <span className="landing-cost-sev-dot" aria-hidden />
-                  {s.label}
+                  {tx(s.label)}
                 </span>
                 <div className="landing-cost-stat num">{c.stat}</div>
-                <div className="landing-cost-label">{c.label}</div>
-                <p className="landing-cost-desc">{c.body}</p>
-              </article>
+                <div className="landing-cost-label">{tx(c.label)}</div>
+                <p className="landing-cost-desc">{tx(c.body)}</p>
+              </article>)
             );
           })}
         </div>
       </section>
-
       {/* AI Advisor — the brain behind the numbers */}
       <section id="advisor" className="landing-section landing-section--advisor">
         <div className="landing-advisor">
           <div className="landing-advisor-copy">
             <span className="landing-section-eyebrow">{ADVISOR_HEAD.eyebrow}</span>
-            <h2 className="font-serif landing-section-title">{ADVISOR_HEAD.title}</h2>
-            <p className="landing-section-sub">{ADVISOR_HEAD.sub}</p>
+            <h2 className="font-serif landing-section-title">{tx(ADVISOR_HEAD.title)}</h2>
+            <p className="landing-section-sub">{tx(ADVISOR_HEAD.sub)}</p>
             <div className="landing-advisor-chiplist">
               {ADVISOR_CHIPS.map(q => (
                 <span key={q} className="landing-advisor-chip">
@@ -539,7 +545,6 @@ export default function Landing({ onSignIn }) {
           <AdvisorMock />
         </div>
       </section>
-
       {/* Features */}
       <section id="features" className="landing-section landing-section-alt">
         <div className="landing-section-head">
@@ -552,22 +557,21 @@ export default function Landing({ onSignIn }) {
             // Bento rhythm: the two flagships open wide, the last two close wide.
             const wide = i <= 1 || i >= FEATURES.length - 2;
             return (
-              <article key={f.title} className={`landing-feature${wide ? ' landing-feature--wide' : ''}`} style={{ '--feature-accent': f.accent, '--feature-delay': `${Math.min(i * 30, 210)}ms` }}>
+              (<article key={f.title} className={`landing-feature${wide ? ' landing-feature--wide' : ''}`} style={{ '--feature-accent': f.accent, '--feature-delay': `${Math.min(i * 30, 210)}ms` }}>
                 <div className="landing-feature-icon" style={{ color: f.accent }}><Icon name={f.icon} /></div>
-                <h3 className="landing-feature-title">{f.title}</h3>
-                <p className="landing-feature-desc">{f.desc}</p>
-              </article>
+                <h3 className="landing-feature-title">{tx(f.title)}</h3>
+                <p className="landing-feature-desc">{tx(f.desc)}</p>
+              </article>)
             );
           })}
         </div>
       </section>
-
       {/* Built for Rwanda */}
       <section id="rwanda" className="landing-section">
         <div className="landing-section-head">
           <span className="landing-section-eyebrow">{RWANDA_HEAD.eyebrow}</span>
-          <h2 className="font-serif landing-section-title">{RWANDA_HEAD.title}</h2>
-          <p className="landing-section-sub">{RWANDA_HEAD.sub}</p>
+          <h2 className="font-serif landing-section-title">{tx(RWANDA_HEAD.title)}</h2>
+          <p className="landing-section-sub">{tx(RWANDA_HEAD.sub)}</p>
         </div>
         <div className="landing-rwanda">
           {RWANDA.map((r, i) => (
@@ -581,10 +585,11 @@ export default function Landing({ onSignIn }) {
           ))}
         </div>
         <p className="landing-rwanda-langs">
-          {'Kinyarwanda · Français · English — landing, sign-in and navigation today; the full app interior is on its way.'}
+          {tx(
+            'Kinyarwanda · Français · English — landing, sign-in and navigation today; the full app interior is on its way.'
+          )}
         </p>
       </section>
-
       {/* Security & honesty */}
       <section id="security" className="landing-section landing-section-alt">
         <div className="landing-section-head">
@@ -597,25 +602,28 @@ export default function Landing({ onSignIn }) {
             <article key={tr.title} className={`landing-trust-card${tr.wide ? ' landing-trust-card--wide' : ''}`}>
               <div className="landing-trust-icon"><Icon name={tr.icon} /></div>
               <div>
-                <h3 className="landing-trust-title">{tr.title}</h3>
-                <p className="landing-trust-desc">{tr.desc}</p>
+                <h3 className="landing-trust-title">{tx(tr.title)}</h3>
+                <p className="landing-trust-desc">{tx(tr.desc)}</p>
               </div>
             </article>
           ))}
           <article className="landing-trust-card landing-trust-card--featured">
             <div className="landing-trust-icon"><Icon name="scales" /></div>
             <div>
-              <h3 className="landing-trust-title">{'Estimates, not market quotes'}</h3>
+              <h3 className="landing-trust-title">{tx('Estimates, not market quotes')}</h3>
               <p className="landing-trust-desc">
-                {'Imari does the math on what you enter. For property, vehicles, livestock and unlisted assets, valuations stay as '}
-                <strong>{'your estimates'}</strong>
-                {' — every figure floored, never rounded up, so a number on screen never overstates reality. Depreciation follows RRA rules; BNR rates handle FX. We are honest about what can be known precisely, and what cannot.'}
+                {tx(
+                  'Imari does the math on what you enter. For property, vehicles, livestock and unlisted assets, valuations stay as '
+                )}
+                <strong>{tx('your estimates')}</strong>
+                {tx(
+                  ' — every figure floored, never rounded up, so a number on screen never overstates reality. Depreciation follows RRA rules; BNR rates handle FX. We are honest about what can be known precisely, and what cannot.'
+                )}
               </p>
             </div>
           </article>
         </div>
       </section>
-
       {/* How it works */}
       <section id="how" className="landing-section">
         <div className="landing-section-head">
@@ -626,16 +634,14 @@ export default function Landing({ onSignIn }) {
           {STEPS.map(s => (
             <li key={s.n} className="landing-step">
               <span className="landing-step-num font-serif">{s.n}</span>
-              <h3 className="landing-step-title">{s.title}</h3>
-              <p className="landing-step-desc">{s.desc}</p>
+              <h3 className="landing-step-title">{tx(s.title)}</h3>
+              <p className="landing-step-desc">{tx(s.desc)}</p>
             </li>
           ))}
         </ol>
       </section>
-
       {/* 3D finale — lazy, below the fold, absent on constrained devices */}
       <SplineShowcase />
-
       {/* Footer CTA */}
       <section className="landing-footer-cta">
         <div className="landing-footer-card">
@@ -655,7 +661,7 @@ export default function Landing({ onSignIn }) {
         <footer className="landing-footer">
           <div className="landing-footer-brand">
             <span className="landing-brand-mark" aria-hidden>●</span>
-            <span className="font-serif">Imari</span>
+            <span className="font-serif">{tx('Imari')}</span>
           </div>
           <div className="landing-footer-meta">
             <span>{t('landing.footer.powered_by')}</span>
@@ -663,6 +669,6 @@ export default function Landing({ onSignIn }) {
           </div>
         </footer>
       </section>
-    </div>
+    </div>)
   );
 }

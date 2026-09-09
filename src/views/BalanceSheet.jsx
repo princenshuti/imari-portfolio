@@ -6,6 +6,8 @@ import { downloadCSV } from '../services/download.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { Reveal } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 // B18 — Personal balance sheet. The net-worth total here MUST equal the
 // dashboard figure (single source of truth): same valueRWF/costRWF/toBase math.
 export default function BalanceSheetView({ state }) {
@@ -67,26 +69,25 @@ export default function BalanceSheetView({ state }) {
   const sectionLabel = { fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 8px' };
 
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18, gap: 12, flexWrap: 'wrap' }} data-noprint>
-        <div className="muted" style={{ fontSize: 13 }}>as of {dateStr}</div>
+        <div className="muted" style={{ fontSize: 13 }}>{tx('as of')} {dateStr}</div>
         <div className="row" style={{ gap: 8 }}>
-          <button onClick={exportCSV} className="btn btn-ghost">↓ CSV</button>
-          <button onClick={() => window.print()} className="btn btn-primary">⎙ Print / Save PDF</button>
+          <button onClick={exportCSV} className="btn btn-ghost">{tx('↓ CSV')}</button>
+          <button onClick={() => window.print()} className="btn btn-primary">{tx('⎙ Print / Save PDF')}</button>
         </div>
       </div>
-
       <Reveal className="card" style={{ padding: '24px 28px', maxWidth: 820 }}>
         {/* Print header */}
         <div style={{ marginBottom: 20 }}>
-          <div className="font-serif" style={{ fontSize: 22 }}>Statement of Net Worth</div>
+          <div className="font-serif" style={{ fontSize: 22 }}>{tx('Statement of Net Worth')}</div>
           <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-            {profile.name ? `${profile.name} · ` : ''}as of {dateStr} · valued in {ccy}
+            {profile.name ? `${profile.name} · ` : ''}{tx('as of')} {dateStr} {tx('· valued in')} {ccy}
           </div>
         </div>
 
         {/* Assets */}
-        <p style={sectionLabel}>Assets</p>
+        <p style={sectionLabel}>{tx('Assets')}</p>
         {data.assetGroups.map(g => (
           <div key={g.group} style={{ marginBottom: 14 }}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -98,46 +99,48 @@ export default function BalanceSheetView({ state }) {
             </div>
             {g.items.map((it, i) => (
               <div key={i} className="row" style={{ justifyContent: 'space-between', padding: '3px 0 3px 16px', fontSize: 12, color: 'var(--ink-2)' }}>
-                <span>{it.name}{it.estimated && <span className="muted" style={{ marginLeft: 6, fontSize: 10 }}>est.</span>}</span>
+                <span>{it.name}{it.estimated && <span className="muted" style={{ marginLeft: 6, fontSize: 10 }}>{tx('est.')}</span>}</span>
                 <span className="num">{show(it.value)}</span>
               </div>
             ))}
           </div>
         ))}
         <div className="row" style={{ justifyContent: 'space-between', padding: '10px 0', borderTop: '1px solid var(--line)', marginTop: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 700 }}>Total assets</span>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{tx('Total assets')}</span>
           <span className="num" style={{ fontSize: 14, fontWeight: 700 }}>{show(data.totalAssets)}</span>
         </div>
 
         {/* Liabilities */}
-        <p style={{ ...sectionLabel, marginTop: 18 }}>Liabilities</p>
+        <p style={{ ...sectionLabel, marginTop: 18 }}>{tx('Liabilities')}</p>
         {data.liabGroups.length === 0 ? (
-          <div className="muted" style={{ fontSize: 12, paddingLeft: 16 }}>No debts tracked — net worth equals total assets.</div>
+          <div className="muted" style={{ fontSize: 12, paddingLeft: 16 }}>{tx('No debts tracked — net worth equals total assets.')}</div>
         ) : data.liabGroups.map(g => (
           <div key={g.label} className="row" style={{ justifyContent: 'space-between', padding: '4px 0', fontSize: 13 }}>
-            <span style={{ color: 'var(--ink-2)' }}>{g.label}</span>
+            <span style={{ color: 'var(--ink-2)' }}>{tx(g.label)}</span>
             <span className="num" style={{ fontWeight: 600 }}>{show(g.total)}</span>
           </div>
         ))}
         {data.liabGroups.length > 0 && (
           <div className="row" style={{ justifyContent: 'space-between', padding: '10px 0', borderTop: '1px solid var(--line)', marginTop: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>Total liabilities</span>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>{tx('Total liabilities')}</span>
             <span className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--down)' }}>{show(data.totalDebt)}</span>
           </div>
         )}
 
         {/* Net worth */}
         <div className="row" style={{ justifyContent: 'space-between', padding: '14px 16px', marginTop: 16, borderRadius: 'var(--r-md)', background: 'var(--brand-softer)', border: '0.5px solid var(--brand-soft)' }}>
-          <span className="font-serif" style={{ fontSize: 18 }}>Net worth</span>
+          <span className="font-serif" style={{ fontSize: 18 }}>{tx('Net worth')}</span>
           <span className="num" style={{ fontSize: 20, fontWeight: 700, color: 'var(--brand)' }}>{show(data.netWorth)}</span>
         </div>
 
         {data.estimatedCount > 0 && (
           <div className="muted" style={{ fontSize: 10.5, marginTop: 14, lineHeight: 1.5 }}>
-            {data.estimatedCount} asset{data.estimatedCount === 1 ? '' : 's'} marked <em>est.</em> use Imari's modeled valuation rather than a figure you entered — a lender should treat these as estimates, not appraised values. Cost basis total: {show(data.totalCost)}.
-          </div>
+            {data.estimatedCount}asset{data.estimatedCount === 1 ? '' : 's'}marked <em>{tx('est.')}</em> {tx(
+              'use Imari\'s modeled valuation rather than a figure you entered — a lender should treat these as estimates, not appraised values. Cost basis total:'
+            )} {show(data.totalCost)}.
+                      </div>
         )}
       </Reveal>
-    </div>
+    </div>)
   );
 }

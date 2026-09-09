@@ -8,6 +8,8 @@ import { navItemsByGroup } from '../nav.js';
 import { useT } from '../contexts/I18nContext.jsx';
 import { useInsights } from '../contexts/InsightsContext.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 const ALL_NAV_GROUPS = navItemsByGroup();
 const COLLAPSE_KEY = 'imari:sidebar:collapsed';
 
@@ -74,7 +76,7 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
   }, [collapsed]);
 
   return (
-    <aside className={`col sidebar-desktop ${collapsed ? 'is-collapsed' : ''}`} style={{
+    (<aside className={`col sidebar-desktop ${collapsed ? 'is-collapsed' : ''}`} style={{
       width: collapsed ? 64 : 244, padding: collapsed ? '20px 8px' : '20px 14px',
       background: 'var(--paper)',
       borderRight: '0.5px solid var(--line)',
@@ -82,7 +84,6 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
       height: '100vh', position: 'sticky', top: 0, overflowY: 'auto',
       transition: 'width 0.22s cubic-bezier(0.23,1,0.32,1), padding 0.22s cubic-bezier(0.23,1,0.32,1)',
     }}>
-
       {/* ── Brand mark — clickable home link ── */}
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
         <button
@@ -102,8 +103,8 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           <ImariMark size={collapsed ? 30 : 38} />
           {!collapsed && (
             <div>
-              <div className="font-serif" style={{ fontSize: 21, lineHeight: 1, letterSpacing: '-0.02em' }}>Imari</div>
-              <div className="muted" style={{ fontSize: 10, marginTop: 2, letterSpacing: '0.03em' }}>by Maxventures</div>
+              <div className="font-serif" style={{ fontSize: 21, lineHeight: 1, letterSpacing: '-0.02em' }}>{tx('Imari')}</div>
+              <div className="muted" style={{ fontSize: 10, marginTop: 2, letterSpacing: '0.03em' }}>{tx('by Maxventures')}</div>
             </div>
           )}
         </button>
@@ -125,7 +126,6 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
           <span aria-hidden="true">{collapsed ? '›' : '‹'}</span>
         </button>
       </div>
-
       {/* ── Net worth card — hidden when sidebar is collapsed ── */}
       {!collapsed && (
       <button onClick={() => onNav('dashboard')} className="btn-unstyled" style={{
@@ -171,38 +171,37 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
         {momChange && Math.abs(momChange.pct) >= 0.5 ? (
           <div className="row" style={{ gap: 7, alignItems: 'center', marginTop: 8 }}>
             <span className={`pill ${momChange.delta >= 0 ? 'pill-up' : 'pill-down'}`} style={{ fontSize: 10 }}>
-              <span aria-hidden="true">{momChange.delta >= 0 ? '▲' : '▼'}</span> {Math.abs(momChange.pct).toFixed(1)}% this month
+              <span aria-hidden="true">{momChange.delta >= 0 ? '▲' : '▼'}</span> {Math.abs(momChange.pct).toFixed(1)}{tx('% this month')}
             </span>
           </div>
         ) : momChange ? (
-          <div className="muted" style={{ fontSize: 10, marginTop: 8 }}>≈ steady this month</div>
+          <div className="muted" style={{ fontSize: 10, marginTop: 8 }}>{tx('≈ steady this month')}</div>
         ) : totalCost > 0 ? (
           <div className="muted" style={{ fontSize: 10, marginTop: 8 }}>
-            {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })} all-time vs cost
+            {up ? '+' : ''}{fmtBase(gain, displayCurrency, { compact: true })} {tx('all-time vs cost')}
           </div>
         ) : null}
 
         <div className="muted" style={{ fontSize: 10.5, marginTop: 6 }}>
-          {displayCurrency} · {profile.name || 'You'}
+          {displayCurrency} · {profile.name || tx('You')}
         </div>
       </button>
       )}
-
       {/* ── Nav groups ── */}
-      <nav className="col" style={{ gap: 14 }} aria-label="Main navigation">
+      <nav className="col" style={{ gap: 14 }} aria-label={tx('Main navigation')}>
         {NAV_GROUPS.map(grp => (
           <div key={grp.label}>
             {!collapsed && (
               <div className="muted" style={{
                 fontSize: 10, letterSpacing: '0.10em', textTransform: 'uppercase', fontWeight: 700,
                 padding: '0 12px', marginBottom: 3,
-              }}>{GROUP_KEY[grp.label] ? t(GROUP_KEY[grp.label]) : grp.label}</div>
+              }}>{GROUP_KEY[grp.label] ? t(GROUP_KEY[grp.label]) : tx(grp.label)}</div>
             )}
             <div className="col" style={{ gap: 1 }}>
               {grp.items.map(it => {
                 const label = NAV_KEY[it.id] ? t(NAV_KEY[it.id]) : it.label;
                 return (
-                  <button
+                  (<button
                     key={it.id}
                     className={`nav-btn${it.id === active ? ' active' : ''}`}
                     onClick={() => onNav(it.id)}
@@ -228,18 +227,17 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
                     {/* Advice badge — active recommendation count from the engine */}
                     {it.id === 'advisor' && adviceCount > 0 && !collapsed && (
                       <span className="pill pill-brand" style={{ marginLeft: 'auto', fontSize: 10, padding: '1px 7px' }}
-                        aria-label={`${adviceCount} active recommendations`}>
+                        aria-label={tx('{0} active recommendations', [adviceCount])}>
                         {adviceCount}
                       </span>
                     )}
-                  </button>
+                  </button>)
                 );
               })}
             </div>
           </div>
         ))}
       </nav>
-
       {/* ── Footer — sync status pill (dot-only when collapsed) ── */}
       <div className="col" style={{ marginTop: 'auto', gap: 8 }}>
         <div
@@ -290,10 +288,10 @@ export default function Sidebar({ active, onNav, profile, netWorth, totalCost, d
             }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--down-soft)'; e.currentTarget.style.color = 'var(--down-ink)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--paper)'; e.currentTarget.style.color = 'var(--ink-3)'; }}
-            >Sign out</button>
+            >{tx('Sign out')}</button>
           </div>
         )}
       </div>
-    </aside>
+    </aside>)
   );
 }

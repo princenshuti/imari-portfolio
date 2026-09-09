@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchItems, saveItem, setItemStatus, deleteItem, subscribeItems } from './items.js';
 
+import { tx } from '../i18n/tx.js';
+
 export function useItems(portfolioId, role) {
   const [items, setItems] = useState(null); // null while loading
   const [error, setError] = useState(null);
@@ -12,7 +14,7 @@ export function useItems(portfolioId, role) {
   const reload = useCallback(async () => {
     if (!portfolioId) return;
     try { const rows = await fetchItems(portfolioId); if (alive.current) { setItems(rows); setError(null); } }
-    catch (e) { if (alive.current) setError(e.message || 'Could not load family items'); }
+    catch (e) { if (alive.current) setError(e.message || tx('Could not load family items')); }
   }, [portfolioId]);
 
   useEffect(() => {
@@ -31,10 +33,10 @@ export function useItems(portfolioId, role) {
     return () => { alive.current = false; off(); };
   }, [portfolioId, reload]);
 
-  const fail = (e) => { setError(e.message || 'Save failed'); reload(); throw e; };
+  const fail = (e) => { setError(e.message || tx('Save failed')); reload(); throw e; };
 
   const save = useCallback(async (form) => {
-    if (!canEdit) throw new Error('View-only access');
+    if (!canEdit) throw new Error(tx('View-only access'));
     const row = await saveItem(portfolioId, form).catch(fail);
     setItems(prev => { const list = prev || []; return list.some(i => i.id === row.id) ? list.map(i => (i.id === row.id ? row : i)) : [...list, row]; });
     return row;

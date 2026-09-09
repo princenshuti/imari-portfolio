@@ -7,6 +7,8 @@ import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { fmtBase } from '../data.js';
 import { KINDS, blankItem, itemToForm } from './planning.js';
 
+import { tx } from '../i18n/tx.js';
+
 const textareaStyle = { ...inputStyle, minHeight: 72, resize: 'vertical', lineHeight: 1.5 };
 
 export function ErrorBanner({ error }) {
@@ -14,7 +16,7 @@ export function ErrorBanner({ error }) {
 }
 
 export function SignInNote({ what }) {
-  return <div className="card muted" style={{ padding: 20 }}>Sign in to use {what} — it is shared with the members of your portfolio.</div>;
+  return <div className="card muted" style={{ padding: 20 }}>{tx('Sign in to use')} {what} {tx('— it is shared with the members of your portfolio.')}</div>;
 }
 
 export function PageHead({ title, sub, action }) {
@@ -59,25 +61,25 @@ export function ItemEditor({ kind, initial, preset, assets = [], onSave, onDelet
     e.preventDefault();
     setBusy(true); setErr('');
     try { await onSave(form); onClose(); }
-    catch (ex) { setErr(ex.message || 'Could not save'); }
+    catch (ex) { setErr(ex.message || tx('Could not save')); }
     finally { setBusy(false); }
   }
 
   return (
-    <Modal open onClose={onClose} title={`${initial ? 'Edit' : 'New'} ${spec.label.toLowerCase()}`} maxWidth={560}>
+    (<Modal open onClose={onClose} title={`${initial ? 'Edit' : 'New'} ${spec.label.toLowerCase()}`} maxWidth={560}>
       <form onSubmit={submit} style={{ padding: 20 }}>
-        <div className="font-serif" style={{ fontSize: 20, marginBottom: 4 }}>{initial ? 'Edit' : 'New'} {spec.label.toLowerCase()}</div>
+        <div className="font-serif" style={{ fontSize: 20, marginBottom: 4 }}>{initial ? tx('Edit') : tx('New')} {spec.label.toLowerCase()}</div>
         {spec.fields.filter(f => !f.hidden).map(f => (
-          <Field key={f.key} label={f.label} hint={f.hint} top={12}>
+          <Field key={f.key} label={tx(f.label)} hint={tx(f.hint)} top={12}>
             {f.type === 'textarea' ? (
               <textarea value={form[f.key] ?? ''} onChange={e => u(f.key, e.target.value)} maxLength={f.max} style={textareaStyle} />
             ) : f.type === 'select' ? (
               <select value={form[f.key] ?? f.def} onChange={e => u(f.key, e.target.value)} style={inputStyle}>
-                {f.options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                {f.options.map(o => <option key={o.id} value={o.id}>{tx(o.label)}</option>)}
               </select>
             ) : f.type === 'asset' ? (
               <select value={form[f.key] ?? ''} onChange={e => u(f.key, e.target.value)} style={inputStyle}>
-                <option value="">— none —</option>
+                <option value="">{tx('— none —')}</option>
                 {assets.filter(a => a.kind === 'vehicle' || String(a.kind).startsWith('realestate')).map(a => <option key={a.id} value={a.id}>{a.name || a.kind}</option>)}
               </select>
             ) : (
@@ -89,11 +91,11 @@ export function ItemEditor({ kind, initial, preset, assets = [], onSave, onDelet
         {err && <div role="alert" style={{ fontSize: 12, color: 'var(--down)', marginTop: 10 }}>{err}</div>}
         <div className="row" style={{ justifyContent: 'space-between', marginTop: 18, gap: 8 }}>
           <div>
-            {initial && onDelete && !confirmDel && <button type="button" className="btn btn-ghost btn-xs" onClick={() => setConfirmDel(true)}>Delete</button>}
+            {initial && onDelete && !confirmDel && <button type="button" className="btn btn-ghost btn-xs" onClick={() => setConfirmDel(true)}>{tx('Delete')}</button>}
           </div>
           <div className="row" style={{ gap: 8 }}>
-            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>{tx('Cancel')}</button>
+            <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? tx('Saving…') : tx('Save')}</button>
           </div>
         </div>
       </form>
@@ -101,10 +103,10 @@ export function ItemEditor({ kind, initial, preset, assets = [], onSave, onDelet
         open={confirmDel}
         onClose={() => setConfirmDel(false)}
         onConfirm={async () => { await onDelete(initial); onClose(); }}
-        title={`Delete this ${spec.label.toLowerCase()}?`}
-        description="This cannot be undone."
-        confirmLabel="Delete"
+        title={tx('Delete this {0}?', [spec.label.toLowerCase()])}
+        description={tx('This cannot be undone.')}
+        confirmLabel={tx('Delete')}
       />
-    </Modal>
+    </Modal>)
   );
 }

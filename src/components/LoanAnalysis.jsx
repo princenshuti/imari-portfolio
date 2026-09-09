@@ -12,6 +12,8 @@ import { useMemo, useState } from 'react';
 import { fmt, fmtBase } from '../data.js';
 import { monthlyPayment, totalInterest, effectiveAPR, monthsToPayoff, amortizationRows } from '../services/finance.js';
 
+import { tx } from '../i18n/tx.js';
+
 function monthsBetween(start, end) {
   if (!start || !end) return 0;
   const a = new Date(start), b = new Date(end);
@@ -69,23 +71,22 @@ export default function LoanAnalysis({ liability, displayCurrency }) {
   if (principal <= 0 || term <= 0) return null;
 
   return (
-    <details className="loan-analysis">
+    (<details className="loan-analysis">
       <summary>
         <span style={{ color: 'var(--ink-3)', fontSize: 11 }}>
-          Monthly payment <strong className="num" style={{ color: 'var(--ink)' }}>{fmt(base.pmt, cur, { compact: true })}</strong>
+          {tx('Monthly payment')} <strong className="num" style={{ color: 'var(--ink)' }}>{fmt(base.pmt, cur, { compact: true })}</strong>
           {'  ·  '}
-          Effective APR <strong style={{ color: 'var(--ink)' }}>{base.apr.toFixed(2)}%</strong>
+          {tx('Effective APR')} <strong style={{ color: 'var(--ink)' }}>{base.apr.toFixed(2)}%</strong>
           {'  ·  '}
-          Total interest <strong className="num" style={{ color: 'var(--down)' }}>{fmt(base.totI, cur, { compact: true })}</strong>
+          {tx('Total interest')} <strong className="num" style={{ color: 'var(--down)' }}>{fmt(base.totI, cur, { compact: true })}</strong>
         </span>
         <span className="loan-analysis-toggle" aria-hidden="true">›</span>
       </summary>
-
       <div style={{ padding: '12px 0 4px', display: 'grid', gap: 14 }}>
         {/* Payoff calculator */}
         <div className="row" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <label htmlFor={`extra-${liability.id}`} style={{ fontSize: 12, color: 'var(--ink-2)' }}>
-            Pay extra
+            {tx('Pay extra')}
           </label>
           <input
             id={`extra-${liability.id}`}
@@ -102,13 +103,16 @@ export default function LoanAnalysis({ liability, displayCurrency }) {
           <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{cur}/month</span>
           {proj && (
             <span style={{ fontSize: 11.5, color: 'var(--up)', marginLeft: 'auto' }}>
-              Payoff in <strong>{proj.months}mo</strong>
-              {proj.monthsSaved > 0 && ` (saves ${proj.monthsSaved}mo, ${fmt(proj.interestSaved, cur, { compact: true })} interest)`}
+              {tx('Payoff in')} <strong>{proj.months}mo</strong>
+              {proj.monthsSaved > 0 && tx(
+                ' (saves {0}mo, {1} interest)',
+                [proj.monthsSaved, fmt(proj.interestSaved, cur, { compact: true })]
+              )}
             </span>
           )}
           {extraNum > 0 && !proj && (
             <span style={{ fontSize: 11, color: 'var(--down)', marginLeft: 'auto' }}>
-              Payment too small to cover interest — increase
+              {tx('Payment too small to cover interest — increase')}
             </span>
           )}
         </div>
@@ -117,11 +121,11 @@ export default function LoanAnalysis({ liability, displayCurrency }) {
         <table style={{ width: '100%', fontSize: 11.5, borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ color: 'var(--ink-4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 10 }}>
-              <th style={{ textAlign: 'left',  padding: '4px 0' }}>Month</th>
-              <th style={{ textAlign: 'right', padding: '4px 0' }}>Payment</th>
-              <th style={{ textAlign: 'right', padding: '4px 0' }}>Interest</th>
-              <th style={{ textAlign: 'right', padding: '4px 0' }}>Principal</th>
-              <th style={{ textAlign: 'right', padding: '4px 0' }}>Balance</th>
+              <th style={{ textAlign: 'left',  padding: '4px 0' }}>{tx('Month')}</th>
+              <th style={{ textAlign: 'right', padding: '4px 0' }}>{tx('Payment')}</th>
+              <th style={{ textAlign: 'right', padding: '4px 0' }}>{tx('Interest')}</th>
+              <th style={{ textAlign: 'right', padding: '4px 0' }}>{tx('Principal')}</th>
+              <th style={{ textAlign: 'right', padding: '4px 0' }}>{tx('Balance')}</th>
             </tr>
           </thead>
           <tbody className="num">
@@ -137,9 +141,11 @@ export default function LoanAnalysis({ liability, displayCurrency }) {
           </tbody>
         </table>
         <div className="muted" style={{ fontSize: 10, marginTop: -4 }}>
-          First 6 months shown — {term} total. Math is illustrative; your actual schedule may differ if the lender uses a different compounding convention.
+          {tx('First 6 months shown —')} {term} {tx(
+            'total. Math is illustrative; your actual schedule may differ if the lender uses a different compounding convention.'
+          )}
         </div>
       </div>
-    </details>
+    </details>)
   );
 }

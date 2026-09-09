@@ -5,6 +5,8 @@
  */
 import { freshnessChip, THRESHOLDS_MS } from '../engine/freshness.js';
 
+import { tx } from '../i18n/tx.js';
+
 export default function FreshnessChip({ chip, asOf, type = 'asset', now, style }) {
   const c = chip || freshnessChip(asOf, {
     now: now || new Date(),
@@ -13,9 +15,9 @@ export default function FreshnessChip({ chip, asOf, type = 'asset', now, style }
   if (!c) return null;
 
   return (
-    <span
-      title={`Inputs ${c.label}`}
-      aria-label={`Data ${c.label}${c.isStale ? ' — stale' : ''}`}
+    (<span
+      title={tx('Inputs {0}', [c.label])}
+      aria-label={tx('Data {0}{1}', [c.label, c.isStale ? ' — stale' : ''])}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         fontSize: 10, lineHeight: 1, padding: '3px 7px',
@@ -27,7 +29,7 @@ export default function FreshnessChip({ chip, asOf, type = 'asset', now, style }
       }}
     >
       <span aria-hidden="true" style={{ opacity: 0.8 }}>{c.isStale ? '⚠' : '◷'}</span>
-      {c.label}
-    </span>
+      {tx(c.label)}
+    </span>)
   );
 }

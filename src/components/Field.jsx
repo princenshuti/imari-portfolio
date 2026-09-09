@@ -2,6 +2,8 @@ import { Children, cloneElement, isValidElement, useId } from 'react';
 import { Sparkline } from './charts.jsx';
 import { fmtNum } from '../data.js';
 
+import { tx } from '../i18n/tx.js';
+
 export const inputStyle = {
   width: '100%', padding: '9px 12px', borderRadius: 'var(--r-sm)',
   border: '1px solid var(--line-strong)',
@@ -102,9 +104,9 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
   // 'modeled'   → muted pill
   const kind = isLive ? 'live' : (d.dataKind ?? 'modeled');
   const BADGE = {
-    live:      { bg: 'color-mix(in oklab, var(--up) 14%, transparent)',   color: 'var(--up-ink)',   label: 'Live'      },
-    reference: { bg: 'color-mix(in oklab, var(--gold) 14%, transparent)', color: 'var(--gold-ink)', label: 'Reference' },
-    modeled:   { bg: 'var(--bg-2)',                                        color: 'var(--ink-3)',   label: 'Modeled'   },
+    live:      { bg: 'color-mix(in oklab, var(--up) 14%, transparent)',   color: 'var(--up-ink)',   label: tx('Live')      },
+    reference: { bg: 'color-mix(in oklab, var(--gold) 14%, transparent)', color: 'var(--gold-ink)', label: tx('Reference') },
+    modeled:   { bg: 'var(--bg-2)',                                        color: 'var(--ink-3)',   label: tx('Modeled')   },
   };
   const badge = BADGE[kind] || BADGE.modeled;
 
@@ -112,15 +114,15 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
   const isUp = hasChange ? change >= 0 : true;
 
   return (
-    <div className="card hover-lift" style={{ padding: big ? 20 : 16, position: 'relative', cursor: 'default' }}>
+    (<div className="card hover-lift" style={{ padding: big ? 20 : 16, position: 'relative', cursor: 'default' }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6, alignItems: 'center', gap: 6 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', flex: 1, minWidth: 0 }}>{d.label}</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', flex: 1, minWidth: 0 }}>{tx(d.label)}</div>
         {onToggleWatch && (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onToggleWatch(d.id); }}
-            aria-label={isWatched ? `Remove ${d.label} from watchlist` : `Add ${d.label} to watchlist`}
-            title={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}
+            aria-label={isWatched ? tx('Remove {0} from watchlist', [d.label]) : tx('Add {0} to watchlist', [d.label])}
+            title={isWatched ? tx('Remove from watchlist') : tx('Add to watchlist')}
             style={{
               background: 'transparent', border: 0, cursor: 'pointer', padding: 2,
               fontSize: 13, lineHeight: 1, color: isWatched ? 'var(--gold)' : 'var(--ink-4)',
@@ -143,23 +145,24 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
               animation: 'imari-dot-pulse 2s ease-in-out infinite',
             }} />
           )}
-          {badge.label}
+          {tx(badge.label)}
         </div>
       </div>
-
       {override?.spread ? (
         // BNR FX card: Buy / Sell side-by-side as the primary display.
         // No "mid" rate shown — Buy is what the app uses for foreign→RWF totals,
         // Sell is what it uses for RWF→foreign payouts (see toBase/fromBase in data.js).
-        <div
+        (<div
           style={{ display: 'flex', gap: big ? 28 : 20, alignItems: 'flex-end', flexWrap: 'wrap', minWidth: 0 }}
-          title="Buy = bank buys foreign currency from you. Sell = bank sells foreign currency to you. Imari uses Buy for foreign→RWF totals and Sell for RWF→foreign payouts."
+          title={tx(
+            'Buy = bank buys foreign currency from you. Sell = bank sells foreign currency to you. Imari uses Buy for foreign→RWF totals and Sell for RWF→foreign payouts.'
+          )}
         >
           <div>
             <div className="muted" style={{
               fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
               textTransform: 'uppercase', marginBottom: 3, color: 'var(--ink-3)',
-            }}>Buy</div>
+            }}>{tx('Buy')}</div>
             <div className="font-serif num" style={{
               fontSize: big ? 24 : 18, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)',
             }}>
@@ -170,14 +173,14 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
             <div className="muted" style={{
               fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
               textTransform: 'uppercase', marginBottom: 3, color: 'var(--ink-3)',
-            }}>Sell</div>
+            }}>{tx('Sell')}</div>
             <div className="font-serif num" style={{
               fontSize: big ? 24 : 18, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)',
             }}>
               {fmtNum(override.spread.sell, 4)}
             </div>
           </div>
-        </div>
+        </div>)
       ) : (
         <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
           <div className="font-serif num" style={{
@@ -198,11 +201,10 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
             </div>
           )}
           {!hasChange && kind === 'live' && (
-            <div className="muted" style={{ fontSize: 10 }}>live rate</div>
+            <div className="muted" style={{ fontSize: 10 }}>{tx('live rate')}</div>
           )}
         </div>
       )}
-
       <div style={{ marginTop: 8, color: d.color }} aria-hidden="true">
         <Sparkline data={d.series} w={big ? 240 : 160} h={big ? 40 : 30} stroke={d.color} fill />
       </div>
@@ -223,7 +225,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
         {d.methodology && (
           <details style={{ marginTop: 4 }}>
             <summary style={{ cursor: 'pointer', color: 'var(--brand)', fontSize: 10, fontWeight: 600 }}>
-              How is this computed?
+              {tx('How is this computed?')}
             </summary>
             <div style={{ marginTop: 4, padding: '6px 8px', background: 'var(--bg-2)', borderRadius: 4, whiteSpace: 'pre-line', fontSize: 10, lineHeight: 1.5, color: 'var(--ink-3)' }}>
               {d.methodology}
@@ -231,7 +233,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
           </details>
         )}
       </div>
-    </div>
+    </div>)
   );
 }
 

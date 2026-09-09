@@ -5,6 +5,8 @@ import { netWorthRWF, monthlyFlowsRWF } from '../engine/insights/_shared.js';
 import { getApiKey, completeText } from '../ai.js';
 import { Reveal, Stagger, StaggerItem, CountUp } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 // B12a/b — Fast Forward: deterministic projection + scenario controls, with an
 // optional AI narration grounded ONLY in the engine output. Modeled, never a guarantee.
 export default function ProjectionsView({ state }) {
@@ -54,61 +56,61 @@ Write 2 short paragraphs in plain English explaining what this trajectory means 
   const numInput = { padding: '8px 10px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--paper)', color: 'var(--ink)', fontFamily: 'inherit', fontSize: 13, width: '100%' };
 
   return (
-    <div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
+    (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       {/* Page title + subtitle live in the TopBar (App.jsx) — repeating them
           here doubled the heading (same fix as Goals, review #12). */}
       {/* Scenario controls */}
       <Reveal className="card" style={{ padding: '18px 20px', marginBottom: 18 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
           <label className="col" style={{ gap: 5 }}>
-            <span className="muted" style={{ fontSize: 11 }}>Add monthly saving ({ccy})</span>
+            <span className="muted" style={{ fontSize: 11 }}>{tx('Add monthly saving (')}{ccy})</span>
             <input type="number" min="0" value={extraMonthly} onChange={e => setExtraMonthly(e.target.value)} style={numInput} />
-            <span className="muted" style={{ fontSize: 10 }}>Base from cash flow: {fmtBase(baseMonthly, ccy, { compact: true })}/mo</span>
+            <span className="muted" style={{ fontSize: 10 }}>{tx('Base from cash flow:')} {fmtBase(baseMonthly, ccy, { compact: true })}/mo</span>
           </label>
           <label className="col" style={{ gap: 5 }}>
-            <span className="muted" style={{ fontSize: 11 }}>One-time lump sum ({ccy})</span>
+            <span className="muted" style={{ fontSize: 11 }}>{tx('One-time lump sum (')}{ccy})</span>
             <input type="number" min="0" value={lumpSum} onChange={e => setLumpSum(e.target.value)} style={numInput} />
           </label>
           <label className="col" style={{ gap: 5 }}>
-            <span className="muted" style={{ fontSize: 11 }}>Expected growth %/yr</span>
+            <span className="muted" style={{ fontSize: 11 }}>{tx('Expected growth %/yr')}</span>
             <input type="number" min="0" max="40" value={growth} onChange={e => setGrowth(e.target.value)} style={numInput} />
-            <span className="muted" style={{ fontSize: 10 }}>Modeled · ±{DEFAULT_ASSUMPTIONS.bandSpreadPct}% band</span>
+            <span className="muted" style={{ fontSize: 10 }}>{tx('Modeled · ±')}{DEFAULT_ASSUMPTIONS.bandSpreadPct}{tx('% band')}</span>
           </label>
         </div>
       </Reveal>
-
       {/* Horizon cards — expected values re-count when the scenario changes */}
       <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
         {proj.horizons.map(h => {
           const delta = scenarioChanged ? h.expected - base.horizons.find(b => b.key === h.key).expected : 0;
           return (
-            <StaggerItem key={h.key} className="card" style={{ padding: '16px 18px' }}>
-              <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{h.label}</div>
+            (<StaggerItem key={h.key} className="card" style={{ padding: '16px 18px' }}>
+              <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx(h.label)}</div>
               <div className="num" style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', marginTop: 4 }}>
                 <CountUp value={h.expected} duration={0.7} format={v => fmtBase(v, ccy, { compact: true })} />
               </div>
               <div className="muted" style={{ fontSize: 10.5, marginTop: 3 }}>{fmtBase(h.low, ccy, { compact: true })} – {fmtBase(h.high, ccy, { compact: true })}</div>
-              <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>≈ {fmtBase(h.realExpected, ccy, { compact: true })} in today's money</div>
+              <div className="muted" style={{ fontSize: 10, marginTop: 3 }}>≈ {fmtBase(h.realExpected, ccy, { compact: true })} {tx('in today\'s money')}</div>
               {scenarioChanged && delta > 0 && (
-                <div style={{ fontSize: 11, marginTop: 6, color: 'var(--up)', fontWeight: 600 }}>+{fmtBase(delta, ccy, { compact: true })} vs current pace</div>
+                <div style={{ fontSize: 11, marginTop: 6, color: 'var(--up)', fontWeight: 600 }}>+{fmtBase(delta, ccy, { compact: true })} {tx('vs current pace')}</div>
               )}
-            </StaggerItem>
+            </StaggerItem>)
           );
         })}
       </Stagger>
-
       {/* AI advisory narration */}
       <Reveal delay={0.1} className="card" style={{ padding: '18px 20px' }}>
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: aiText || aiErr ? 12 : 0 }}>
-          <h2 className="font-serif" style={{ fontSize: 16, margin: 0, fontWeight: 400 }}>What this means</h2>
-          <button onClick={narrate} disabled={aiPending} className="btn btn-primary btn-sm">{aiPending ? 'Thinking…' : '✦ Explain scenario'}</button>
+          <h2 className="font-serif" style={{ fontSize: 16, margin: 0, fontWeight: 400 }}>{tx('What this means')}</h2>
+          <button onClick={narrate} disabled={aiPending} className="btn btn-primary btn-sm">{aiPending ? tx('Thinking…') : tx('✦ Explain scenario')}</button>
         </div>
         {aiErr && <div role="alert" style={{ fontSize: 12.5, color: 'var(--down-ink)' }}>{aiErr}</div>}
         {aiText && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', whiteSpace: 'pre-wrap' }}>{aiText}</div>}
         <div className="muted" style={{ fontSize: 10.5, marginTop: 12, lineHeight: 1.5 }}>
-          Projections are modeled estimates based on your assumptions — actual returns vary and this is not professional financial advice.
+          {tx(
+            'Projections are modeled estimates based on your assumptions — actual returns vary and this is not professional financial advice.'
+          )}
         </div>
       </Reveal>
-    </div>
+    </div>)
   );
 }

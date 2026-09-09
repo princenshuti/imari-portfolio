@@ -5,6 +5,8 @@
 import { fmt, CLASSES, LIABILITY_TYPES, INCOME_CATEGORIES, EXPENSE_CATEGORIES, GOAL_CATEGORIES } from '../data.js';
 import { NAV_ITEMS } from '../nav.js';
 
+import { tx } from '../i18n/tx.js';
+
 const ALL_CF_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 
 /** 2 = starts with, 1 = contains, 0 = no match. Case-insensitive. */
@@ -35,7 +37,7 @@ export function searchPortfolio(state, query, { limit = 8 } = {}) {
     const cls = CLASSES.find(c => c.kind === a.kind);
     const s = best(scoreText(a.name, q), scoreText(cls?.label, q), scoreText(a.notes, q));
     if (s) results.push({
-      type: 'asset', id: a.id, title: a.name || cls?.label || 'Asset',
+      type: 'asset', id: a.id, title: a.name || cls?.label || tx('Asset'),
       subtitle: `${cls?.label || 'Asset'} · ${fmt(a.currentValue || a.purchasePrice || 0, a.currency || 'RWF', { compact: true })}`,
       to: 'assets', score: s + 1, // owning something outranks a menu entry
     });
@@ -45,8 +47,11 @@ export function searchPortfolio(state, query, { limit = 8 } = {}) {
     const t = LIABILITY_TYPES.find(x => x.kind === l.kind);
     const s = best(scoreText(l.name, q), scoreText(l.lender, q), scoreText(t?.label, q));
     if (s) results.push({
-      type: 'liability', id: l.id, title: l.name || l.lender || t?.label || 'Debt',
-      subtitle: `${t?.label || 'Debt'} · ${fmt(l.remainingAmount || 0, l.currency || 'RWF', { compact: true })} remaining`,
+      type: 'liability', id: l.id, title: l.name || l.lender || t?.label || tx('Debt'),
+      subtitle: tx('{0} · {1} remaining', [
+        t?.label || 'Debt',
+        fmt(l.remainingAmount || 0, l.currency || 'RWF', { compact: true })
+      ]),
       to: 'liabilities', score: s + 1,
     });
   }
@@ -55,8 +60,11 @@ export function searchPortfolio(state, query, { limit = 8 } = {}) {
     const cat = GOAL_CATEGORIES.find(c => c.id === g.category);
     const s = best(scoreText(g.name, q), scoreText(cat?.label, q));
     if (s) results.push({
-      type: 'goal', id: g.id, title: g.name || cat?.label || 'Goal',
-      subtitle: `Goal · target ${fmt(g.targetAmount || 0, g.currency || 'RWF', { compact: true })}`,
+      type: 'goal', id: g.id, title: g.name || cat?.label || tx('Goal'),
+      subtitle: tx(
+        'Goal · target {0}',
+        [fmt(g.targetAmount || 0, g.currency || 'RWF', { compact: true })]
+      ),
       to: 'goals', score: s + 1,
     });
   }
@@ -65,7 +73,7 @@ export function searchPortfolio(state, query, { limit = 8 } = {}) {
     const cat = ALL_CF_CATS.find(c => c.id === cf.category);
     const s = best(scoreText(cf.notes, q), scoreText(cat?.label, q));
     if (s) results.push({
-      type: 'cashflow', id: cf.id, title: cf.notes || cat?.label || 'Entry',
+      type: 'cashflow', id: cf.id, title: cf.notes || cat?.label || tx('Entry'),
       subtitle: `${cf.type === 'income' ? 'Income' : 'Expense'} · ${fmt(cf.amount || 0, cf.currency || 'RWF', { compact: true })} · ${cf.date || ''}`,
       to: 'cashflow', score: s,
     });
@@ -75,7 +83,7 @@ export function searchPortfolio(state, query, { limit = 8 } = {}) {
     const s = scoreText(item.labelDesktop, q);
     if (s) results.push({
       type: 'view', id: `nav-${item.id}`, title: item.labelDesktop,
-      subtitle: 'Open view', to: item.id, score: s,
+      subtitle: tx('Open view'), to: item.id, score: s,
     });
   }
 

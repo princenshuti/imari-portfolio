@@ -4,10 +4,12 @@
 import { supabase } from '../supabase.js';
 import { KIND_IDS, normalizeItem } from './planning.js';
 
+import { tx } from '../i18n/tx.js';
+
 const BUCKET = 'family-docs';
 const need = (portfolioId) => {
-  if (!supabase) throw new Error('Cloud sync is not configured');
-  if (!portfolioId) throw new Error('No portfolio');
+  if (!supabase) throw new Error(tx('Cloud sync is not configured'));
+  if (!portfolioId) throw new Error(tx('No portfolio'));
 };
 const throwIf = ({ error }) => { if (error) throw error; };
 const isUuid = v => /^[0-9a-f-]{36}$/i.test(String(v));
@@ -41,13 +43,13 @@ export async function saveItem(portfolioId, form) {
 
 export async function setItemStatus(portfolioId, id, status) {
   need(portfolioId);
-  if (!isUuid(id) || !['open', 'done', 'archived'].includes(status)) throw new Error('Invalid update');
+  if (!isUuid(id) || !['open', 'done', 'archived'].includes(status)) throw new Error(tx('Invalid update'));
   throwIf(await supabase.from('family_items').update({ status }).eq('portfolio_id', portfolioId).eq('id', id));
 }
 
 export async function deleteItem(portfolioId, item) {
   need(portfolioId);
-  if (!isUuid(item.id)) throw new Error('Invalid id');
+  if (!isUuid(item.id)) throw new Error(tx('Invalid id'));
   if (item.data?.file?.path) await removeDocFile(item.data.file.path).catch(() => {}); // metadata wins; orphan files are harmless
   throwIf(await supabase.from('family_items').delete().eq('portfolio_id', portfolioId).eq('id', item.id));
 }
@@ -59,9 +61,9 @@ export const DOC_MIME = new Set(['application/pdf', 'image/jpeg', 'image/png', '
 /** Upload a file for an existing document item; returns the file descriptor to store in data.file. */
 export async function uploadDocFile(portfolioId, itemId, file) {
   need(portfolioId);
-  if (!isUuid(itemId)) throw new Error('Save the document first');
-  if (!DOC_MIME.has(file.type)) throw new Error('Only PDF, JPG, PNG or WebP files are accepted');
-  if (file.size > DOC_MAX_BYTES) throw new Error('File too large (max 10 MB)');
+  if (!isUuid(itemId)) throw new Error(tx('Save the document first'));
+  if (!DOC_MIME.has(file.type)) throw new Error(tx('Only PDF, JPG, PNG or WebP files are accepted'));
+  if (file.size > DOC_MAX_BYTES) throw new Error(tx('File too large (max 10 MB)'));
   const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 80) || 'file';
   const path = `${portfolioId}/${itemId}/${Date.now()}-${safeName}`;
   throwIf(await supabase.storage.from(BUCKET).upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' }));
@@ -70,7 +72,7 @@ export async function uploadDocFile(portfolioId, itemId, file) {
 
 /** Short-lived (60 s) URL to open a stored file. */
 export async function docFileUrl(path) {
-  if (!supabase) throw new Error('Cloud sync is not configured');
+  if (!supabase) throw new Error(tx('Cloud sync is not configured'));
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 60);
   if (error) throw error;
   return data.signedUrl;
