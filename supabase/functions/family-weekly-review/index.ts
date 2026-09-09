@@ -35,6 +35,12 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (d: Date) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 const dateOf = (s: string) => new Date(`${s}T00:00:00Z`);
 function mondayOf(d: Date): string { const x = new Date(d); const day = x.getUTCDay(); x.setUTCDate(x.getUTCDate() - (day === 0 ? 6 : day - 1)); return iso(x); }
+// In-app path: 3 requests per user per 10 minutes (the review itself dedupes at 10 minutes).
+const userHits = new Map<string, number[]>();
+function overUserLimit(uid: string): boolean {
+  const now = Date.now(); const arr = (userHits.get(uid) ?? []).filter(t => now - t < 600_000);
+  if (arr.length >= 3) return true; arr.push(now); userHits.set(uid, arr); return false;
+}
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
@@ -155,6 +161,7 @@ Deno.serve(async (req) => {
   const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
   const { data: { user }, error } = await userClient.auth.getUser();
   if (error || !user) return json({ error: 'Unauthorized' }, 401);
+  if (overUserLimit(user.id)) return json({ error: 'Too many requests — try again in a few minutes' }, 429);
   const { data: mem } = await admin.from('portfolio_members').select('portfolio_id,role').eq('user_id', user.id).in('role', ['owner', 'editor']);
   const pid = (mem ?? []).find((m: any) => m.role === 'owner')?.portfolio_id ?? (mem ?? [])[0]?.portfolio_id;
   if (!pid) return json({ error: 'No editable portfolio' }, 403);

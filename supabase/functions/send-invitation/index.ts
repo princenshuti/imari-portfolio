@@ -28,6 +28,21 @@ const SERVICE_ROLE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const ANON_KEY           = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const RESEND_API_KEY     = Deno.env.get('RESEND_API_KEY') ?? '';
 const FROM_EMAIL         = Deno.env.get('FROM_EMAIL') ?? '';
+// Fallback transport: an n8n webhook that sends through the owner's Gmail.
+// Used only when Resend is not configured. Shared secret in a header.
+const EMAIL_WEBHOOK_URL    = Deno.env.get('EMAIL_WEBHOOK_URL') ?? '';
+const EMAIL_WEBHOOK_SECRET = Deno.env.get('EMAIL_WEBHOOK_SECRET') ?? '';
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// Per-user throttle: 5 invitation e-mails per 10 minutes (in-memory, per instance).
+const SEND_WINDOW_MS = 10 * 60_000, SEND_MAX = 5;
+const sendBuckets = new Map<string, number[]>();
+function overSendLimit(userId: string): boolean {
+  const now = Date.now();
+  const arr = (sendBuckets.get(userId) ?? []).filter(t => now - t < SEND_WINDOW_MS);
+  if (arr.length >= SEND_MAX) return true;
+  arr.push(now); sendBuckets.set(userId, arr);
+  return false;
+}
 const APP_URL            = (Deno.env.get('APP_URL') ?? '').replace(/\/$/, '');
 
 const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
@@ -124,8 +139,10 @@ Deno.serve(async (req: Request) => {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANON_KEY) {
     return reply({ error: 'supabase env not configured' }, 500);
   }
-  if (!RESEND_API_KEY || !FROM_EMAIL || !APP_URL) {
-    return reply({ error: 'email env not configured (RESEND_API_KEY, FROM_EMAIL, APP_URL required)' }, 500);
+  const viaResend  = Boolean(RESEND_API_KEY && FROM_EMAIL);
+  const viaWebhook = Boolean(EMAIL_WEBHOOK_URL && EMAIL_WEBHOOK_SECRET);
+  if (!APP_URL || (!viaResend && !viaWebhook)) {
+    return reply({ error: 'email transport not configured (set RESEND_API_KEY + FROM_EMAIL, or EMAIL_WEBHOOK_URL + EMAIL_WEBHOOK_SECRET)' }, 500);
   }
 
   const authHeader = req.headers.get('Authorization') ?? '';
@@ -140,6 +157,7 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: userErr } = await userClient.auth.getUser();
   if (userErr || !userData?.user) return reply({ error: 'invalid session' }, 401);
   const caller = userData.user;
+  if (overSendLimit(caller.id)) return reply({ error: 'Too many invitation e-mails — wait a few minutes and try again.' }, 429);
 
   let body: RequestBody;
   try { body = await req.json(); }
@@ -160,6 +178,8 @@ Deno.serve(async (req: Request) => {
     .single();
   if (invErr || !inv) return reply({ error: 'invitation not found' }, 404);
   if (inv.accepted_at) return reply({ error: 'invitation already accepted' }, 409);
+  if (typeof inv.email !== 'string' || inv.email.length > 254 || !EMAIL_RE.test(inv.email)) return reply({ error: 'invitation e-mail is not valid' }, 400);
+  if (inv.expires_at && new Date(inv.expires_at).getTime() < Date.now()) return reply({ error: 'invitation has expired — revoke it and invite again' }, 410);
 
   // 3. Re-verify the caller is an owner of that portfolio. Don't trust the client.
   const { data: membership, error: memErr } = await admin
@@ -205,6 +225,24 @@ Deno.serve(async (req: Request) => {
     expiresAt: inv.expires_at,
   });
   const subject = `${inviterName || caller.email || 'Someone'} invited you to Imari Portfolio`;
+
+  if (!viaResend) {
+    // Gmail through the owner's n8n instance. The webhook only runs when the
+    // shared secret matches; anything else is answered 200 and dropped there.
+    let hookRes: Response;
+    try {
+      hookRes = await fetch(EMAIL_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-email-secret': EMAIL_WEBHOOK_SECRET },
+        body: JSON.stringify({ to: inv.email, subject, html, replyTo: caller.email ?? '' }),
+      });
+    } catch (e) {
+      console.error('email webhook unreachable:', e);
+      return reply({ error: 'email service unreachable' }, 502);
+    }
+    if (!hookRes.ok) return reply({ error: 'email send failed', detail: `webhook ${hookRes.status}` }, 502);
+    return reply({ ok: true, transport: 'gmail' });
+  }
 
   const resendRes = await fetch('https://api.resend.com/emails', {
     method: 'POST',

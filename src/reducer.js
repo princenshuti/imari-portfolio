@@ -5,6 +5,32 @@ import { FX, fromBase, toBase } from './data.js';
 import { defaultState } from './store.js';
 import { addSnapshot } from './services/snapshots.js';
 
+// ── Input hygiene (single choke point for every write) ───────────────────────
+// Strips control characters and caps string lengths on any object the user can
+// type into, before it reaches state, localStorage, the cloud or the AI context.
+// Data URIs (photos, avatar, attachments) and known long-text fields keep
+// generous limits; everything else is a short label.
+const LONG_KEYS  = new Set(['notes', 'bio', 'description', 'content', 'pattern']);
+const DATA_KEYS  = new Set(['avatar', 'photos', 'documents', 'attachment', 'dataUrl', 'data']);
+const MAX_SHORT = 300, MAX_LONG = 4000, MAX_DATA = 4 * 1024 * 1024;
+export function scrubText(v, max = MAX_SHORT) {
+  return String(v).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, max);
+}
+export function scrub(obj, depth = 0) {
+  if (depth > 4 || obj == null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.slice(0, 500).map(x => (typeof x === 'string' ? scrubText(x, MAX_LONG) : scrub(x, depth + 1)));
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    if (typeof v === 'string') {
+      if (DATA_KEYS.has(k) || v.startsWith('data:')) out[k] = v.startsWith('data:') ? v.slice(0, MAX_DATA) : scrubText(v, MAX_LONG);
+      else out[k] = scrubText(v, LONG_KEYS.has(k) ? MAX_LONG : MAX_SHORT);
+    } else if (v && typeof v === 'object') out[k] = scrub(v, depth + 1);
+    else out[k] = v;
+  }
+  return out;
+}
+
 export function upsert(arr, item, key = 'id') {
   const i = arr.findIndex(x => x[key] === item[key]);
   return i >= 0 ? arr.map((x, idx) => idx === i ? item : x) : [...arr, item];
@@ -33,10 +59,11 @@ export function syncAccountBalance(assets, cashflows, accountId) {
 export function reducer(state, action) {
   switch (action.type) {
     case 'setProfile':
-      return { ...state, profile: { ...state.profile, ...action.patch } };
+      return { ...state, profile: { ...state.profile, ...scrub(action.patch) } };
 
     // ── Assets ──────────────────────────────────────────────────
     case 'upsertAsset': {
+      action = { ...action, asset: scrub(action.asset) };
       // Stamp updatedAt on every save — a save is a fresh verification of the
       // value, and the Data-Freshness layer (§11) reads this to know how old
       // net worth's inputs are. Cloud sync uses replaceAll (below), not this,
@@ -60,18 +87,19 @@ export function reducer(state, action) {
 
     // ── Liabilities ─────────────────────────────────────────────
     case 'upsertLiability':
-      return { ...state, liabilities: upsert(state.liabilities || [], action.liability) };
+      return { ...state, liabilities: upsert(state.liabilities || [], scrub(action.liability)) };
     case 'deleteLiability':
       return { ...state, liabilities: (state.liabilities || []).filter(l => l.id !== action.id) };
 
     // ── Goals ───────────────────────────────────────────────────
     case 'upsertGoal':
-      return { ...state, goals: upsert(state.goals || [], action.goal) };
+      return { ...state, goals: upsert(state.goals || [], scrub(action.goal)) };
     case 'deleteGoal':
       return { ...state, goals: (state.goals || []).filter(g => g.id !== action.id) };
 
     // ── Cash flows ──────────────────────────────────────────────
     case 'upsertCashflow': {
+      action = { ...action, entry: scrub(action.entry) };
       const newCashflows = upsert(state.cashflows || [], action.entry);
       const oldEntry = (state.cashflows || []).find(c => c.id === action.entry.id);
       const toSync = new Set();
@@ -95,7 +123,7 @@ export function reducer(state, action) {
 
     // ── Categorisation rules (F5) ───────────────────────────────
     case 'upsertCatRule':
-      return { ...state, catRules: upsert(state.catRules || [], action.rule) };
+      return { ...state, catRules: upsert(state.catRules || [], scrub(action.rule)) };
     case 'deleteCatRule':
       return { ...state, catRules: (state.catRules || []).filter(r => r.id !== action.id) };
 

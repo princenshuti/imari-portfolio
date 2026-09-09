@@ -367,6 +367,16 @@ export default function App() {
     return () => { aborted = true; };
   }, [session?.user?.id]);
 
+  // Last-resort error handling: anything that escapes a component or a promise
+  // becomes a visible toast (with the message) instead of a silent console line.
+  useEffect(() => {
+    const onRejection = (e) => { const m = e?.reason?.message || String(e?.reason || 'Unexpected error'); showToast(`Something went wrong: ${m.slice(0, 160)}`, 'error'); };
+    const onError = (e) => { if (e?.message) showToast(`Something went wrong: ${String(e.message).slice(0, 160)}`, 'error'); };
+    window.addEventListener('unhandledrejection', onRejection);
+    window.addEventListener('error', onError);
+    return () => { window.removeEventListener('unhandledrejection', onRejection); window.removeEventListener('error', onError); };
+  }, []);
+
   // Family data for the insight engine + advisor — set by FamilyBridge (entitled households only).
   const [family, setFamily] = useState(null);
   const familyEnabled = Boolean(portfolioId) && isEntitled(entitlements, FEATURES.FAMILY);
