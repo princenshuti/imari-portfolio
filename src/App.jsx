@@ -143,7 +143,7 @@ export default function App() {
   // which fires after useEffect (too late, causes a Login flash or missed event).
   const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
     const h = window.location.hash;
-    return h.includes('type=recovery') || h.includes('type=signup');
+    return h.includes('type=recovery') || h.includes('type=signup') || h.includes('type=invite');
   });
   const [pendingInvite, setPendingInvite] = useState(null);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
@@ -285,7 +285,7 @@ export default function App() {
     getSession().then(s => {
       setSession(s);
       // Don't mark stateReady if we're in recovery mode — wait for the recovery session
-      if (!s && !window.location.hash.includes('type=recovery')) setStateReady(true);
+      if (!s && !window.location.hash.includes('type=recovery') && !window.location.hash.includes('type=invite')) setStateReady(true);
     });
     const unsub = onAuthStateChange((s, event) => {
       if (event === 'PASSWORD_RECOVERY') {

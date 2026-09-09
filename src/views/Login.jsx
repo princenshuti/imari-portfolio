@@ -46,8 +46,18 @@ export default function Login({ pendingInvite, initialMode = 'signin' }) {
       } else {
         if (password.length < 8) throw new Error('Password must be at least 8 characters.');
         const data = await signUp(email, password);
+        // Supabase answers a repeated sign-up with a placeholder user that has
+        // no identities (so the API itself never reveals existing e-mails).
+        // Tell the person plainly and take them to sign-in instead of leaving
+        // them waiting for a confirmation e-mail that will never come.
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          setMode('signin');
+          window.location.hash = 'login';
+          setError('An account with this email already exists. Sign in, or use “Forgot password” to reset it.');
+          return;
+        }
         if (data.user && !data.session) {
-          setMessage('Check your email for a confirmation link to finish signup.');
+          setMessage('Almost there — check your inbox for a confirmation link to finish creating your account. It expires in one hour.');
         }
       }
     } catch (err) {
