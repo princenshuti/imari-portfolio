@@ -107,7 +107,7 @@ You are a financial advisor. Only answer financial questions grounded in the dat
     if (!question.trim() || pending) return;
     const apiKey = getApiKey();
     if (!apiKey) {
-      dispatch({ type: 'appendChat', msg: { role: 'assistant', content: 'Please add your Anthropic API key in **Settings** to enable AI chat.', ts: Date.now() } });
+      dispatch({ type: 'appendChat', msg: { role: 'assistant', content: tx('Please add your Anthropic API key in **Settings** to enable AI chat.'), ts: Date.now() } });
       return;
     }
     dispatch({ type: 'appendChat', msg: { role: 'user', content: question, ts: Date.now() } });
@@ -203,35 +203,21 @@ You are a financial advisor. Only answer financial questions grounded in the dat
   // only adjusts `bottom` (not `top`) and only for bottom-* corners.
   return (
     (<div
-      className={`fa-wrap fa-wrap-${corner}`}
-      style={{
-        position: 'fixed',
-        zIndex: 9990,
-        ...pos,
-        transition: [
-          'top    0.24s cubic-bezier(0.23,1,0.32,1)',
-          'bottom 0.24s cubic-bezier(0.23,1,0.32,1)',
-          'left   0.24s cubic-bezier(0.23,1,0.32,1)',
-          'right  0.24s cubic-bezier(0.23,1,0.32,1)',
-        ].join(', '),
-      }}
-    >
+        className={`fa-wrap fa-wrap-${corner}`}
+        style={{
+          position: 'fixed',
+          zIndex: 9990,
+          ...pos,
+          transition: [
+            'top    0.24s cubic-bezier(0.23,1,0.32,1)',
+            'bottom 0.24s cubic-bezier(0.23,1,0.32,1)',
+            'left   0.24s cubic-bezier(0.23,1,0.32,1)',
+            'right  0.24s cubic-bezier(0.23,1,0.32,1)',
+          ].join(', '),
+        }}
+      >
       {/* Keyframes */}
-      <style>{`
-        @keyframes fa-dot-alive {
-          0%,100% { opacity: 1; transform: scale(1);   }
-          50%     { opacity: 0.4; transform: scale(0.7); }
-        }
-        @keyframes fa-typing {
-          0%,80%,100% { transform: scale(0.4); opacity: 0.4; }
-          40%         { transform: scale(1);   opacity: 1;   }
-        }
-        .fa-btn { transition: box-shadow 0.18s ease, transform 0.12s cubic-bezier(0.23,1,0.32,1); }
-        .fa-btn:hover { transform: scale(1.07) !important; }
-        .fa-btn:active { transform: scale(0.95) !important; }
-        .fa-chip { transition: background 0.12s ease-out, border-color 0.12s ease-out, color 0.12s ease-out; }
-        .fa-chip:hover { background: var(--brand-soft) !important; border-color: var(--brand) !important; color: var(--brand) !important; }
-      `}</style>
+      <style>{'\n        @keyframes fa-dot-alive {\n          0%,100% { opacity: 1; transform: scale(1);   }\n          50%     { opacity: 0.4; transform: scale(0.7); }\n        }\n        @keyframes fa-typing {\n          0%,80%,100% { transform: scale(0.4); opacity: 0.4; }\n          40%         { transform: scale(1);   opacity: 1;   }\n        }\n        .fa-btn { transition: box-shadow 0.18s ease, transform 0.12s cubic-bezier(0.23,1,0.32,1); }\n        .fa-btn:hover { transform: scale(1.07) !important; }\n        .fa-btn:active { transform: scale(0.95) !important; }\n        .fa-chip { transition: background 0.12s ease-out, border-color 0.12s ease-out, color 0.12s ease-out; }\n        .fa-chip:hover { background: var(--brand-soft) !important; border-color: var(--brand) !important; color: var(--brand) !important; }\n      '}</style>
       {/* ── Chat panel ─────────────────────────────────────────────────────── */}
       <AnimatePresence>
       {open && (

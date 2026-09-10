@@ -9,7 +9,7 @@ import { useMarket } from '../contexts/MarketContext.jsx';
 import { monthlyFlowsRWF } from '../engine/insights/_shared.js';
 import { Stagger, StaggerItem, Reveal } from '../components/motion.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 const EMPTY_GOAL = {
   category: 'investment', title: '', targetAmount: '', currency: 'RWF',
@@ -246,16 +246,16 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
     'done':     { label: tx('Done'),     color: 'var(--up)',   bg: 'var(--up-soft)'   },
   }[status];
 
-  const deadlineFmt = deadline ? deadline.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+  const deadlineFmt = deadline ? deadline.toLocaleDateString(txLocale(), { month: 'short', day: 'numeric', year: 'numeric' }) : null;
 
   // Milestone celebration markers — display ticks at 25/50/75% on the progress bar
   const milestones = [25, 50, 75];
 
   return (
     (<div className="hover-actions card" style={{
-      padding: '20px 22px', marginBottom: 14,
-      borderLeft: `3px solid ${isAchieved ? 'var(--up)' : isOverdue ? 'var(--down)' : 'var(--brand)'}`,
-    }}>
+        padding: '20px 22px', marginBottom: 14,
+        borderLeft: `3px solid ${isAchieved ? 'var(--up)' : isOverdue ? 'var(--down)' : 'var(--brand)'}`,
+      }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
         <div className="row" style={{ gap: 12, alignItems: 'center' }}>
           <span style={{ fontSize: 28 }}>{cat.icon}</span>
@@ -349,7 +349,7 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
         }}>
           <span aria-hidden="true" style={{ fontSize: 18 }}>🎉</span>
           <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--up-ink)' }}>
-            {tx('Achieved')}{goal.achievedAt ? ` · ${new Date(goal.achievedAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}` : ''}— {fmt(goal.targetAmount, goal.currency, { compact: true })} {tx('reached.')}
+            {tx('Achieved')}{goal.achievedAt ? ` · ${new Date(goal.achievedAt).toLocaleDateString(txLocale(), { month: 'long', year: 'numeric' })}` : ''}— {fmt(goal.targetAmount, goal.currency, { compact: true })} {tx('reached.')}
           </span>
         </div>
       )}
@@ -360,10 +360,10 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
           background: fundedLate ? 'var(--gold-soft)' : 'var(--up-soft)',
           fontSize: 11, color: fundedLate ? 'var(--gold-ink, var(--gold))' : 'var(--up-ink)',
         }}>
-          {tx('Funded by')} <strong>{fundedBy.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</strong> {tx('at\n          your current')} {fmtBase(monthlySaving, displayCurrency, { compact: true })}/mo saving
+          {tx('Funded by')} <strong>{fundedBy.toLocaleDateString(txLocale(), { month: 'long', year: 'numeric' })}</strong> {tx('at\n          your current')} {fmtBase(monthlySaving, displayCurrency, { compact: true })}/mo saving
                     {fundedLate && deadline ? tx(
             ' — after your {0} deadline',
-            [deadline.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })]
+            [deadline.toLocaleDateString(txLocale(), { month: 'short', year: 'numeric' })]
           ) : ''}.
                   </div>
       )}
@@ -388,14 +388,14 @@ function GoalCard({ goal, currentValue, displayCurrency, onEdit, onDelete, onLoc
             <span style={{ fontSize: 11, color: 'var(--gold-ink, var(--gold))' }}>
               <span aria-hidden="true">🔒</span> {tx('Locked to')} <strong>{goal.lock.instrumentRef}</strong>
               {goal.lock.auctionDate ? tx(' · next auction {0}', [
-                new Date(goal.lock.auctionDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                new Date(goal.lock.auctionDate).toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' })
               ]) : ''}
             </span>
             <button type="button" onClick={() => onLock(null)} className="btn btn-ghost btn-xs">{tx('Unlock')}</button>
           </div>
         ) : (
           <button type="button" className="btn btn-ghost btn-xs" style={{ marginTop: 10 }}
-            onClick={() => onLock({ locked: true, instrumentRef: 'BNR T-bill', auctionDate: nextBnrAuction() })}>
+            onClick={() => onLock({ locked: true, instrumentRef: tx('BNR T-bill'), auctionDate: nextBnrAuction() })}>
             <span aria-hidden="true">🔒</span> {tx('Lock to a T-bill')}
           </button>
         )

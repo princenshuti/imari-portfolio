@@ -31,7 +31,7 @@ export default function Household({ state, dispatch, portfolioId, role }) {
     .sort((a, b) => (a.next?.getTime() || 0) - (b.next?.getTime() || 0)), [state.cashflows, now]);
   const monthlyTotal = bills.reduce((s, b) => s + b.monthly, 0);
 
-  if (!portfolioId) return <SignInNote what="the household board" />;
+  if (!portfolioId) return <SignInNote what={tx('the household board')} />;
 
   /** Done on a repeating task also schedules the next one. */
   async function complete(t, checked) {

@@ -38,7 +38,9 @@ export default function concentrationRisk(state, { now = new Date(), refs = REFE
   // Prefer whichever concentration is larger; require strictly > threshold.
   let kind, pct, label, refsIds;
   if (groupPct >= assetPct) {
-    kind = 'group'; pct = groupPct; label = topGroup.group; refsIds = topGroup.ids;
+    // Group names come from the asset-class table, so translate the label here:
+    // it is interpolated into sentences rather than rendered on its own.
+    kind = 'group'; pct = groupPct; label = tx(topGroup.group); refsIds = topGroup.ids;
   } else {
     kind = 'asset'; pct = assetPct; label = topAsset.a.name; refsIds = [topAsset.a.id];
   }
@@ -52,7 +54,7 @@ export default function concentrationRisk(state, { now = new Date(), refs = REFE
     category: 'allocation',
     headline: tx(
       '{0}% of your assets in {1}',
-      [pctStr, kind === 'group' ? label : 'one asset']
+      [pctStr, kind === 'group' ? label : tx('one asset')]
     ),
     body: kind === 'group'
       ? tx(

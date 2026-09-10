@@ -27,7 +27,7 @@ export function ConfirmDestructive({
   open,
   onClose,
   onConfirm,
-  title         = 'Are you sure?',
+  title         = tx('Are you sure?'),
   description,
   confirmLabel  = 'Delete',
   requireType   = null,

@@ -169,7 +169,7 @@ export default function LiabilitiesView({ state, dispatch }) {
           <div className="row" style={{ padding: '14px 20px', justifyContent: 'space-between' }}>
             <div className="row" style={{ gap: 10 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--down)', flexShrink: 0 }} />
-              <div className="font-serif" style={{ fontSize: 16 }}>{g.group}</div>
+              <div className="font-serif" style={{ fontSize: 16 }}>{tx(g.group)}</div>
               <span className="pill pill-soft">{g.items.length}</span>
             </div>
             <div className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--down)' }}>

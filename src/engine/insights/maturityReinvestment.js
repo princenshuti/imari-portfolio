@@ -8,7 +8,7 @@ import { makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { valueRWF } from '../../data.js';
 import { parseLocalDate } from '../recurrence.js';
 
-import { tx } from '../../i18n/tx.js';
+import { tx, txLocale } from '../../i18n/tx.js';
 
 const HORIZON_DAYS = 60; // look-ahead window
 
@@ -26,7 +26,7 @@ export default function maturityReinvestment(state, { now = new Date(), refs = R
   const daysUntil = Math.ceil((next.due - now) / 86400000);
   const matured = daysUntil <= 0;
   const idleMonthly = next.value * refs.tBillYieldPct / 100 / 12;
-  const dateStr = next.due.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const dateStr = next.due.toLocaleDateString(txLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
   const ids = maturing.map(x => x.a.id);
 
   return makeInsight({

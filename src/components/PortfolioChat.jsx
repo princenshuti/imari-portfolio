@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { listMessages, sendMessage, subscribeMessages } from '../cloud.js';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 export default function PortfolioChat({ portfolioId, session }) {
   const [messages, setMessages] = useState([]);
@@ -54,7 +54,7 @@ export default function PortfolioChat({ portfolioId, session }) {
                 color: mine ? 'var(--brand-ink)' : 'var(--ink)',
               }}>{tx(m.body)}</div>
               <div className="muted" style={{ fontSize: 10, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
-                {new Date(m.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                {new Date(m.created_at).toLocaleString(txLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>)
           );

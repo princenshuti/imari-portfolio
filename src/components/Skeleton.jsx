@@ -69,7 +69,7 @@ export function CardSkeleton({ height = 140 }) {
  * dashboard/assets/trends layout closely enough to feel like the right page
  * is about to appear.
  */
-export function ViewSkeleton({ cards = 6, label = 'Loading view' }) {
+export function ViewSkeleton({ cards = 6, label = tx('Loading view') }) {
   return (
     <div
       role="status"

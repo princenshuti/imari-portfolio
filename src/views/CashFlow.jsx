@@ -14,7 +14,7 @@ import { applyCatRules } from '../engine/catRules.js';
 import { budgetStatus } from '../engine/budgets.js';
 import { monthlyEquivalentRWF, parseLocalDate } from '../engine/recurrence.js';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
@@ -502,11 +502,11 @@ function ImportModal({ accounts, currency, catRules = [], onImport, onCancel }) 
           <div className="col" style={{ gap: 12 }}>
             {colField('Date', 'date', null, true)}
             {colField('Description', 'desc')}
-            {colField('Money out', 'debit', 'Debit / Withdrawal / Sent')}
-            {colField('Money in', 'credit', 'Credit / Deposit / Received')}
-            {colField('Amount', 'amount', 'Single-amount column')}
-            {colField('Type', 'type', 'Dr/Cr column')}
-            {colField('Fee / Charge', 'fee', 'Booked as separate bank-fees expense')}
+            {colField(tx('Money out'), 'debit', tx('Debit / Withdrawal / Sent'))}
+            {colField(tx('Money in'), 'credit', tx('Credit / Deposit / Received'))}
+            {colField('Amount', 'amount', tx('Single-amount column'))}
+            {colField('Type', 'type', tx('Dr/Cr column'))}
+            {colField(tx('Fee / Charge'), 'fee', tx('Booked as separate bank-fees expense'))}
           </div>
 
           {/* Preview the first 3 rows */}
@@ -795,8 +795,8 @@ function CFRow({ cf, accounts, onEdit, onDelete }) {
           <div className="num" style={{ fontSize: 14, fontWeight: 700, color: isIncome ? 'var(--up)' : 'var(--down)' }}>
             {isIncome ? '+' : '−'}{fmt(cf.amount, cf.currency, { compact: true })}
           </div>
-          <button type="button" onClick={() => onEdit(cf)} aria-label={`Edit cashflow ${cf.description || cf.category || ''}`.trim()} className="btn-icon-sm is-row-action"><span aria-hidden="true">✎</span></button>
-          <button type="button" onClick={() => onDelete(cf.id)} aria-label={`Delete cashflow ${cf.description || cf.category || ''}`.trim()} className="btn-icon-sm is-row-action is-danger"><span aria-hidden="true">×</span></button>
+          <button type="button" onClick={() => onEdit(cf)} aria-label={tx('Edit cashflow {0}', [cf.description || cf.category || '']).trim()} className="btn-icon-sm is-row-action"><span aria-hidden="true">✎</span></button>
+          <button type="button" onClick={() => onDelete(cf.id)} aria-label={tx('Delete cashflow {0}', [cf.description || cf.category || '']).trim()} className="btn-icon-sm is-row-action is-danger"><span aria-hidden="true">×</span></button>
         </div>
       </div>
       <ImageLightbox open={showImg && !!cf.attachment} onClose={() => setShowImg(false)} src={cf.attachment?.data} alt={tx('Cashflow receipt')} />
@@ -819,7 +819,7 @@ export default function CashFlowView({ state, dispatch }) {
   const refDate = new Date();
   refDate.setMonth(refDate.getMonth() + monthOffset);
   const refYear = refDate.getFullYear(), refMonth = refDate.getMonth();
-  const monthLabel = refDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const monthLabel = refDate.toLocaleDateString(txLocale(), { month: 'long', year: 'numeric' });
 
   const { incomes, expenses, totInc, totExp } = useMemo(() => {
     const incomes = [], expenses = [];
@@ -864,7 +864,7 @@ export default function CashFlowView({ state, dispatch }) {
       const ma = monthlyAmount(cf);
       if (cf.type === 'income') inc += ma; else exp += ma;
     });
-    return { label: d.toLocaleDateString('en-GB', { month: 'short' }), inc, exp, y, m };
+    return { label: d.toLocaleDateString(txLocale(), { month: 'short' }), inc, exp, y, m };
   }), [cashflows, chartMonths]);
 
   const barMax = Math.max(...barData.map(b => Math.max(b.inc, b.exp)), 1);
@@ -998,7 +998,14 @@ export default function CashFlowView({ state, dispatch }) {
                 ))}
                 {barData.map((b, i) => {
                   const net = b.inc - b.exp;
-                  const tip = `${b.label} ${b.y} · Income ${fmtBase(b.inc, profile.displayCurrency, { compact: true })} · Expense ${fmtBase(b.exp, profile.displayCurrency, { compact: true })} · Net ${net >= 0 ? '+' : ''}${fmtBase(net, profile.displayCurrency, { compact: true })}`;
+                  const tip = tx('{0} {1} · Income {2} · Expense {3} · Net {4}{5}', [
+                    b.label,
+                    b.y,
+                    fmtBase(b.inc, profile.displayCurrency, { compact: true }),
+                    fmtBase(b.exp, profile.displayCurrency, { compact: true }),
+                    net >= 0 ? '+' : '',
+                    fmtBase(net, profile.displayCurrency, { compact: true })
+                  ]);
                   return (
                     (<div
                       key={i}
@@ -1042,7 +1049,10 @@ export default function CashFlowView({ state, dispatch }) {
               <div className="row" style={{ gap: 12, alignItems: 'center' }}>
                 <Donut size={84} thickness={11}
                   slices={expenseByCategory.map(c => ({ value: c.value, color: c.color }))}
-                  ariaLabel={`Expenses by category, ${monthLabel}: ${expenseByCategory.slice(0, 5).map(c => c.label).join(', ')}`} />
+                  ariaLabel={tx(
+                    'Expenses by category, {0}: {1}',
+                    [monthLabel, expenseByCategory.slice(0, 5).map(c => c.label).join(', ')]
+                  )} />
                 <div className="col" style={{ gap: 4, fontSize: 11, flex: 1, minWidth: 0 }}>
                   {expenseByCategory.slice(0, 5).map(c => {
                     const total = expenseByCategory.reduce((s, x) => s + x.value, 0);
@@ -1300,7 +1310,7 @@ function ForecastSection({ cashflows, accounts, displayCurrency }) {
   const hasRecurring = cashflows.some(cf => cf.recurring && cf.recurring !== 'once');
   if (!hasRecurring && forecast.totalIncome === 0 && forecast.totalExpense === 0) return null;
 
-  const shortDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const shortDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' });
   const crunch = forecast.firstShortfallDate;
 
   return (
@@ -1333,7 +1343,10 @@ function ForecastSection({ cashflows, accounts, displayCurrency }) {
         stroke={crunch ? 'var(--down)' : 'var(--brand)'}
         accent={crunch ? 'var(--down)' : 'var(--brand)'}
         formatValue={(v) => fmtBase(v, displayCurrency, { compact: true })}
-        ariaLabel={`Projected balance over the next 30 days, ending at ${fmtBase(forecast.endBalance, displayCurrency, { compact: true })}.`}
+        ariaLabel={tx(
+          'Projected balance over the next 30 days, ending at {0}.',
+          [fmtBase(forecast.endBalance, displayCurrency, { compact: true })]
+        )}
       />
       {crunch && (
         <div role="status" style={{

@@ -36,17 +36,11 @@ const PRINT = args.includes('--print');
 const ONLY = args.includes('--file') ? args[args.indexOf('--file') + 1] : null;
 
 const b = recast.types.builders, n = recast.types.namedTypes;
-const ATTRS = new Set(['subtext', 'costHook', 'law', 'ariaLabel', 'why', 'note', 'footnote', 'emptyLabel', 'detail', 'ctaText', 'buttonLabel', 'confirmText', 'columns', 'headers', 'steps', 'placeholder', 'title', 'aria-label', 'alt', 'label', 'hint', 'sub', 'subtitle', 'description', 'confirmLabel', 'emptyText', 'message', 'helper', 'tooltip', 'caption', 'kicker', 'eyebrow', 'legend', 'summary', 'question', 'body', 'headline', 'cta', 'ctaLabel', 'actionLabel', 'okLabel', 'cancelLabel', 'prefix', 'suffix']);
-const MEMBER_PROPS = new Set(['group', 'why', 'subtext', 'costHook', 'law', 'note', 'area', 'label', 'title', 'hint', 'sub', 'subtitle', 'description', 'desc', 'plural', 'tag', 'text', 'short', 'long', 'definition', 'summary', 'headline', 'body', 'costStatement', 'labelDesktop', 'labelMobile']);
-const OBJ_PROPS = new Set(['why', 'subtext', 'costHook', 'law', 'note', 'group', 'headline', 'body', 'costStatement', 'label', 'title', 'subtitle', 'hint', 'description', 'placeholder', 'sub', 'text', 'summary', 'message']);
+const ATTRS = new Set(['placeholder', 'title', 'aria-label', 'alt', 'label', 'hint', 'sub', 'subtitle', 'description', 'confirmLabel', 'emptyText', 'message', 'helper', 'tooltip', 'caption', 'kicker', 'eyebrow', 'legend', 'summary', 'question', 'body', 'headline', 'cta', 'ctaLabel', 'actionLabel', 'okLabel', 'cancelLabel', 'prefix', 'suffix']);
+const MEMBER_PROPS = new Set(['label', 'title', 'hint', 'sub', 'subtitle', 'description', 'desc', 'plural', 'tag', 'text', 'short', 'long', 'definition', 'summary', 'headline', 'body', 'costStatement', 'labelDesktop', 'labelMobile']);
+const OBJ_PROPS = new Set(['headline', 'body', 'costStatement', 'label', 'title', 'subtitle', 'hint', 'description', 'placeholder', 'sub', 'text', 'summary', 'message']);
 const CALLS = new Set(['showToast', 'setError', 'setMessage', 'setInfo', 'setMsg', 'setErr', 'setStatus', 'setNotice']);
 const SKIP_FILES = /(\.test\.js$|\/locales\/|\/i18n\/|\/markdown\.js$|\/supabase\.js$|\/main\.jsx$|\/nav\.js$)/;
-// Files whose prose is machine-facing (LLM prompts, statement parsers): never wrap generic literals/templates there.
-const NO_GENERIC = /(\/services\/receiptOcr\.js$|\/services\/advisorContext\.js$|\/services\/bankImport\.js$|\/services\/cloud\.js$|\/services\/entitlements\.js$|\/engine\/|\/data\.js$|\/excel\.js$|\/glossary\.js$|\/family\/(habits|planning|items|cloud|useFamily|useItems|useFamilyBundle)\.js$)/;
-const GENERIC_LITERALS = /\/(views|components|family)\/[^/]+\.jsx$|\/App\.jsx$|\/family\/context\.js$|\/severity\.js$|\/features\.js$|\/contexts\/MarketContext\.jsx$|\/engine\/freshness\.js$|\/engine\/insights\/[^/]+\.js$/;
-const NON_UI_KEYS = new Set(['className','style','id','type','kind','key','name','value','href','src','group','icon','glyph','color','font','path','target','rel','role','autoComplete','inputMode','pattern','accept','method','mode','align','fill','stroke','d','viewBox','transform','points','fontFamily','fontWeight','textAnchor','htmlFor','currency','locale','lang','dir','code','symbol','flag','ticker','source','url','endpoint','route','hash','storageKey','table','column','bucket','channel','event','action','field','sortKey','category','tone','variant','size','position','severity','status','state','filter','range','tab','view','page','model','provider','format','ext','mime','contentType','cache','credentials','headers','Authorization','apikey','topic']);
-const NON_UI_CALLS = new Set(['log','warn','error','info','debug','includes','startsWith','endsWith','indexOf','split','replace','replaceAll','match','test','localeCompare','getItem','setItem','removeItem','querySelector','querySelectorAll','getElementById','addEventListener','removeEventListener','from','channel','on','rpc','select','eq','neq','in','order','fetch','get','set','has','delete','add','remove','toggle','contains','padStart','padEnd','createElement','setAttribute','getAttribute','dispatch','navigate','open','assign','setRequestHeader','append','matchMedia','RegExp','URL','Intl','NumberFormat','DateTimeFormat','encodeURIComponent','join','some','every','find','filter','map','reduce','sort','postMessage','track','emit','send','invoke','functions','storage','upload','download','createSignedUrl','list','insert','update','upsert','trackEvent']);
-const looksProse = s => { const c = s.replace(/\{\d+\}/g, ' '); return /[A-Za-z]{2,}[^A-Za-z]+[A-Za-z]{2,}/.test(c) && /[a-z]/.test(c) && !/(solid|dashed|var\(--|\dpx|\dms|\ds\b|color-mix|rgba?\(|cubic-bezier|linear-gradient|ease|keyframes|monospace|sans-serif|https?:|\/rest\/|\.json|\.csv|\.png|\.svg|\bnull\b|\bundefined\b|^[a-z-]+ [a-z-]+$|^\w+\/\w+$)/.test(c) && !/\n/.test(s) && s.length <= 240; };
 
 const hasLetters = s => /[A-Za-z]/.test(s);
 const looksLikeText = s => hasLetters(s) && !/^[A-Z0-9_./:-]+$/.test(s) && !/^https?:|^data:|^#|^\/|^mailto:/.test(s) && !/^[a-z][a-zA-Z0-9]*$/.test(s) && s.length > 1;
@@ -96,38 +90,15 @@ function wrapExpr(node) {
     return (c || a) ? node : null;
   }
   if (n.LogicalExpression.check(node)) {
-    const r = wrapExpr(node.right); const l = (n.StringLiteral.check(node.left) || n.TemplateLiteral.check(node.left) || n.MemberExpression.check(node.left) || n.OptionalMemberExpression.check(node.left)) ? wrapExpr(node.left) : null;
+    const r = wrapExpr(node.right); const l = (n.StringLiteral.check(node.left) || n.TemplateLiteral.check(node.left) ) ? wrapExpr(node.left) : null;
     if (r) node.right = r; if (l) node.left = l;
     return (r || l) ? node : null;
   }
-  if (n.ArrayExpression.check(node) && node.elements.length && node.elements.every(e => e && (n.StringLiteral.check(e) || (n.Literal.check(e) && typeof e.value === 'string')))) {
-    let any = false; node.elements = node.elements.map(e => { const w = wrapExpr(e); if (w) any = true; return w || e; }); return any ? node : null;
-  }
-  if (n.MemberExpression.check(node) || n.OptionalMemberExpression.check(node)) {
+  if (n.MemberExpression.check(node)) {
     if (!node.computed && n.Identifier.check(node.property) && MEMBER_PROPS.has(node.property.name)) { stats.members++; return b.callExpression(b.identifier('tx'), [node]); }
     if (node.computed && n.Identifier.check(node.object) && /^[A-Z][A-Z0-9_]+$/.test(node.object.name)) { stats.members++; return b.callExpression(b.identifier('tx'), [node]); }
   }
   return null;
-}
-
-function nonUiContext(path) {
-  const parent = path.parent && path.parent.node; if (!parent) return true;
-  if (n.ImportDeclaration.check(parent) || n.ExportNamedDeclaration.check(parent) || n.ExportAllDeclaration.check(parent)) return true;
-  if (n.TaggedTemplateExpression.check(parent)) return true;
-  if (n.ObjectProperty.check(parent) || n.Property.check(parent)) { if (parent.key === path.node) return true; const k = parent.key; const kn = n.Identifier.check(k) ? k.name : (n.StringLiteral.check(k) ? k.value : ''); if (NON_UI_KEYS.has(kn)) return true; return false; }
-  if (n.JSXAttribute.check(parent)) { const an = parent.name && (parent.name.name || parent.name.namespace?.name); return !ATTRS.has(an); }
-  if (n.BinaryExpression.check(parent) && /^[=!]==?$/.test(parent.operator)) return true;
-  if (n.SwitchCase.check(parent)) return true;
-  if ((n.MemberExpression.check(parent) || n.OptionalMemberExpression.check(parent)) && parent.property === path.node) return true;
-  if (n.CallExpression.check(parent) || n.OptionalCallExpression.check(parent) || n.NewExpression.check(parent)) {
-    const c = parent.callee; const cn = n.Identifier.check(c) ? c.name : ((n.MemberExpression.check(c) || n.OptionalMemberExpression.check(c)) && n.Identifier.check(c.property) ? c.property.name : '');
-    if (NON_UI_CALLS.has(cn)) return true;
-    if (n.MemberExpression.check(c) && n.Identifier.check(c.object) && /^(console|localStorage|sessionStorage|document|window|navigator|supabase|JSON|Object|Array|Math|Date|history|location|crypto|URL|Intl)$/.test(c.object.name)) return true;
-    return false;
-  }
-  if (n.VariableDeclarator.check(parent) && n.Identifier.check(parent.id) && /(_RE|Regex|Key|KEY|_ID|Id|Url|URL|Path|Route|Class|Selector|Topic|Bucket|Table)$/.test(parent.id.name)) return true;
-  if (n.AssignmentExpression.check(parent) && n.MemberExpression.check(parent.left) && n.Identifier.check(parent.left.property) && /^(className|id|href|src|hash|textContent|innerHTML|title)$/.test(parent.left.property.name) && parent.left.property.name !== 'title' && parent.left.property.name !== 'textContent') return true;
-  return false;
 }
 
 async function processFile(file) {
@@ -196,19 +167,6 @@ async function processFile(file) {
         if (w) { path.node.arguments[0] = w; stats.calls++; touched++; }
       }
       this.traverse(path);
-    },
-    visitTemplateLiteral(path) {
-      if (!GENERIC_LITERALS.test(file) || NO_GENERIC.test(file) || insideT(path) || !insideFunction(path) || nonUiContext(path)) { this.traverse(path); return; }
-      const parts = path.node.quasis.map(q => q.value.cooked ?? q.value.raw); let text = ''; parts.forEach((p, i) => { text += p; if (i < path.node.expressions.length) text += `{${i}}`; });
-      if (!looksProse(text)) { this.traverse(path); return; }
-      const w = fromTemplate(path.node);
-      if (w) { path.replace(w); stats.exprs++; touched++; return false; }
-      this.traverse(path);
-    },
-    visitStringLiteral(path) {
-      if (!GENERIC_LITERALS.test(file) || NO_GENERIC.test(file) || insideT(path) || !insideFunction(path) || nonUiContext(path)) return false;
-      const v = path.node.value; if (!looksProse(v)) return false;
-      path.replace(txCall(v)); stats.exprs++; touched++; return false;
     },
     visitNewExpression(path) {
       if (n.Identifier.check(path.node.callee) && path.node.callee.name === 'Error' && path.node.arguments.length) {

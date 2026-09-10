@@ -95,7 +95,9 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
   // Merge live override on top of static domain data
   const value    = override?.value  ?? d.value;
   const change   = override?.change ?? d.change;
-  const source   = override?.source ?? d.source;
+  // Source strings come from the market table or a cached fetch, so translate
+  // at render — a cached English value must not survive a language switch.
+  const source   = tx(override?.source ?? d.source);
   const isLive   = override?.live   ?? false;
 
   // Badge logic
@@ -217,7 +219,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
           <span style={{ marginLeft: 4, opacity: 0.6 }}>· {timeSince(override.fetchedAt)}</span>
         )}
         {!override?.fetchedAt && d.asOf && (
-          <span style={{ marginLeft: 4, opacity: 0.6 }}>· {d.asOf}</span>
+          <span style={{ marginLeft: 4, opacity: 0.6 }}>· {tx(d.asOf)}</span>
         )}
         {/* Modeled-indicator methodology disclosure — appears inline so users
             know exactly how the number was composed. Native <details> works
@@ -239,7 +241,7 @@ export function TrendCard({ d, big = false, override = null, isWatched = false, 
 
 function timeSince(isoStr) {
   const s = Math.floor((Date.now() - new Date(isoStr)) / 1000);
-  if (s < 60)   return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  return `${Math.floor(s / 3600)}h ago`;
+  if (s < 60)   return tx('just now');
+  if (s < 3600) return tx('{0}m ago', [Math.floor(s / 60)]);
+  return tx('{0}h ago', [Math.floor(s / 3600)]);
 }

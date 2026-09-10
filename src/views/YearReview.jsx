@@ -4,7 +4,7 @@ import { buildYearReview } from '../engine/yearReview.js';
 import { AreaChart } from '../components/charts.jsx';
 import { Reveal, Stagger, StaggerItem, CountUp } from '../components/motion.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 // Surfaces src/engine/yearReview.js — the trailing 12 months of daily
 // snapshots, distilled into a reflection. Honesty rules: synthetic seed
@@ -14,8 +14,8 @@ export default function YearReviewView({ state }) {
   const ccy = profile.displayCurrency || 'RWF';
   const review = useMemo(() => buildYearReview(snapshots), [snapshots]);
 
-  const longDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  const shortDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const longDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(txLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
+  const shortDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' });
 
   if (!review) {
     return (
@@ -39,7 +39,7 @@ export default function YearReviewView({ state }) {
   return (
     (<div style={{ padding: 28, background: 'var(--bg)', minHeight: 'calc(100vh - 70px)' }}>
       <div className="muted" style={{ fontSize: 13, marginBottom: 18 }}>
-        {longDate(review.start.date)} → {longDate(review.end.date)} · {review.daysTracked} snapshots
+        {longDate(review.start.date)} → {longDate(review.end.date)} · {tx('{0} snapshots', [review.daysTracked])}
       </div>
       {review.includesSynthetic && (
         <div role="status" style={{
@@ -64,7 +64,7 @@ export default function YearReviewView({ state }) {
           </div>
         </div>
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-          from {fmtBase(review.start.netWorth, ccy, { compact: true })} on {longDate(review.start.date)}
+          {tx('from {0} on {1}', [fmtBase(review.start.netWorth, ccy, { compact: true }), longDate(review.start.date)])}
         </div>
       </Reveal>
       {/* Watermarks + best/worst months */}
@@ -97,7 +97,12 @@ export default function YearReviewView({ state }) {
           {review.months.map(m => {
             const positive = m.change >= 0;
             const h = (Math.abs(m.change) / barMax) * 96;
-            const tip = `${m.label}: ${positive ? '+' : ''}${fmtBase(m.change, ccy, { compact: true })} · closed at ${fmtBase(m.endNetWorth, ccy, { compact: true })}`;
+            const tip = tx('{0}: {1}{2} · closed at {3}', [
+              m.label,
+              positive ? '+' : '',
+              fmtBase(m.change, ccy, { compact: true }),
+              fmtBase(m.endNetWorth, ccy, { compact: true })
+            ]);
             return (
               (<div key={m.ym} title={tip} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 4, minWidth: 0 }}>
                 <div style={{
@@ -125,7 +130,10 @@ export default function YearReviewView({ state }) {
           w={640} h={130} responsive
           stroke={accent} accent={accent}
           formatValue={(v) => fmtBase(v, ccy, { compact: true })}
-          ariaLabel={`Net worth month-end values over the past year, ${up ? 'up' : 'down'} ${fmtBase(Math.abs(review.change), ccy, { compact: true })} overall.`}
+          ariaLabel={tx('Net worth month-end values over the past year, {0} {1} overall.', [
+            up ? 'up' : 'down',
+            fmtBase(Math.abs(review.change), ccy, { compact: true })
+          ])}
         />
       </Reveal>
     </div>)

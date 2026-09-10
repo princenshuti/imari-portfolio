@@ -4,7 +4,7 @@ import { buildMonthlyReport } from '../engine/monthlyReport.js';
 import { downloadCSV } from '../services/download.js';
 import { Reveal } from '../components/motion.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 // F7 — auto-generated monthly report, same printable shape as BalanceSheet.
 // Every number is derived from entered data; the month picker walks history.
@@ -19,25 +19,25 @@ export default function ReportsView({ state }) {
   );
 
   const monthLabel = new Date(report.year, report.monthIdx, 1)
-    .toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    .toLocaleDateString(txLocale(), { month: 'long', year: 'numeric' });
   const show = (rwf) => fmtBase(rwf, ccy, { compact: false });
   const showC = (rwf) => fmtBase(rwf, ccy, { compact: true });
 
   const exportCSV = () => {
     const conv = (rwf) => Math.round(fromBase(rwf, ccy));
     const rows = [
-      ['Imari monthly report', monthLabel, `valued in ${ccy}`],
+      [tx('Imari monthly report'), monthLabel, tx('valued in {0}', [ccy])],
       [],
       ['Income', conv(report.income)],
       ['Expenses', conv(report.expense)],
       ['Net', conv(report.net)],
-      ['Savings rate %', report.savingsRate != null ? report.savingsRate.toFixed(1) : ''],
+      [tx('Savings rate %'), report.savingsRate != null ? report.savingsRate.toFixed(1) : ''],
       [],
-      ['Expenses by category'],
+      [tx('Expenses by category')],
       ...report.expenseCategories.map(c => [c.label, conv(c.amount), `${c.share.toFixed(1)}%`]),
     ];
     if (report.netWorth) {
-      rows.push([], ['Net worth start', conv(report.netWorth.start)], ['Net worth end', conv(report.netWorth.end)], ['Net worth change', conv(report.netWorth.change)]);
+      rows.push([], [tx('Net worth start'), conv(report.netWorth.start)], [tx('Net worth end'), conv(report.netWorth.end)], [tx('Net worth change'), conv(report.netWorth.change)]);
     }
     downloadCSV(rows, `imari-report-${report.year}-${String(report.monthIdx + 1).padStart(2, '0')}.csv`);
   };

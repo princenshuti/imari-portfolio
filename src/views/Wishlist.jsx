@@ -35,7 +35,7 @@ export default function Wishlist({ state, dispatch, portfolioId, role, showToast
   const investable = open[0]?.a.investable ?? affordability({ amount: 1 }, state, now).investable;
   const pace = open[0]?.a.pace ?? 0;
 
-  if (!portfolioId) return <SignInNote what="the wish list" />;
+  if (!portfolioId) return <SignInNote what={tx('the wish list')} />;
 
   /** Promote a wish into a Goal funded from liquid cash. */
   async function toGoal(w) {

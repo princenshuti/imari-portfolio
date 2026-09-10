@@ -9,14 +9,14 @@ import { getCalendarToken, rotateCalendarToken, deleteCalendarToken, calendarFee
 import { ItemEditor, ErrorBanner, SignInNote, PageHead, Empty, Due } from '../family/ui.jsx';
 import { fromISO } from '../family/habits.js';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 const KIND_STYLE = {
   event: 'pill-brand', task: 'pill-soft', policy: 'pill-gold', document: 'pill-gold', wish: 'pill-soft',
   goal: 'pill-up', loan: 'pill-down', bill: 'pill-soft', tax: 'pill-down',
 };
-const fmtDay = iso => fromISO(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-const monthOf = iso => fromISO(iso).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+const fmtDay = iso => fromISO(iso).toLocaleDateString(txLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
+const monthOf = iso => fromISO(iso).toLocaleDateString(txLocale(), { month: 'long', year: 'numeric' });
 
 export default function FamilyCalendar({ state, dispatch, portfolioId, role, showToast }) {
   const { items, error, canEdit, save, remove } = useItems(portfolioId, role);
@@ -25,7 +25,7 @@ export default function FamilyCalendar({ state, dispatch, portfolioId, role, sho
   const now = useMemo(() => new Date(), []);
   const events = useMemo(() => deriveEvents(state, items || [], { now, days }), [state, items, now, days]);
 
-  if (!portfolioId) return <SignInNote what="the family calendar" />;
+  if (!portfolioId) return <SignInNote what={tx('the family calendar')} />;
 
   const groups = [];
   for (const e of events) {
@@ -100,11 +100,11 @@ function FeedCard({ portfolioId, canEdit, showToast }) {
         <div className="row" style={{ gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           <code className="md-code" style={{ fontSize: 11, wordBreak: 'break-all', flex: 1, minWidth: 220 }}>{url}</code>
           <button className="btn btn-sm" onClick={() => navigator.clipboard?.writeText(url).then(() => showToast?.(tx('Feed link copied'), 'success'))}>{tx('Copy')}</button>
-          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => run(() => rotateCalendarToken(portfolioId), 'Feed link rotated — update your calendar app')}>{tx('Rotate')}</button>
-          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => run(async () => { await deleteCalendarToken(portfolioId); return null; }, 'Feed disabled')}>{tx('Disable')}</button>
+          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => run(() => rotateCalendarToken(portfolioId), tx('Feed link rotated — update your calendar app'))}>{tx('Rotate')}</button>
+          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => run(async () => { await deleteCalendarToken(portfolioId); return null; }, tx('Feed disabled'))}>{tx('Disable')}</button>
         </div>
       ) : (
-        <button className="btn btn-sm" style={{ marginTop: 10 }} disabled={busy} onClick={() => run(() => rotateCalendarToken(portfolioId), 'Feed created')}>{tx('Create feed link')}</button>
+        <button className="btn btn-sm" style={{ marginTop: 10 }} disabled={busy} onClick={() => run(() => rotateCalendarToken(portfolioId), tx('Feed created'))}>{tx('Create feed link')}</button>
       )}
     </div>)
   );

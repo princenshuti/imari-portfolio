@@ -8,7 +8,7 @@ import { liquidIds, liquidValueRWF, safetyBufferRWF, monthlyFlowsRWF, makeInsigh
 import { toBase } from '../../data.js';
 import { nextOccurrence } from '../recurrence.js';
 
-import { tx } from '../../i18n/tx.js';
+import { tx, txLocale } from '../../i18n/tx.js';
 
 const HORIZON_DAYS = 120;
 
@@ -34,8 +34,8 @@ export default function obligationSmoothing(state, { now = new Date(), refs = RE
   const monthsUntil = Math.max(1, Math.ceil(daysUntil / 30.44));
   const shortfall = hit.amountRWF - Math.max(0, spare);
   const setAside = shortfall / monthsUntil;
-  const label = hit.cf.notes || hit.cf.category || 'this obligation';
-  const dateStr = hit.due.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  const label = hit.cf.notes || hit.cf.category || tx('this obligation');
+  const dateStr = hit.due.toLocaleDateString(txLocale(), { day: 'numeric', month: 'long' });
   const cashIds = liquidIds(assets);
   const sourceRefs = [hit.cf.id, ...cashIds];
 

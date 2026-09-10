@@ -37,7 +37,7 @@ export default function Insurance({ state, dispatch, portfolioId, role, showToas
     const cfId = newId();
     dispatch({ type: 'upsertCashflow', entry: {
       id: cfId, type: 'expense', category: 'insurance', amount: Number(p.amount), currency: 'RWF',
-      date: toLocalISO(now), recurring: p.data?.frequency || 'annually', notes: `Premium · ${p.title}`, accountId: null, attachment: null,
+      date: toLocalISO(now), recurring: p.data?.frequency || 'annually', notes: tx('Premium · {0}', [p.title]), accountId: null, attachment: null,
     }});
     await save({ ...itemToForm(p), cashflow_id: cfId }).catch(() => {});
     showToast?.(tx('Premium added to Cash Flow as a recurring expense'), 'success');

@@ -6,7 +6,7 @@ import { downloadCSV } from '../services/download.js';
 import { useMarket } from '../contexts/MarketContext.jsx';
 import { Reveal } from '../components/motion.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 // B18 — Personal balance sheet. The net-worth total here MUST equal the
 // dashboard figure (single source of truth): same valueRWF/costRWF/toBase math.
@@ -14,7 +14,7 @@ export default function BalanceSheetView({ state }) {
   const { assets = [], liabilities = [], profile } = state;
   const ccy = profile.displayCurrency || 'RWF';
   const today = new Date();
-  const dateStr = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const dateStr = today.toLocaleDateString(txLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
 
   const { fetchedAt: fxFetchedAt } = useMarket(); // live-FX arrival → revalue
   const data = useMemo(() => {
@@ -54,15 +54,15 @@ export default function BalanceSheetView({ state }) {
 
   const exportCSV = () => {
     const conv = (rwf) => Math.round(fromBase(rwf, ccy));
-    const rows = [['Section', 'Group', 'Item', `Cost basis (${ccy})`, `Current value (${ccy})`, 'Basis']];
+    const rows = [['Section', 'Group', 'Item', tx('Cost basis ({0})', [ccy]), tx('Current value ({0})', [ccy]), 'Basis']];
     data.assetGroups.forEach(g => g.items.forEach(it =>
-      rows.push(['Asset', g.group, it.name, conv(it.cost), conv(it.value), it.estimated ? 'Estimated' : 'Your value'])));
+      rows.push([tx('Asset'), tx(g.group), it.name, conv(it.cost), conv(it.value), it.estimated ? 'Estimated' : tx('Your value')])));
     data.liabGroups.forEach(g => g.items.forEach(it =>
-      rows.push(['Liability', g.label, it.name, '', conv(it.amount), ''])));
+      rows.push([tx('Liability'), tx(g.label), it.name, '', conv(it.amount), ''])));
     rows.push([]);
-    rows.push(['Total assets', '', '', conv(data.totalCost), conv(data.totalAssets), '']);
-    rows.push(['Total liabilities', '', '', '', conv(data.totalDebt), '']);
-    rows.push(['Net worth', '', '', '', conv(data.netWorth), '']);
+    rows.push([tx('Total assets'), '', '', conv(data.totalCost), conv(data.totalAssets), '']);
+    rows.push([tx('Total liabilities'), '', '', '', conv(data.totalDebt), '']);
+    rows.push([tx('Net worth'), '', '', '', conv(data.netWorth), '']);
     downloadCSV(rows, `imari-balance-sheet-${today.toISOString().slice(0, 10)}.csv`);
   };
 
@@ -93,7 +93,7 @@ export default function BalanceSheetView({ state }) {
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <div className="row" style={{ gap: 8, alignItems: 'center' }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: g.color }} />
-                <span style={{ fontSize: 13.5, fontWeight: 600 }}>{g.group}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 600 }}>{tx(g.group)}</span>
               </div>
               <span className="num" style={{ fontSize: 13.5, fontWeight: 700 }}>{show(g.value)}</span>
             </div>

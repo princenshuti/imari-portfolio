@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { CLASSES, fmt, fmtBase, suggestValue, toBase, yearsBetween } from '../data.js';
 import AssetIcon from './AssetIcon.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 export default function AssetRow({ asset, displayCurrency, isSelected, onToggle, onEdit, onDelete, onSaveValue, rowProps = {} }) {
   const cls = CLASSES.find(c => c.kind === asset.kind) || CLASSES[CLASSES.length - 1];
@@ -38,19 +38,19 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
 
   return (
     (<div
-      {...rowProps}
-      role="option"
-      aria-selected={isSelected}
-      aria-label={`${asset.name}, ${fmt(current, asset.currency, { compact: true })}`}
-      className="asset-row-focusable hover-actions"
-      style={{
-        display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
-        alignItems:'center', padding: '14px 22px', gap: 12,
-        background: isSelected ? 'color-mix(in oklab, var(--down) 6%, transparent)' : 'transparent',
-        transition: 'background 0.15s',
-        outline: 'none', // visible ring comes from .asset-row-focusable:focus-visible
-      }}
-    >
+        {...rowProps}
+        role="option"
+        aria-selected={isSelected}
+        aria-label={`${asset.name}, ${fmt(current, asset.currency, { compact: true })}`}
+        className="asset-row-focusable hover-actions"
+        style={{
+          display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
+          alignItems:'center', padding: '14px 22px', gap: 12,
+          background: isSelected ? 'color-mix(in oklab, var(--down) 6%, transparent)' : 'transparent',
+          transition: 'background 0.15s',
+          outline: 'none', // visible ring comes from .asset-row-focusable:focus-visible
+        }}
+      >
       <input
         type="checkbox" checked={!!isSelected} onChange={onToggle}
         onClick={e => e.stopPropagation()}
@@ -93,7 +93,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
               asset.units != null && `${asset.units} units`,
               asset.count != null && `${asset.count} head`,
               asset.neighbourhood && asset.neighbourhood,
-              asset.upi && `UPI ${asset.upi}`,
+              asset.upi && tx('UPI {0}', [asset.upi]),
               asset.chassis && asset.chassis,
             ].filter(Boolean).join(' · ')}
           >
@@ -112,7 +112,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
         <div className="num" style={{ fontSize: 12 }}>
           {fmt(cost, asset.currency, { compact: true })}
         </div>
-        <div className="muted" style={{ fontSize: 10 }}>{new Date(asset.purchaseDate).toLocaleDateString('en-GB', { month:'short', year:'numeric' })} · {yrs.toFixed(1)}{tx('y ago')}</div>
+        <div className="muted" style={{ fontSize: 10 }}>{new Date(asset.purchaseDate).toLocaleDateString(txLocale(), { month:'short', year:'numeric' })} · {yrs.toFixed(1)}{tx('y ago')}</div>
       </div>
       <div className="col" style={{ gap: 2 }}>
         {editing ? (

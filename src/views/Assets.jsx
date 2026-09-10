@@ -78,8 +78,8 @@ export default function AssetsView({ state, dispatch, showToast }) {
       const updates = matched.filter(p => assets.some(a => a.id === p.id));
       const inserts = matched.filter(p => !assets.some(a => a.id === p.id));
       const summary = [
-        inserts.length && `add ${inserts.length} new`,
-        updates.length && `update ${updates.length} existing`,
+        inserts.length && tx('add {0} new', [inserts.length]),
+        updates.length && tx('update {0} existing', [updates.length]),
       ].filter(Boolean).join(' · ');
       // Confirmation runs through ConfirmDestructive (not native confirm) so
       // updates that overwrite existing rows get the same deliberate UI as
@@ -311,7 +311,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
               {g !== 'all' && (
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
               )}
-              {g === 'all' ? tx('All · {0}', [assets.length]) : `${g} · ${grData?.items.length ?? 0}`}
+              {g === 'all' ? tx('All · {0}', [assets.length]) : tx('{0} · {1}', [tx(g), grData?.items.length ?? 0])}
             </button>)
           );
         })}
@@ -510,7 +510,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
             <div className="row" style={{ padding: '16px 22px', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
               <div className="row" style={{ gap: 10, alignItems: 'center' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: g.color, flexShrink: 0 }} />
-                <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>{g.group}</h2>
+                <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>{tx(g.group)}</h2>
                 <span className="pill pill-soft">{g.allItems.length}</span>
               </div>
               <div className="row" style={{ gap: 14, fontSize: 12, flexWrap: 'wrap' }}>
@@ -697,9 +697,9 @@ export default function AssetsView({ state, dispatch, showToast }) {
           setImportResult({
             kind: errors.length ? 'partial' : 'success',
             message: [
-              inserts && `${inserts} asset${inserts === 1 ? '' : 's'} added.`,
-              updates && `${updates} asset${updates === 1 ? '' : 's'} updated.`,
-              errors.length && `${errors.length} row${errors.length === 1 ? '' : 's'} skipped.`,
+              inserts && tx('{0} asset{1} added.', [inserts, inserts === 1 ? '' : 's']),
+              updates && tx('{0} asset{1} updated.', [updates, updates === 1 ? '' : 's']),
+              errors.length && tx('{0} row{1} skipped.', [errors.length, errors.length === 1 ? '' : 's']),
             ].filter(Boolean).join('  '),
             errors,
           });
@@ -718,7 +718,7 @@ export default function AssetsView({ state, dispatch, showToast }) {
               : ''}
           </span>
         }
-        confirmLabel={`Import ${pendingImport?.matched?.length || ''}`.trim()}
+        confirmLabel={tx('Import {0}', [pendingImport?.matched?.length || '']).trim()}
       />
     </div>)
   );

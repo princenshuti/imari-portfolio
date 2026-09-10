@@ -27,7 +27,7 @@ export default function Documents({ portfolioId, role, showToast }) {
   const expiring = docs.filter(d => { const n = daysUntil(d.due_date, now); return n != null && n <= 90; });
   const withFile = docs.filter(d => d.data?.file?.path).length;
 
-  if (!portfolioId) return <SignInNote what="the documents vault" />;
+  if (!portfolioId) return <SignInNote what={tx('the documents vault')} />;
 
   function pickFile(doc) { targetRef.current = doc; fileRef.current?.click(); }
 

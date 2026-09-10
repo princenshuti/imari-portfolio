@@ -39,9 +39,12 @@ export default function ProjectionsView({ state }) {
   const narrate = async () => {
     if (aiPending) return;
     const key = getApiKey();
-    if (!key) { setAiErr('Add your AI key in Settings to narrate this scenario.'); return; }
+    if (!key) { setAiErr(tx('Add your AI key in Settings to narrate this scenario.')); return; }
     setAiPending(true); setAiErr('');
-    const lines = proj.horizons.map(h => `${h.label}: expected ${Math.round(h.expected)} RWF (range ${Math.round(h.low)}–${Math.round(h.high)})`).join('\n');
+    const lines = proj.horizons.map(h => tx(
+      '{0}: expected {1} RWF (range {2}–{3})',
+      [h.label, Math.round(h.expected), Math.round(h.low), Math.round(h.high)]
+    )).join('\n');
     const prompt = `You are Imari Advisor for ${profile.name || 'the user'} in Rwanda. Below is a DETERMINISTIC net-worth projection (figures are fixed — do not change or invent any). Current net worth ${Math.round(nw)} RWF, saving ${monthlySavings} RWF/month, assumed ${assumptions.expectedAnnualGrowthPct}%/yr growth.
 
 ${lines}
@@ -49,7 +52,7 @@ ${lines}
 Write 2 short paragraphs in plain English explaining what this trajectory means and one lever to improve it. Use the given figures only. No headings. End with a one-line reminder that this is a modeled estimate, not professional advice.`;
     try {
       setAiText((await completeText(key, prompt)).trim());
-    } catch (e) { setAiErr(e.message || 'Could not reach the AI service.'); }
+    } catch (e) { setAiErr(e.message || tx('Could not reach the AI service.')); }
     finally { setAiPending(false); }
   };
 

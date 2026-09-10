@@ -25,7 +25,7 @@ import NamePrompt from './views/NamePrompt.jsx';
 import Onboarding from './views/Onboarding.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
 import { I18nProvider } from './contexts/I18nContext.jsx';
-import { tx } from './i18n/tx.js';
+import { tx, txLocale } from './i18n/tx.js';
 // All views — lazy loaded on first navigation
 const DashboardView   = lazy(() => import('./views/Dashboard.jsx'));
 const AssetsView      = lazy(() => import('./views/Assets.jsx'));
@@ -58,17 +58,17 @@ const FamilyBridge    = lazy(() => import('./family/FamilyBridge.jsx'));
 function FullScreenLoader({ message = 'Loading…' }) {
   return (
     (<div style={{
-      position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', background: 'var(--bg)',
-      gap: 14,
-    }}>
+        position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', background: 'var(--bg)',
+        gap: 14,
+      }}>
       <div style={{
         width: 36, height: 36, borderRadius: '50%',
         border: '3px solid var(--line)', borderTopColor: 'var(--brand)',
         animation: 'spin 0.7s linear infinite',
       }} />
       <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>{message}</div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
     </div>)
   );
 }
@@ -321,7 +321,7 @@ export default function App() {
         clearInviteFromURL();
       })
       .catch(e => {
-        showToast('Could not accept invitation: ' + e.message, 'error');
+        showToast(tx('Could not accept invitation: ') + e.message, 'error');
         setPendingInvite(null);
         clearInviteFromURL();
       })
@@ -360,7 +360,7 @@ export default function App() {
       })
       .catch(e => {
         if (aborted) return;
-        showToast('Failed to load portfolio: ' + e.message, 'error');
+        showToast(tx('Failed to load portfolio: ') + e.message, 'error');
       })
       .finally(() => {
         if (!aborted) setLoadingPortfolio(false);
@@ -371,7 +371,7 @@ export default function App() {
   // Last-resort error handling: anything that escapes a component or a promise
   // becomes a visible toast (with the message) instead of a silent console line.
   useEffect(() => {
-    const onRejection = (e) => { const m = e?.reason?.message || String(e?.reason || 'Unexpected error'); showToast(tx('Something went wrong: {0}', [m.slice(0, 160)]), 'error'); };
+    const onRejection = (e) => { const m = e?.reason?.message || String(e?.reason || tx('Unexpected error')); showToast(tx('Something went wrong: {0}', [m.slice(0, 160)]), 'error'); };
     const onError = (e) => { if (e?.message) showToast(tx('Something went wrong: {0}', [String(e.message).slice(0, 160)]), 'error'); };
     window.addEventListener('unhandledrejection', onRejection);
     window.addEventListener('error', onError);
@@ -441,7 +441,7 @@ export default function App() {
           dispatch({ type: 'replaceAll', state: fresh.state });
           showToast(tx('Another session saved newer changes — refreshed to the latest data.'), 'warning');
         }).catch(e => {
-          showToast('Auto-save failed — ' + e.message, 'error');
+          showToast(tx('Auto-save failed — ') + e.message, 'error');
         });
       }, 350);
       return () => clearTimeout(t);
@@ -565,7 +565,7 @@ export default function App() {
         }
       };
       if (a.kind === 'bond')        checkDate(a.maturity, 'matures');
-      if (a.kind === 'receivable')  checkDate(a.dueDate,  'was due');
+      if (a.kind === 'receivable')  checkDate(a.dueDate,  tx('was due'));
     });
   }, [stateReady, state.profile.name, state.assets]);
 
@@ -660,7 +660,7 @@ export default function App() {
     || 'en';
   const titles = {
     dashboard:   { title: `${greetingFor(activeLocale)}, ${state.profile.name.split(' ')[0]}.`, subtitle: tx('Today · {0}', [
-      new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })
+      new Date().toLocaleDateString(txLocale(), { weekday:'long', day:'numeric', month:'long' })
     ]) },
     accounts:    { title: tx('Accounts'), subtitle: tx('{0} bank / mobile money', [accountCount]) },
     assets:      { title: tx('Your assets'), subtitle: tx('{0} positions tracked', [state.assets.length]) },

@@ -5,7 +5,7 @@ import {
 } from '../data.js';
 import { Reveal, Stagger, StaggerItem } from '../components/motion.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -148,7 +148,7 @@ export default function TaxReportView({ state, dispatch }) {
         const cat  = PROPERTY_CATEGORIES.find(c => c.id === a.propertyCategory);
         const isResidential = a.kind === 'realestate-house' || cat?.id === 'residential';
         const note = !a.propertyCategory
-          ? 'No category set — defaulted to 0.1%. Edit the asset to pick one.'
+          ? tx('No category set — defaulted to 0.1%. Edit the asset to pick one.')
           : calc.exempt
             ? calc.reason
             : cat?.note;
@@ -215,7 +215,7 @@ export default function TaxReportView({ state, dispatch }) {
         <div>
           <div className="font-serif" style={{ fontSize: 28 }}>{tx('Tax Report')} {year}</div>
           <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
-            {tx('Rwanda Revenue Authority · Based on asset values as at')} {today.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}
+            {tx('Rwanda Revenue Authority · Based on asset values as at')} {today.toLocaleDateString(txLocale(), { day:'numeric', month:'long', year:'numeric' })}
           </div>
         </div>
         <button
@@ -269,19 +269,21 @@ export default function TaxReportView({ state, dispatch }) {
           const cur = a.currentValue !== '' && a.currentValue != null ? a.currentValue : null;
           const isRealEstate = a.kind === 'realestate-land' || a.kind === 'realestate-house';
           if (isRealEstate && !cur) {
-            missing.push({ id: a.id, name: a.name, why: 'No market value — Fixed Asset Tax will use the purchase price (or 0).' });
+            missing.push({ id: a.id, name: a.name, why: tx('No market value — Fixed Asset Tax will use the purchase price (or 0).') });
           }
           if (isRealEstate && !a.propertyCategory) {
-            missing.push({ id: a.id, name: a.name, why: 'No property category — defaults to 0.1% residential rate; pick commercial / industrial / agricultural if applicable.' });
+            missing.push({ id: a.id, name: a.name, why: tx(
+              'No property category — defaults to 0.1% residential rate; pick commercial / industrial / agricultural if applicable.'
+            ) });
           }
           if (isRealEstate && !a.sizeM2) {
-            missing.push({ id: a.id, name: a.name, why: 'No size (m²) — agricultural ≤ 2 ha auto-exemption cannot be applied.' });
+            missing.push({ id: a.id, name: a.name, why: tx('No size (m²) — agricultural ≤ 2 ha auto-exemption cannot be applied.') });
           }
           if (!a.purchasePrice && a.kind !== 'momo-cash') {
-            missing.push({ id: a.id, name: a.name, why: 'No purchase price — CGT estimate will be inaccurate on sale.' });
+            missing.push({ id: a.id, name: a.name, why: tx('No purchase price — CGT estimate will be inaccurate on sale.') });
           }
           if (!a.purchaseDate) {
-            missing.push({ id: a.id, name: a.name, why: 'No purchase date — depreciation / appreciation cannot be calculated.' });
+            missing.push({ id: a.id, name: a.name, why: tx('No purchase date — depreciation / appreciation cannot be calculated.') });
           }
         });
 
@@ -297,10 +299,10 @@ export default function TaxReportView({ state, dispatch }) {
                   <div>
                     <div className="font-serif" style={{ fontSize: 19, lineHeight: 1.2 }}>{tx(next.label)}</div>
                     <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
-                      {next.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      {next.date.toLocaleDateString(txLocale(), { day: 'numeric', month: 'long', year: 'numeric' })}
                       {' · '}
                       <strong style={{ color: 'var(--down)' }}>
-                        {Math.max(0, Math.ceil((next.date - today) / 86400000))} days
+                        {tx('{0} days', [Math.max(0, Math.ceil((next.date - today) / 86400000))])}
                       </strong> {tx('from today')}
                     </div>
                   </div>
@@ -387,7 +389,7 @@ export default function TaxReportView({ state, dispatch }) {
         accent="var(--down)"
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-          <LawBadge law="RRA · Fixed Asset Tax Law" />
+          <LawBadge law={tx('RRA · Fixed Asset Tax Law')} />
           <span className="muted" style={{ fontSize: 11 }}>{tx(
             'Declaration & payment deadline: 31 March · Late interest: 1.5%/month + 10% surcharge (max RWF 100,000)'
           )}</span>
@@ -414,10 +416,10 @@ export default function TaxReportView({ state, dispatch }) {
           </div>
         ) : (
           <TaxTable
-            columns={['Asset', 'Category', 'Size', 'Market value', 'Taxable base', 'Rate', 'Annual tax', 'Note']}
+            columns={[tx('Asset'), tx('Category'), tx('Size'), tx('Market value'), tx('Taxable base'), tx('Rate'), tx('Annual tax'), tx('Note')]}
             rows={propertyTaxRows.map(r => [
               r.a.name,
-              r.cat?.label || (r.a.kind === 'realestate-house' ? 'Residential (default)' : 'Land — uncategorised'),
+              tx(r.cat?.label) || (r.a.kind === 'realestate-house' ? tx('Residential (default)') : tx('Land — uncategorised')),
               { value: r.a.sizeM2 ? `${(+r.a.sizeM2).toLocaleString()} m²` : '—', color: 'var(--ink-3)' },
               { value: fmtBase(r.marketValueRWF, c, { compact: true }), mono: true },
               { value: fmtBase(r.taxableBase, c, { compact: true }), mono: true },
@@ -432,7 +434,7 @@ export default function TaxReportView({ state, dispatch }) {
                 : { value: '', color: 'var(--ink-3)' },
             ])}
             footerRow={[
-              'Total', '', '', '', '',  '',
+              tx('Total'), '', '', '', '',  '',
               { value: fmtBase(totalPropertyTax, c), mono: true, bold: true, color: 'var(--down)' },
               '',
             ]}
@@ -459,7 +461,7 @@ export default function TaxReportView({ state, dispatch }) {
             ))}
           </div>
           <div className="muted" style={{ fontSize: 10, marginTop: 8, lineHeight: 1.5 }}>
-            {tx('Surcharge bands above are')} <strong>cumulative</strong> {tx(
+            {tx('Surcharge bands above are')} <strong>{tx('cumulative')}</strong> {tx(
               'with the 1.5%/month late\n            interest from 31 March: total owed = base tax + band surcharge + (1.5% × months late × base tax).\n            The surcharge itself is capped at'
             )} <strong>{tx('RWF 100,000')}</strong>{tx('; monthly interest has no cap.')}
           </div>
@@ -475,7 +477,7 @@ export default function TaxReportView({ state, dispatch }) {
         printBreak
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-          <LawBadge law="Law 013/2025 · Art. 2(2)" />
+          <LawBadge law={tx('Law 013/2025 · Art. 2(2)')} />
           <span className="muted" style={{ fontSize: 11 }}>
             {tx(
               'Declared and paid to RRA by 31 December each year · Fuel levy (15% petrol/gas oil CIF) collected at customs separately'
@@ -505,15 +507,15 @@ export default function TaxReportView({ state, dispatch }) {
           </div>
         ) : (
           <TaxTable
-            columns={['Vehicle', 'Model', 'Category (Law 013/2025)', 'Annual levy']}
+            columns={[tx('Vehicle'), tx('Model'), tx('Category (Law 013/2025)'), tx('Annual levy')]}
             rows={vehicleLevyRows.map(r => [
               r.a.name,
               { value: r.a.model || '—', color: 'var(--ink-2)' },
-              r.cat.label,
+              tx(r.cat.label),
               { value: fmt(r.levy, 'RWF'), mono: true, bold: true, color: 'var(--clay)' },
             ])}
             footerRow={[
-              'Total', '', '',
+              tx('Total'), '', '',
               { value: fmt(totalVehicleLevy, 'RWF'), mono: true, color: 'var(--clay)' },
             ]}
           />
@@ -541,7 +543,7 @@ export default function TaxReportView({ state, dispatch }) {
         printBreak
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14 }}>
-          <LawBadge law="Rwanda Income Tax Law · RRA CGT" />
+          <LawBadge law={tx('Rwanda Income Tax Law · RRA CGT')} />
           <span className="muted" style={{ fontSize: 11 }}>{tx(
             '5% on realised gains for most asset classes · withholding 15% on investment income'
           )}</span>
@@ -561,10 +563,10 @@ export default function TaxReportView({ state, dispatch }) {
         </div>
 
         <TaxTable
-          columns={['Asset', 'Class', 'Cost basis', 'Current value', 'Unrealised gain', 'CGT rate', 'Est. CGT', 'Withholding']}
+          columns={[tx('Asset'), tx('Class'), tx('Cost basis'), tx('Current value'), tx('Unrealised gain'), tx('CGT rate'), tx('Est. CGT'), tx('Withholding')]}
           rows={cgtRows.map(({ a, cls, rule, cost, value, gain, cgt, withholding }) => [
             a.name,
-            { value: cls.label, color: 'var(--ink-2)' },
+            { value: tx(cls.label), color: 'var(--ink-2)' },
             { value: fmtBase(cost, c, { compact:true }), mono: true },
             { value: fmtBase(value, c, { compact:true }), mono: true },
             {
@@ -572,7 +574,7 @@ export default function TaxReportView({ state, dispatch }) {
               mono: true, bold: gain > 0,
               color: gain >= 0 ? 'var(--up)' : 'var(--down)',
             },
-            { value: rule.label, color: 'var(--ink-3)' },
+            { value: tx(rule.label), color: 'var(--ink-3)' },
             {
               value: cgt > 0 ? fmtBase(cgt, c, { compact:true }) : '—',
               mono: true, bold: cgt > 0, color: cgt > 0 ? 'var(--down)' : 'var(--ink-3)',
@@ -583,7 +585,7 @@ export default function TaxReportView({ state, dispatch }) {
             },
           ])}
           footerRow={[
-            'Total', '',
+            tx('Total'), '',
             '', '',
             { value: '+' + fmtBase(totalGain, c, { compact:true }), mono:true, color:'var(--up)' },
             '',

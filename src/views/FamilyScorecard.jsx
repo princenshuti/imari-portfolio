@@ -11,10 +11,10 @@ import {
   monthSummary, yearSummary, mapLegacyExport,
 } from '../family/habits.js';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const fmtWeek = w => { const a = fromISO(w), b = fromISO(addDays(w, 6)); const f = d => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); return `${f(a)} – ${f(b)}`; };
+const fmtWeek = w => { const a = fromISO(w), b = fromISO(addDays(w, 6)); const f = d => d.toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' }); return `${f(a)} – ${f(b)}`; };
 
 export default function FamilyScorecard({ portfolioId, role, showToast }) {
   const fam = useFamily(portfolioId, role);
@@ -229,7 +229,7 @@ function ImportCard({ portfolioId, onDone, showToast }) {
           <div className="muted" style={{ fontSize: 11, lineHeight: 1.5, marginTop: 2 }}>
             {tx('In the old dashboard open the browser console and run')}
             <code className="md-code" style={{ margin: '0 4px' }}>{tx('copy(localStorage.getItem(\'prince_family_2026_dashboard_v1\'))')}</code>
-            {tx('then paste into a')} <b>.json</b> {tx('file and upload it here. Existing ticks are merged, nothing is deleted.')}
+            {tx('then paste into a')} <b>{'.json'}</b> {tx('file and upload it here. Existing ticks are merged, nothing is deleted.')}
           </div>
           {msg && <div style={{ fontSize: 12, marginTop: 6 }}>{msg}</div>}
         </div>

@@ -43,7 +43,7 @@ export default function debtVsIdleCash(state, { now = new Date(), refs = REFEREN
   const annualSave = applicable * netRatePct / 100;
   if (annualSave < MIN_ANNUAL_SAVING_RWF) return null;
 
-  const loanName = top.l.name || top.l.lender || 'your loan';
+  const loanName = top.l.name || top.l.lender || tx('your loan');
   const cashIds = liquidIds(assets);
   const sourceRefs = [top.l.id, ...cashIds];
   const fullRepay = applicable >= top.remainingRWF;

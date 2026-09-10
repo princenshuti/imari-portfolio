@@ -26,7 +26,7 @@ export default function receivableOverdue(state, { now = new Date(), refs = REFE
   const total = overdue.reduce((s, x) => s + x.value, 0);
   const top = overdue[0];
   const monthlyForgone = total * refs.tBillYieldPct / 100 / 12;
-  const who = top.a.debtor || top.a.name || 'the debtor';
+  const who = top.a.debtor || top.a.name || tx('the debtor');
   const ids = overdue.map(x => x.a.id);
 
   return makeInsight({

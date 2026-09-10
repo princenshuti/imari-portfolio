@@ -38,11 +38,11 @@ export function humanizeAge(ms) {
   const days = ms / 86400000;
   if (days < 1) return 'today';
   if (days < 2) return 'yesterday';
-  if (days < 14) return `${Math.round(days)} days ago`;
-  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
-  if (days < 365) return `${Math.round(days / 30)} months ago`;
+  if (days < 14) return tx('{0} days ago', [Math.round(days)]);
+  if (days < 60) return tx('{0} weeks ago', [Math.round(days / 7)]);
+  if (days < 365) return tx('{0} months ago', [Math.round(days / 30)]);
   const yrs = days / 365;
-  return `${yrs.toFixed(yrs < 2 ? 1 : 0)} years ago`;
+  return tx('{0} years ago', [yrs.toFixed(yrs < 2 ? 1 : 0)]);
 }
 
 /**

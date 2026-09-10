@@ -25,7 +25,7 @@ import { severityColor } from '../severity.js';
 import CostOfAbsence from '../components/CostOfAbsence.jsx';
 import MetricWidget from '../components/MetricWidget.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 // ─── Asset classification ──────────────────────────────────────────────────
 // Liquid = cash or near-cash (withdrawable same-day)
@@ -52,10 +52,10 @@ function assetMonthlyIncomeRWF(a) {
 // ─── Helpers ──────────────────────────────────────────────────────────────
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  if (s < 60) return tx('just now');
+  if (s < 3600) return tx('{0}m ago', [Math.floor(s / 60)]);
+  if (s < 86400) return tx('{0}h ago', [Math.floor(s / 3600)]);
+  return tx('{0}d ago', [Math.floor(s / 86400)]);
 }
 function renderMD(s) {
   const esc = s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -89,7 +89,7 @@ function IdleCashCard({ insight, displayCurrency, now }) {
         </div>
         {days > 0 && (
           <div>
-            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Forgone since')} {new Date(insight.dataAsOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Forgone since')} {new Date(insight.dataAsOf).toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' })}</div>
             <div className="num" style={{ fontSize: 24, fontWeight: 700, color: 'var(--down)' }}>{fmtBase(cumulative, displayCurrency, { compact: true })}</div>
           </div>
         )}
@@ -217,8 +217,8 @@ function CategoryBars({ groups, totalValue }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0, flex: 1 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{g.group}</span>
-                <span className="muted" style={{ fontSize: 10 }}>{g.count} asset{g.count !== 1 ? 's' : ''} · {alloc}%</span>
+                <span style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{tx(g.group)}</span>
+                <span className="muted" style={{ fontSize: 10 }}>{tx('{0} asset{1} · {2}%', [g.count, g.count !== 1 ? 's' : '', alloc])}</span>
               </div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
                 <span className="num" style={{ fontSize: 13, fontWeight: 700, color: isUp ? 'var(--up)' : 'var(--down)', minWidth: 72, textAlign: 'right' }}>
@@ -370,7 +370,7 @@ function ModelPulse({ stats, trueNetWorth, monthlyNet, savingsRate, signalCount,
             return (
               <div key={g.group} className="row" style={{ gap: 10, alignItems: 'center', minWidth: 0 }}>
                 <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, width: 110, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.group}</span>
+                <span style={{ fontSize: 12, width: 110, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx(g.group)}</span>
                 <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden' }}>
                   <motion.div
                     initial={{ scaleX: 0 }}
@@ -713,7 +713,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         else ma = toBase(cf.amount || 0, cf.currency || 'RWF');
         if (cf.type === 'income') inc += ma; else exp += ma;
       });
-      return { label: d.toLocaleDateString('en-GB', { month: 'short' }), inc, exp, net: inc - exp };
+      return { label: d.toLocaleDateString(txLocale(), { month: 'short' }), inc, exp, net: inc - exp };
     });
   }, [cashflows]);
 
@@ -744,7 +744,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       const mo = assetMonthlyIncomeRWF(a);
       if (mo > 0) {
         assetIncomeMonthly += mo;
-        const kindLabel = CLASSES.find(c => c.kind === a.kind)?.group || 'Other';
+        const kindLabel = CLASSES.find(c => c.kind === a.kind)?.group || 'Other';  // translated at render
         assetIncomeByKind[kindLabel] = (assetIncomeByKind[kindLabel] || 0) + mo;
         // Passive = not salary/freelance
         passiveIncomeMonthly += mo;
@@ -847,11 +847,11 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     moversAll.forEach(a => {
       if (a.kind === 'receivable' && a.dueDate) {
         const d = new Date(a.dueDate);
-        if (d < today) alerts.push({ name: a.name, kind: a.kind, badge: `${Math.ceil((today - d) / 86400000)}d overdue`, sub: tx('Receivable past due date') });
+        if (d < today) alerts.push({ name: a.name, kind: a.kind, badge: tx('{0}d overdue', [Math.ceil((today - d) / 86400000)]), sub: tx('Receivable past due date') });
       }
       if (a.kind === 'bond' && a.maturity) {
         const d = new Date(a.maturity); const days = Math.ceil((d - today) / 86400000);
-        if (days > 0 && days < 90) alerts.push({ name: a.name, kind: a.kind, badge: `${days}d left`, sub: tx('Bond approaching maturity') });
+        if (days > 0 && days < 90) alerts.push({ name: a.name, kind: a.kind, badge: tx('{0}d left', [days]), sub: tx('Bond approaching maturity') });
       }
       if (a._pct < -20) alerts.push({ name: a.name, kind: a.kind, badge: `${a._pct.toFixed(0)}%`, sub: tx('Significant unrealised loss') });
     });
@@ -1028,48 +1028,62 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         <MetricWidget key="cash" delay={0} title={tx('Cash in Hand')}
           value={fmtBase(liquid, profile.displayCurrency, { compact: true })}
           subtext={months != null && months <= 120
-            ? `${months.toFixed(1)} months of expenses`
+            ? tx('{0} months of expenses', [months.toFixed(1)])
             : months != null
-              ? '10+ years at recorded spending — add expenses for a real figure'
-              : 'cash + mobile money + bank'}
+              ? tx('10+ years at recorded spending — add expenses for a real figure')
+              : tx('cash + mobile money + bank')}
           asOf={wAsOf} now={today} deepLink="accounts" onNav={nav}
           severity={months != null && months < 3 ? 'warning' : 'good'}
-          costHook={months != null && months < 3 ? 'Below the 3-month safety floor — thin cover if income pauses.' : undefined} />,
+          costHook={months != null && months < 3 ? tx('Below the 3-month safety floor — thin cover if income pauses.') : undefined} />,
       ];
       if (taxTotal > 0) widgets.push(
         <MetricWidget key="tax" delay={40} title={tx('Tax Estimate')}
           value={fmtBase(taxTotal, profile.displayCurrency, { compact: true })}
-          subtext={taxDays != null ? `next deadline in ${taxDays} days` : 'RRA obligations'}
+          subtext={taxDays != null ? tx('next deadline in {0} days', [taxDays]) : tx('RRA obligations')}
           deepLink="tax" onNav={nav}
           severity={taxDays != null && taxDays <= 30 ? 'warning' : 'info'}
-          costHook="Estimate, not a filing — late penalties accrue if a deadline is missed." />);
+          costHook={tx('Estimate, not a filing — late penalties accrue if a deadline is missed.')} />);
       if (liabilities.length > 0) widgets.push(
         <MetricWidget key="debt" delay={80} title={tx('Debt')}
           value={fmtBase(totalDebt, profile.displayCurrency, { compact: true })}
           subtext={`${debtToAsset.toFixed(1)}% debt-to-asset`}
           deepLink="liabilities" onNav={nav}
           severity={debtToAsset > 50 ? 'warning' : 'info'}
-          costHook={financialStats.monthlyObligations > 0 ? `${fmtBase(financialStats.monthlyObligations, profile.displayCurrency, { compact: true })}/mo in repayments.` : undefined} />);
+          costHook={financialStats.monthlyObligations > 0 ? tx('{0}/mo in repayments.', [
+            fmtBase(financialStats.monthlyObligations, profile.displayCurrency, { compact: true })
+          ]) : undefined} />);
       // F6 — budget envelopes: only renders once the user has set limits.
       const bs = budgetStatus(cashflows, state.budgets || {}, today);
       if (bs.totalBudget > 0) widgets.push(
         <MetricWidget key="budgets" delay={160} title={tx('Budgets')}
           value={`${fmtBase(bs.totalSpent, profile.displayCurrency, { compact: true })} / ${fmtBase(bs.totalBudget, profile.displayCurrency, { compact: true })}`}
-          subtext={`${Math.round(bs.monthPct)}% through the month · ${bs.rows.length} envelope${bs.rows.length > 1 ? 's' : ''}`}
+          subtext={tx(
+            '{0}% through the month · {1} envelope{2}',
+            [Math.round(bs.monthPct), bs.rows.length, bs.rows.length > 1 ? 's' : '']
+          )}
           deepLink="cashflow" onNav={nav}
           severity={bs.overCount > 0 ? 'critical' : bs.rows.some(r => r.pace === 'hot') ? 'warning' : 'good'}
           costHook={bs.overCount > 0
-            ? `${bs.overCount} envelope${bs.overCount > 1 ? 's' : ''} over plan — ${fmtBase(bs.totalOver, profile.displayCurrency, { compact: true })} past budget.`
+            ? tx('{0} envelope{1} over plan — {2} past budget.', [
+            bs.overCount,
+            bs.overCount > 1 ? 's' : '',
+            fmtBase(bs.totalOver, profile.displayCurrency, { compact: true })
+          ])
             : bs.rows.some(r => r.pace === 'hot')
-              ? `${bs.rows.filter(r => r.pace === 'hot').map(r => r.label).slice(0, 2).join(', ')} burning faster than the month.`
+              ? tx('{0} burning faster than the month.', [
+            bs.rows.filter(r => r.pace === 'hot').map(r => r.label).slice(0, 2).join(', ')
+          ])
               : undefined} />);
       widgets.push(
         <MetricWidget key="investable" delay={120} title={tx('Investable')}
           value={fmtBase(investable, profile.displayCurrency, { compact: true })}
-          subtext="liquid minus a 3-month buffer"
+          subtext={tx('liquid minus a 3-month buffer')}
           deepLink="trends" onNav={nav}
           severity={investable > REFERENCE.idleCashFloorRWF ? 'warning' : 'good'}
-          costHook={investable > REFERENCE.idleCashFloorRWF ? `Idle — at ~${REFERENCE.tBillYieldPct}% T-bill that's ~${fmtBase(forgoneYr, profile.displayCurrency, { compact: true })}/yr forgone.` : undefined} />);
+          costHook={investable > REFERENCE.idleCashFloorRWF ? tx('Idle — at ~{0}% T-bill that\'s ~{1}/yr forgone.', [
+            REFERENCE.tBillYieldPct,
+            fmtBase(forgoneYr, profile.displayCurrency, { compact: true })
+          ]) : undefined} />);
       // One calm row of four — the rest of the story lives in its own views.
       return <div className="dash-kpi-grid">{widgets.slice(0, 4)}</div>;
     })(),
@@ -1130,7 +1144,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
                   <button key={r} onClick={() => { setProjMode(false); setChartRange(r); }}
                     className={`seg-tab${!projMode && chartRange === r ? ' active' : ''}`}
-                    aria-pressed={!projMode && chartRange === r}>{r}</button>
+                    aria-pressed={!projMode && chartRange === r}>{tx(r)}</button>
                 ))}
               </div>
               {/* Fast Forward lives here now — the same chart, continued past today */}
@@ -1202,8 +1216,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         <div style={{ display: 'flex', gap: 26, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <Donut size={114} thickness={15}
-              slices={stats.groups.map(g => ({ value: g.value, color: g.color, label: g.group }))}
-              ariaLabel={`Asset allocation: ${stats.groups.map(g => `${g.group} ${stats.totalValue > 0 ? (g.value / stats.totalValue * 100).toFixed(0) : 0} percent`).join(', ')}`} />
+              slices={stats.groups.map(g => ({ value: g.value, color: g.color, label: tx(g.group) }))}
+              ariaLabel={tx('Asset allocation: {0}', [
+                stats.groups.map(g => `${tx(g.group)} ${stats.totalValue > 0 ? (g.value / stats.totalValue * 100).toFixed(0) : 0} percent`).join(', ')
+              ])} />
             <div style={{
               position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
               textAlign: 'center', pointerEvents: 'none',
@@ -1212,7 +1228,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 {stats.totalValue > 0 && stats.groups[0] ? `${Math.round(stats.groups[0].value / stats.totalValue * 100)}%` : stats.groups.length}
               </div>
               <div className="muted" style={{ fontSize: 10, marginTop: 2, maxWidth: 72, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {stats.totalValue > 0 && stats.groups[0] ? stats.groups[0].group : 'groups'}
+                {stats.totalValue > 0 && stats.groups[0] ? tx(stats.groups[0].group) : tx('groups')}
               </div>
             </div>
           </div>
@@ -1221,7 +1237,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               <div key={g.group} className="row" style={{ gap: 8, fontSize: 12, justifyContent: 'space-between' }}>
                 <div className="row" style={{ gap: 8, minWidth: 0 }}>
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0, marginTop: 1 }} />
-                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink-2)' }}>{g.group}</span>
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink-2)' }}>{tx(g.group)}</span>
                 </div>
                 <span className="num" style={{ color: 'var(--ink)', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>
                   {stats.totalValue > 0 ? (g.value / stats.totalValue * 100).toFixed(0) : 0}%
@@ -1404,7 +1420,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           {lowReplacement && (
             <div style={{ marginTop: 14 }}>
               <CostOfAbsence severity="warning"
-                costStatement={`At your current contributions you'll replace only ${Math.floor(proj.replacementRatio)}% of income at 60 — below a comfortable 60%. Topping up Ejo Heza closes the gap.`}
+                costStatement={tx(
+                  'At your current contributions you\'ll replace only {0}% of income at 60 — below a comfortable 60%. Topping up Ejo Heza closes the gap.',
+                  [Math.floor(proj.replacementRatio)]
+                )}
                 action={{ label: tx('Review pension'), to: 'assets' }}
                 onAction={(to) => dispatch({ type: 'nav', to })}
                 terms={[{ id: 'replacement-ratio', ...GLOSSARY['replacement-ratio'] }]} />
@@ -1418,10 +1437,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     income: (assets.length > 0 || cashflows.length > 0) ? (() => {
       const fs = financialStats;
       const INCOME_LABEL = {
-        salary:    'Salary / Wages', rental:   'Rental income',
-        dividends: 'Dividends',      'bond-int':'Bond interest',
-        business:  'Business income','freelance':'Freelance',
-        'other-inc':'Other income',
+        salary:    tx('Salary / Wages'), rental:   tx('Rental income'),
+        dividends: 'Dividends',      'bond-int':tx('Bond interest'),
+        business:  tx('Business income'),'freelance':'Freelance',
+        'other-inc':tx('Other income'),
       };
       const INCOME_COLOR = {
         salary:    'var(--sky)',    rental:    'var(--brand)',
@@ -1434,7 +1453,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           label: INCOME_LABEL[cat] || cat, color: INCOME_COLOR[cat] || 'var(--ink-3)', monthly: mo, source: 'cashflow',
         })),
         ...Object.entries(fs.assetIncomeByKind).map(([group, mo]) => ({
-          label: tx('{0} (asset income)', [group]), color: 'var(--brand)', monthly: mo, source: 'asset',
+          label: tx('{0} (asset income)', [tx(group)]), color: 'var(--brand)', monthly: mo, source: 'asset',
         })),
       ].sort((a, b) => b.monthly - a.monthly);
       const hasIncome = fs.totalMonthlyIncome > 0;
@@ -1557,7 +1576,9 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         <div className="row" style={{ gap: 22, alignItems: 'center', flexWrap: 'wrap' }}>
           <Donut size={104} thickness={14}
             slices={expenseByCategory.rows.map(r => ({ value: r.amount, color: r.color, label: r.label }))}
-            ariaLabel={`Expenses by category: ${expenseByCategory.rows.slice(0, 5).map(r => `${r.label} ${r.pct.toFixed(0)} percent`).join(', ')}`} />
+            ariaLabel={tx('Expenses by category: {0}', [
+              expenseByCategory.rows.slice(0, 5).map(r => `${r.label} ${r.pct.toFixed(0)} percent`).join(', ')
+            ])} />
           <div className="col" style={{ flex: 1, minWidth: 240, gap: 9 }}>
             {expenseByCategory.rows.slice(0, 6).map(r => (
               <button key={r.id} onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} className="dash-link btn-unstyled"
@@ -1594,7 +1615,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       const m = macroOverlay;
       const Pill = ({ kind, asOf }) => (
         <span className="muted" style={{ fontSize: 10, padding: '2px 6px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>
-          {kind}{asOf ? ` · ${asOf}` : ''}
+          {tx(kind)}{asOf ? ` · ${tx(asOf)}` : ''}
         </span>
       );
       const Card = ({ title, children }) => (
@@ -1813,20 +1834,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       <div className="dash-page dash-flow">
 
         {/* Keyframes */}
-        <style>{`
-        @keyframes imari-slideUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes imari-shimmer {
-          0%   { background-position: 200% center; }
-          100% { background-position: -200% center; }
-        }
-        .dash-btn-range { transition: background 0.14s ease-out, color 0.14s ease-out; }
-        .dash-btn-range:active { transform: scale(0.97); }
-        .dash-arrange-btn { transition: background 0.14s ease-out, color 0.14s ease-out, box-shadow 0.14s ease-out, border-color 0.14s ease-out; }
-        .dash-arrange-btn:active { transform: scale(0.97); }
-      `}</style>
+        <style>{'\n        @keyframes imari-slideUp {\n          from { opacity: 0; transform: translateY(10px); }\n          to   { opacity: 1; transform: translateY(0); }\n        }\n        @keyframes imari-shimmer {\n          0%   { background-position: 200% center; }\n          100% { background-position: -200% center; }\n        }\n        .dash-btn-range { transition: background 0.14s ease-out, color 0.14s ease-out; }\n        .dash-btn-range:active { transform: scale(0.97); }\n        .dash-arrange-btn { transition: background 0.14s ease-out, color 0.14s ease-out, box-shadow 0.14s ease-out, border-color 0.14s ease-out; }\n        .dash-arrange-btn:active { transform: scale(0.97); }\n      '}</style>
 
         {/* ── Advisor strip (§1, demoted per design review #9) ──
             A permanent red alarm trains users to ignore it. The full-width

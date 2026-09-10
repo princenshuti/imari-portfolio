@@ -6,6 +6,8 @@
 import { CLASSES, valueRWF, costRWF, toBase } from '../../data.js';
 import { monthlyEquivalentRWF, parseLocalDate } from '../recurrence.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export const LIQUID_KINDS = new Set(['savings', 'momo-cash']);
 export const MAINT_KINDS = new Set(['realestate-house', 'realestate-land', 'vehicle', 'livestock']);
 
@@ -167,5 +169,5 @@ export function rwf(n) {
   else { dec = 0; disp = floorTo(n, 0); }
   const sign = disp < 0 ? '-' : '';
   const mag = Math.abs(disp);
-  return `RWF ${sign}${suffix ? mag.toFixed(dec) + suffix : String(mag)}`;
+  return tx('RWF {0}{1}', [sign, suffix ? mag.toFixed(dec) + suffix : String(mag)]);
 }

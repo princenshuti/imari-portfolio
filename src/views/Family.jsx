@@ -75,7 +75,7 @@ export default function Family({ state, dispatch, portfolioId, role }) {
              sub={money.runway == null ? tx('Add expenses in Cash Flow') : tx('Liquid ÷ monthly spend')}
              accent={money.runway != null && money.runway < 3 ? 'var(--down)' : 'var(--brand)'} />
         <KPI label={tx('Debt remaining')} value={fmtBase(money.debt, cur)}
-             sub={money.topDebt ? `${money.topDebt.name || money.topDebt.lender || 'Largest loan'}${money.topDebt.endDate ? ` · ends ${money.topDebt.endDate}` : ''}` : tx('No liabilities tracked')}
+             sub={money.topDebt ? `${money.topDebt.name || money.topDebt.lender || tx('Largest loan')}${money.topDebt.endDate ? tx(' · ends {0}', [money.topDebt.endDate]) : ''}` : tx('No liabilities tracked')}
              accent={money.debt > 0 ? 'var(--gold-ink)' : 'var(--brand)'} />
         <KPI label={tx('This week')} value={score == null ? '…' : `${score}/${MAX_SCORE}`} sub={score == null ? tx('Loading') : tx('{0} · week of {1}', [r.label, week])} accent={r.color} />
       </div>

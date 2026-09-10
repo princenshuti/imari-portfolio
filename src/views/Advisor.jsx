@@ -19,7 +19,7 @@ import { glossaryFor } from '../glossary.js';
 import Explain from '../components/Explain.jsx';
 import { renderMD } from '../markdown.js';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 const askAdvisor = (question) =>
   window.dispatchEvent(new CustomEvent('imari:advisor:ask', { detail: question }));
@@ -38,14 +38,14 @@ function buildQuestions(assets, profile) {
   const cur = profile.displayCurrency || 'RWF';
 
   return [
-    `Give me a one-paragraph summary of my financial health.`,
-    biggest && `Why is ${biggest.name} my biggest holding — should I be worried?`,
-    topMover && topMover._pct > 0 && `${topMover.name} has gained the most — is it likely to keep going?`,
-    `Am I too concentrated in any single asset or class?`,
-    `What's my approximate annual RRA tax exposure?`,
-    `Build a 12-month plan to grow my net worth 25%.`,
-    `If I save 200,000 ${cur}/month, when do I hit 50M ${cur}?`,
-    `What should my next investment be, given today's rates?`,
+    tx('Give me a one-paragraph summary of my financial health.'),
+    biggest && tx('Why is {0} my biggest holding — should I be worried?', [biggest.name]),
+    topMover && topMover._pct > 0 && tx('{0} has gained the most — is it likely to keep going?', [topMover.name]),
+    tx('Am I too concentrated in any single asset or class?'),
+    tx('What\'s my approximate annual RRA tax exposure?'),
+    tx('Build a 12-month plan to grow my net worth 25%.'),
+    tx('If I save 200,000 {0}/month, when do I hit 50M {1}?', [cur, cur]),
+    tx('What should my next investment be, given today\'s rates?'),
   ].filter(Boolean);
 }
 
@@ -97,7 +97,9 @@ export default function AdvisorView({ state, dispatch }) {
           </div>
         </div>
         <button type="button" className="btn btn-primary" style={{ marginLeft: 'auto' }}
-          onClick={() => askAdvisor('Give me a one-paragraph summary of my financial health, grounded in my numbers and today\'s market.')}>
+          onClick={() => askAdvisor(tx(
+            'Give me a one-paragraph summary of my financial health, grounded in my numbers and today\'s market.'
+          ))}>
           {tx('✦ Ask anything')}
         </button>
       </div>
@@ -157,7 +159,10 @@ export default function AdvisorView({ state, dispatch }) {
                 <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 8, color: 'var(--ink)' }}>{tx(r.costOfAbsence.costStatement)}</div>
                 <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                   <button type="button" className="btn btn-primary" style={{ fontSize: 12, padding: '7px 13px' }}
-                    onClick={() => askAdvisor(`Imari flagged this for me: "${r.headline}". ${r.costOfAbsence.costStatement} Walk me through what's behind it and exactly how I should act on it, step by step.`)}>
+                    onClick={() => askAdvisor(tx(
+                      'Imari flagged this for me: "{0}". {1} Walk me through what\'s behind it and exactly how I should act on it, step by step.',
+                      [r.headline, r.costOfAbsence.costStatement]
+                    ))}>
                     {tx('✦ Discuss this')}
                   </button>
                   {r.costOfAbsence.action && (
@@ -198,7 +203,7 @@ export default function AdvisorView({ state, dispatch }) {
               <div key={i} className="card" style={{ padding: '14px 18px' }}>
                 <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
                   <div className="muted" style={{ fontSize: 10.5 }}>
-                    {sv.question ? `“${sv.question}” · ` : ''}{new Date(sv.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {sv.question ? `“${sv.question}” · ` : ''}{new Date(sv.savedAt).toLocaleDateString(txLocale(), { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                   <button type="button" className="btn-icon-sm" aria-label={tx('Remove saved insight')} onClick={() => removeSaved(sv.content)}>
                     <span aria-hidden="true">×</span>

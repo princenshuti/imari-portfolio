@@ -258,7 +258,7 @@ export default function AssetEditor({ asset, onSave, onCancel, showToast }) {
       const MAX_SIZE = 2 * 1024 * 1024;
       const oversized = Array.from(files).filter(f => f.size > MAX_SIZE);
       if (oversized.length) {
-        const msg = `Skipped (over 2 MB): ${oversized.map(f => f.name).join(', ')}`;
+        const msg = tx('Skipped (over 2 MB): {0}', [oversized.map(f => f.name).join(', ')]);
         if (showToast) showToast(msg, 'warning');
         else alert(msg); // fallback if hosted without toast context
       }

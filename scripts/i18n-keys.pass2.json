@@ -1,0 +1,22 @@
+[
+ "Am I too concentrated in any single asset or class?",
+ "Build a 12-month plan to grow my net worth 25%.",
+ "Give me a one-paragraph summary of my financial health.",
+ "If I save 200,000 {0}/month, when do I hit 50M {1}?",
+ "Imari flagged this for me: \"{0}\". {1} Walk me through what's behind it and exactly how I should act on it, step by step.",
+ "No category set — defaulted to 0.1%. Edit the asset to pick one.",
+ "UPI {0}",
+ "What should my next investment be, given today's rates?",
+ "What's my approximate annual RRA tax exposure?",
+ "Why is {0} my biggest holding — should I be worried?",
+ "add {0} new",
+ "update {0} existing",
+ "{0} asset{1} added.",
+ "{0} asset{1} updated.",
+ "{0} has gained the most — is it likely to keep going?",
+ "{0} row{1} skipped.",
+ "{0} {1} · Income {2} · Expense {3} · Net {4}{5}",
+ "{0}: buy {1} / sell {2}",
+ "{0}: expected {1} RWF (range {2}–{3})",
+ "{0}: {1}{2} · closed at {3}"
+]

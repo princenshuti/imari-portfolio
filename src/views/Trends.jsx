@@ -42,9 +42,9 @@ export default function TrendsView({ state, dispatch }) {
   function relativeTime(date) {
     if (!date) return '';
     const s = Math.floor((Date.now() - date) / 1000);
-    if (s < 60)   return 'just now';
-    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-    return `${Math.floor(s / 3600)}h ago`;
+    if (s < 60)   return tx('just now');
+    if (s < 3600) return tx('{0}m ago', [Math.floor(s / 60)]);
+    return tx('{0}h ago', [Math.floor(s / 3600)]);
   }
 
   return (
@@ -139,8 +139,8 @@ export default function TrendsView({ state, dispatch }) {
       {Object.entries(groups).map(([groupName, domains]) => (
         <div key={groupName} style={{ marginBottom: 26 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-            <div className="font-serif" style={{ fontSize: 20 }}>{groupName}</div>
-            <span className="muted" style={{ fontSize: 11 }}>{domains.length} indicator{domains.length !== 1 ? 's' : ''}</span>
+            <div className="font-serif" style={{ fontSize: 20 }}>{tx(groupName)}</div>
+            <span className="muted" style={{ fontSize: 11 }}>{tx('{0} indicator{1}', [domains.length, domains.length !== 1 ? 's' : ''])}</span>
           </div>
           {/* layout on each item: watching/unwatching re-sorts the grid with a FLIP animation */}
           <Stagger style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
@@ -200,12 +200,7 @@ export default function TrendsView({ state, dispatch }) {
         </div>
       </Reveal>
       {/* ── Keyframe for live dot pulse ───────────────────────────── */}
-      <style>{`
-        @keyframes imari-dot-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50%       { opacity: 0.45; transform: scale(0.7); }
-        }
-      `}</style>
+      <style>{'\n        @keyframes imari-dot-pulse {\n          0%, 100% { opacity: 1; transform: scale(1); }\n          50%       { opacity: 0.45; transform: scale(0.7); }\n        }\n      '}</style>
     </div>)
   );
 }

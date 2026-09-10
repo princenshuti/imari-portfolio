@@ -39,7 +39,7 @@ export default function realVsNominalNetWorth(state, { now = new Date(), refs = 
 
   const losingGround = realPct < 0;
   const severity = losingGround ? 'warning' : 'info';
-  const monthsLabel = days >= 330 ? 'over the past year' : `over the past ${Math.round(days / 30)} months`;
+  const monthsLabel = days >= 330 ? tx('over the past year') : tx('over the past {0} months', [Math.round(days / 30)]);
 
   return makeInsight({
     id: 'real-vs-nominal',

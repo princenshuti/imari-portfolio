@@ -16,7 +16,7 @@ import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
 import { RowSkeleton } from '../components/Skeleton.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 /** Resize + center-crop an image File to a square JPEG data URI. */
 async function resizeAvatar(file, px = 160) {
@@ -127,7 +127,7 @@ function MembersSection({ portfolioId, role, session }) {
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2500);
     } catch {
-      setError('Could not copy to clipboard. Long-press the link to copy manually: ' + link);
+      setError(tx('Could not copy to clipboard. Long-press the link to copy manually: ') + link);
     }
   };
 
@@ -266,7 +266,7 @@ function MembersSection({ portfolioId, role, session }) {
                     <div className="col" style={{ minWidth: 0, gap: 2 }}>
                       <div style={{ fontSize: 13, fontWeight: 500 }}>{inv.email}</div>
                       <div className="muted" style={{ fontSize: 11 }}>
-                        {inv.role} {tx('· expires')} {new Date(inv.expires_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}
+                        {inv.role} {tx('· expires')} {new Date(inv.expires_at).toLocaleDateString(txLocale(), { day:'numeric', month:'short' })}
                       </div>
                     </div>
                     <div className="row" style={{ gap: 6 }}>
@@ -593,7 +593,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
       dispatch({ type: 'setProfile', patch: { avatar: dataUrl } });
       showToast?.(tx('Profile photo updated.'), 'success');
     } catch (e) {
-      showToast?.('Could not process the image: ' + e.message, 'error');
+      showToast?.(tx('Could not process the image: ') + e.message, 'error');
     } finally {
       setAvatarLoading(false);
       if (avatarRef.current) avatarRef.current.value = '';
@@ -607,7 +607,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
       // app — it gets the typed-confirmation dialog, not a native confirm().
       setPendingJsonImport(await importJSONFile(file));
     } catch (e) {
-      showToast?.('Import failed: ' + e.message, 'error');
+      showToast?.(tx('Import failed: ') + e.message, 'error');
     }
   };
 
@@ -876,7 +876,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
               </div>
               <div className="muted" style={{ fontSize:11, marginTop:4, fontFamily:'Geist Mono, monospace' }}>
                 {Object.entries(bnrInfo.rates).map(([c, r]) =>
-                  `${c}: buy ${fmtNum(r.buy, 2)} / sell ${fmtNum(r.sell, 2)}`
+                  tx('{0}: buy {1} / sell {2}', [c, fmtNum(r.buy, 2), fmtNum(r.sell, 2)])
                 ).join('  ·  ')}
               </div>
               <div className="muted" style={{ fontSize:10, marginTop:4, lineHeight:1.5 }}>

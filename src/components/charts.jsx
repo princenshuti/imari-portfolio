@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { fmtBase, fromBase } from '../data.js';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 export function Sparkline({ data, w = 80, h = 26, stroke = 'currentColor', fill = false, ariaLabel }) {
   if (!data || data.length < 2) return null;
@@ -16,7 +16,10 @@ export function Sparkline({ data, w = 80, h = 26, stroke = 'currentColor', fill 
   const firstV = data[0], lastV = data[data.length - 1];
   const trendPct = firstV ? ((lastV - firstV) / firstV * 100) : 0;
   const dir = trendPct >= 0 ? 'up' : 'down';
-  const label = ariaLabel || `Sparkline trend ${dir} ${Math.abs(trendPct).toFixed(1)} percent over ${data.length} points`;
+  const label = ariaLabel || tx(
+    'Sparkline trend {0} {1} percent over {2} points',
+    [dir, Math.abs(trendPct).toFixed(1), data.length]
+  );
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display:'block' }} role="img" aria-label={label}>
       {fill && <path d={area} fill={stroke} opacity={0.12} />}
@@ -69,7 +72,15 @@ export function AreaChart({
   const firstV = data[0], lastV = data[data.length - 1];
   const trendPct = firstV ? ((lastV - firstV) / firstV * 100) : 0;
   const a11yLabel = ariaLabel ||
-    `Area chart with ${data.length} points, latest value ${fmtV(lastV)}, ${trendPct >= 0 ? 'up' : 'down'} ${Math.abs(trendPct).toFixed(1)} percent vs start.`;
+    tx(
+      'Area chart with {0} points, latest value {1}, {2} {3} percent vs start.',
+      [
+        data.length,
+        fmtV(lastV),
+        trendPct >= 0 ? 'up' : 'down',
+        Math.abs(trendPct).toFixed(1)
+      ]
+    );
 
   return (
     <div style={{ position: 'relative' }}>
@@ -195,7 +206,7 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
       xLabelsRaw.push({
         date: s.date,
         x: xOf(i),
-        label: new Date(s.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        label: new Date(s.date + 'T00:00:00').toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' }),
       });
     }
   }
@@ -230,7 +241,7 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
       const x = fromBase(v, displayCurrency);
       return x >= 1e9 ? `${(x / 1e9).toFixed(1)}B` : x >= 1e6 ? `${(x / 1e6).toFixed(1)}M` : `${(x / 1e3).toFixed(0)}k`;
     };
-    const dateOf = (i) => new Date(snapshots[i].date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const dateOf = (i) => new Date(snapshots[i].date + 'T00:00:00').toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' });
     if (pi > 1 && pi < snapshots.length - 2) {
       annotations.push({ x: xOf(pi), y: yOf(nwArr[pi]), text: tx('Peak {0} · {1}', [lbl(nwArr[pi]), dateOf(pi)]), above: true, color: 'var(--up)' });
     }
@@ -343,7 +354,7 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
           minWidth: 160,
         }}>
           <div className="muted" style={{ fontSize: 10, marginBottom: 4 }}>
-            {new Date(snap.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {new Date(snap.date + 'T00:00:00').toLocaleDateString(txLocale(), { day: 'numeric', month: 'short', year: 'numeric' })}
           </div>
           <div className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand)' }}>
             {fmtBase(snap.netWorth, displayCurrency, { compact: true })}
@@ -463,8 +474,10 @@ export function Donut({ slices, size = 120, thickness = 14, gap = 1.5, ariaLabel
   let offset = 0;
   const label = ariaLabel || (
     slices.length > 0
-      ? `Allocation donut: ${slices.map(s => `${s.label || ''} ${(s.value / total * 100).toFixed(0)} percent`).join(', ')}`
-      : 'Allocation donut'
+      ? tx('Allocation donut: {0}', [
+      slices.map(s => `${s.label || ''} ${(s.value / total * 100).toFixed(0)} percent`).join(', ')
+    ])
+      : tx('Allocation donut')
   );
   return (
     <svg

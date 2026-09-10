@@ -6,7 +6,7 @@ import { REFERENCE } from './refs.js';
 import { makeInsight, inputsAsOf } from './_shared.js';
 import { valueRWF, fixedAssetTax, FIXED_ASSET_TAX, VEHICLE_CATEGORIES } from '../../data.js';
 
-import { tx } from '../../i18n/tx.js';
+import { tx, txLocale } from '../../i18n/tx.js';
 
 const HORIZON_DAYS = 120;
 
@@ -64,7 +64,7 @@ export default function taxDeadlineExposure(state, { now = new Date() } = {}) {
 
   const penalty = Math.round(next.amount * FIXED_ASSET_TAX.latePenalties[0]); // first bracket ~10%
   const severity = days <= 14 ? 'critical' : days <= 60 ? 'warning' : 'info';
-  const rwfStr = n => `RWF ${Math.round(n).toLocaleString('en-US')}`;
+  const rwfStr = n => tx('RWF {0}', [Math.round(n).toLocaleString('en-US')]);
 
   return makeInsight({
     id: 'tax-deadline-exposure',
@@ -74,7 +74,7 @@ export default function taxDeadlineExposure(state, { now = new Date() } = {}) {
     body: tx('{0} of about {1} is due {2}.', [
       next.label,
       rwfStr(next.amount),
-      next.deadline.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
+      next.deadline.toLocaleDateString(txLocale(), { day: 'numeric', month: 'long' })
     ]),
     costOfAbsence: {
       severity,

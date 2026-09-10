@@ -5,7 +5,7 @@ import Modal from '../components/Modal.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { Stagger, StaggerItem } from '../components/motion.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, txLocale } from '../i18n/tx.js';
 
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
 
@@ -225,10 +225,10 @@ export default function AccountsView({ state, dispatch }) {
       const d = new Date(iso);
       const days = Math.floor((Date.now() - d.getTime()) / 86400000);
       if (days < 1)  return 'today';
-      if (days < 7)  return `${days}d ago`;
-      if (days < 30) return `${Math.floor(days / 7)}w ago`;
-      if (days < 365) return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-      return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+      if (days < 7)  return tx('{0}d ago', [days]);
+      if (days < 30) return tx('{0}w ago', [Math.floor(days / 7)]);
+      if (days < 365) return d.toLocaleDateString(txLocale(), { month: 'short', year: 'numeric' });
+      return d.toLocaleDateString(txLocale(), { month: 'short', year: 'numeric' });
     };
     const out = {};
     for (const [id, iso] of Object.entries(map)) out[id] = fmt(iso);

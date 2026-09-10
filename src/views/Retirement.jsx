@@ -94,7 +94,7 @@ export default function RetirementView({ state, dispatch }) {
           </div>
         )}
         <div className="muted" style={{ fontSize: 11, marginLeft: 'auto', maxWidth: 340 }}>
-          {tx('Source:')} {RETIREMENT_CONFIG.asOf}{tx('. Replacement target:')} {RETIREMENT_CONFIG.replacementTargetPct}{tx('%. Drawdown over')} {RETIREMENT_CONFIG.yearsInRetirement} {tx('years.')}
+          {tx('Source:')} {tx(RETIREMENT_CONFIG.asOf)}{tx('. Replacement target:')} {RETIREMENT_CONFIG.replacementTargetPct}{tx('%. Drawdown over')} {RETIREMENT_CONFIG.yearsInRetirement} {tx('years.')}
         </div>
       </Reveal>
       {/* Inputs */}

@@ -31,3 +31,13 @@ export function tx(msg, vars) {
 
 /** Human name of a locale, for prompts and e-mails. */
 export const LOCALE_NAMES = { en: 'English', fr: 'French', rw: 'Kinyarwanda' };
+
+/**
+ * BCP-47 tag for date and number formatting in the active language.
+ *
+ * Every `toLocaleDateString` in the app passes this instead of a hard-coded
+ * 'en-GB', so month names follow the chosen language (septembre / Nzeri).
+ * English stays on en-GB for the day-month-year order Rwanda uses.
+ */
+const DATE_LOCALES = { en: 'en-GB', fr: 'fr-FR', rw: 'rw-RW' };
+export function txLocale() { return DATE_LOCALES[current] || 'en-GB'; }

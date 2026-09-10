@@ -38,7 +38,7 @@ export function Empty({ children }) {
 export function Due({ days }) {
   if (days == null) return null;
   const late = days < 0, soon = days <= 30;
-  const label = days === 0 ? 'today' : late ? `${-days}d overdue` : `in ${days}d`;
+  const label = days === 0 ? 'today' : late ? tx('{0}d overdue', [-days]) : tx('in {0}d', [days]);
   return <span className={`pill ${late ? 'pill-down' : soon ? 'pill-gold' : 'pill-soft'} num`} style={{ fontSize: 10 }}>{label}</span>;
 }
 

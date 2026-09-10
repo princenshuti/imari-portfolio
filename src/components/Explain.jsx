@@ -36,7 +36,7 @@ export default function Explain({ entries = [], style }) {
               transition: 'background 0.14s, color 0.14s',
             }}
           >
-            <span aria-hidden="true" style={{ marginRight: 4 }}>ⓘ</span>{e.term}
+            <span aria-hidden="true" style={{ marginRight: 4 }}>ⓘ</span>{tx(e.term)}
           </button>
         ))}
       </div>
@@ -50,7 +50,7 @@ export default function Explain({ entries = [], style }) {
             animation: 'imari-slideUp 200ms cubic-bezier(0.23,1,0.32,1) both',
           }}
         >
-          <strong style={{ color: 'var(--ink)' }}>{open.term}.</strong> {tx(open.body)}
+          <strong style={{ color: 'var(--ink)' }}>{tx(open.term)}.</strong> {tx(open.body)}
         </div>
       )}
     </div>)
