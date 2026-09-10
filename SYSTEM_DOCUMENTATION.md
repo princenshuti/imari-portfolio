@@ -324,7 +324,7 @@ Production deploys are never a side effect of a push — that was changed delibe
 | Integration tests | None configured. |
 | Type checking | None (project is plain JS, not TS). |
 | Linting | Not enforced in CI. |
-| i18n audit | ✅ `npm run i18n:audit` — locale completeness (en/fr/rw) + hardcoded-string gate on chrome files. |
+| i18n audit | ✅ `npm run i18n:audit` — chrome bundle completeness (en/fr/rw), interior catalogue completeness (every key of `scripts/i18n-keys.all.json` present in both catalogues), and a hardcoded-string gate on chrome files. |
 | Build verification | ✅ `vite build` runs on every push to `main`; a failure blocks the deploy. |
 | Runtime checks | React `StrictMode` is enabled in dev. |
 | Manual QA | Each feature has been exercised against the deployed site. |
@@ -377,6 +377,64 @@ Until all three are done, email-based auth and the invitation flow silently brea
 
 ---
 
+## 6b. Internationalisation (EN / FR / Kinyarwanda)
+
+Every screen, report, insight sentence and AI reply follows the language picked
+in **Settings → Language**. Two layers cooperate:
+
+| Layer | Where | Keyed by | Used for |
+|---|---|---|---|
+| `t('key.path')` | `src/locales/{en,fr,rw}.js` | dotted key | chrome: landing, nav, login, onboarding, settings |
+| `tx('English text')` | `src/i18n/messages.{fr,rw}.json` | the English string itself | the whole app interior |
+
+**Why message-keyed.** The interior had ~2,000 strings written in place. Using
+the English text as the key meant no key invention, and a missing entry falls
+back to readable English instead of a blank cell.
+
+**Pipeline** (run in this order after touching interior copy):
+
+```bash
+node scripts/i18n-codemod.mjs      # pass 1 — JSX text, allow-listed attributes
+node scripts/i18n-pass2.mjs        # pass 2 — prose in plain literals inside functions
+node scripts/i18n-data-keys.mjs    # module-level data tables + string arrays
+node scripts/i18n-keys.mjs         # union → scripts/i18n-keys.all.json
+node scripts/i18n-merge.mjs        # scripts/i18n/{fr,rw}_N.json → src/i18n/messages.*.json
+npm run i18n:audit                 # fails on any untranslated key
+```
+
+Translations are authored in reviewable chunks under `scripts/i18n/`
+(`fr_1.json` … `rw_11.json`); the merge script is the only writer of
+`src/i18n/messages.*.json`. It fails on a missing key or on a placeholder the
+English source never had. Dropping a placeholder is allowed — English plural
+suffixes (`{1}` = "s") have no equivalent in French or Kinyarwanda.
+
+**Data-table strings** (asset classes, categories, market domains, glossary,
+advisor starter questions) are translated at the *read site* — `tx(x.label)` —
+so they never appear as a literal inside a `tx()` call. `i18n-data-keys.mjs`
+collects them separately; that is why it must run before `i18n-keys.mjs`.
+
+**Three things that bite:**
+
+1. **The first paint waits for the catalogue.** `tx()` reads module state, so
+   anything computed before the catalogue loads (market source labels, insight
+   sentences, toasts) would capture English into React state and never
+   re-translate. `I18nProvider` holds children behind a splash until
+   `hasMessages(locale)`; English never waits, and a failed fetch falls back to
+   English rather than hanging.
+2. **`LocaleBoundary` re-keys the subtree** on locale change so every `tx()`
+   call re-runs.
+3. **Dates follow the language** through `txLocale()` (`en-GB` / `fr-FR` /
+   `rw-RW`) — never hard-code a locale in `toLocaleDateString`.
+
+**AI surfaces** are instructed in the reader's language, not just the UI: the
+floating advisor's system prompt, the Fast Forward narration, and the Sunday
+family review Edge Function (which also localises the e-mail subject).
+
+Catalogues are lazy chunks (~57 kB gzip each) loaded only for a non-English
+locale, so the main bundle is unchanged at 394 kB.
+
+---
+
 ## 7. Known limits & next steps
 
 - **UI flows have no automated tests.** 220 vitest tests cover every calculation engine, the reducer, services, and content integrity — but rendering/routing regressions are caught visually (a hooks-order crash once shipped to staging with all tests green). A headless smoke test in CI is the known gap.
@@ -406,7 +464,7 @@ A factual one-page digest for pitch material. Every claim below is verifiable in
 
 **The thesis (loss aversion, "Cost of Absence").** Every advisory insight is ranked by what inaction costs — in francs, days, and risk — computed deterministically from the user's own data. 16 individually-tested rules; the AI only phrases what the math already proved. Honesty discipline is a feature: figures are dated, sourced, floored (never rounded up), and rules go silent when data is thin.
 
-**Built for Rwanda's rails, not adapted to them.** BNR official FX (daily, self-healing scraper), RRA tax estimates (Fixed Asset Tax, vehicle levy, CGT, EBM VAT credit), RSSB + Ejo Heza pension projection on the statutory schedule, UPI land-title anchoring, MTN MoMo / Airtel statement import with AI categorisation, EN/FR/Kinyarwanda. This is the moat a global app can't reach.
+**Built for Rwanda's rails, not adapted to them.** BNR official FX (daily, self-healing scraper), RRA tax estimates (Fixed Asset Tax, vehicle levy, CGT, EBM VAT credit), RSSB + Ejo Heza pension projection on the statutory schedule, UPI land-title anchoring, MTN MoMo / Airtel statement import with AI categorisation, and a fully translated product — every screen, report and AI reply in English, French or Kinyarwanda. This is the moat a global app can't reach.
 
 **Product maturity.**
 - ~20 views, 17 movable dashboard widgets, PWA installable + offline, realtime multi-device sync, role-based sharing (owner/editor/viewer — diaspora trustee use-case), 25+ asset classes.
