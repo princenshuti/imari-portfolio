@@ -20,7 +20,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 const SRC = resolve(root, 'src');
 const SKIP = /(\.test\.js$|\/i18n\/|\/locales\/|\/services\/(supabase|cloud|receiptOcr|advisorContext)\.js$|\/ai\.js$|\/main\.jsx$)/;
-const TEXT_KEYS = new Set(['label','labelDesktop','labelMobile','hint','group','note','sub','subtitle','title','headline','body','desc','description','plural','short','long','definition','summary','text','why','law','area','badge','placeholder','question','answer','tag','name','cta','example','unit','caption','message','costStatement','tooltip','helper','prompt']);
+const TEXT_KEYS = new Set(['label','labelDesktop','labelMobile','hint','group','note','sub','subtitle','title','headline','body','desc','description','plural','short','long','definition','summary','text','why','law','area','badge','placeholder','question','answer','tag','name','cta','example','unit','caption','message','costStatement','tooltip','helper','prompt','eyebrow','line','area']);
 // `name`/`prompt` are text on some tables and identifiers on others — keep the
 // human-looking ones only.
 const isProse = (s) => typeof s === 'string' && s.length > 1 && s.length < 300

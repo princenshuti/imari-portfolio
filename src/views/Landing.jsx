@@ -485,7 +485,7 @@ export default function Landing({ onSignIn }) {
             <span className="landing-brand-name font-serif">{tx('Imari')}</span>
           </a>
           <div className="landing-nav-actions">
-            <a href="#cost" className="landing-link">{COST_HEAD.eyebrow}</a>
+            <a href="#cost" className="landing-link">{tx(COST_HEAD.eyebrow)}</a>
             <a href="#advisor" className="landing-link">{tx('AI Advisor')}</a>
             <a href="#family" className="landing-link">{t('landing.nav.family')}</a>
             <a href="#features" className="landing-link">{t('landing.nav.features')}</a>
@@ -591,7 +591,7 @@ export default function Landing({ onSignIn }) {
       {/* Cost of Absence — the signature idea */}
       <section id="cost" className="landing-section landing-section--cost">
         <div className="landing-section-head">
-          <span className="landing-section-eyebrow">{COST_HEAD.eyebrow}</span>
+          <span className="landing-section-eyebrow">{tx(COST_HEAD.eyebrow)}</span>
           <h2 className="font-serif landing-section-title">{tx(COST_HEAD.title)}</h2>
           <p className="landing-section-sub">{tx(COST_HEAD.sub)}</p>
         </div>
@@ -616,7 +616,7 @@ export default function Landing({ onSignIn }) {
       <section id="advisor" className="landing-section landing-section--advisor">
         <div className="landing-advisor">
           <div className="landing-advisor-copy">
-            <span className="landing-section-eyebrow">{ADVISOR_HEAD.eyebrow}</span>
+            <span className="landing-section-eyebrow">{tx(ADVISOR_HEAD.eyebrow)}</span>
             <h2 className="font-serif landing-section-title">{tx(ADVISOR_HEAD.title)}</h2>
             <p className="landing-section-sub">{tx(ADVISOR_HEAD.sub)}</p>
             <div className="landing-advisor-chiplist">
@@ -683,7 +683,7 @@ export default function Landing({ onSignIn }) {
       {/* Built for Rwanda */}
       <section id="rwanda" className="landing-section">
         <div className="landing-section-head">
-          <span className="landing-section-eyebrow">{RWANDA_HEAD.eyebrow}</span>
+          <span className="landing-section-eyebrow">{tx(RWANDA_HEAD.eyebrow)}</span>
           <h2 className="font-serif landing-section-title">{tx(RWANDA_HEAD.title)}</h2>
           <p className="landing-section-sub">{tx(RWANDA_HEAD.sub)}</p>
         </div>
