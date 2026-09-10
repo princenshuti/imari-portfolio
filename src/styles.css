@@ -2293,6 +2293,199 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ── Responsive ───────────────────────────────────────────────── */
+/* ── Hero pillars — the "what is this?" answer, above the fold ───────────
+   Three equal columns on desktop, a single readable column on phones. Each
+   pillar carries its own accent so Wealth / Family / Advisor stay distinct
+   without relying on colour alone (the label text says which is which). */
+.landing-pillars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 30px;
+  max-width: 640px;
+}
+.landing-pillar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'icon label' 'line line';
+  align-items: center;
+  gap: 4px 9px;
+  padding: 14px 14px 15px;
+  background: var(--paper);
+  border: 0.5px solid var(--line-soft);
+  border-top: 2px solid var(--pillar-accent, var(--brand));
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+.landing-pillar-icon {
+  grid-area: icon;
+  display: inline-flex;
+  color: var(--pillar-accent, var(--brand));
+}
+.landing-pillar-icon svg { width: 18px; height: 18px; }
+.landing-pillar-label {
+  grid-area: label;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.landing-pillar-line {
+  grid-area: line;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+/* ── Family — the second product pillar ─────────────────────────────────
+   Same two-column rhythm as the advisor section above it, then a six-tile
+   grid for the sub-features. */
+.landing-family {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 56px;
+  align-items: center;
+  margin-bottom: 42px;
+}
+.landing-family-copy .landing-section-title { font-size: clamp(30px, 3.6vw, 42px); }
+.landing-family-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 24px 0 0;
+  padding: 13px 15px;
+  background: var(--bg-2);
+  border-left: 2px solid var(--brand);
+  border-radius: 0 var(--r-lg) var(--r-lg) 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.landing-family-note svg { flex-shrink: 0; color: var(--brand); width: 18px; height: 18px; }
+
+/* Scorecard miniature */
+.landing-family-mock {
+  background: var(--paper);
+  border: 0.5px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+  padding: 22px 22px 20px;
+}
+.landing-family-mock-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.landing-family-score {
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.landing-family-score-max { font-size: 18px; color: var(--ink-4); }
+.landing-family-streak {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: var(--r-pill);
+  background: var(--up-soft);
+  color: var(--up-ink);
+  white-space: nowrap;
+}
+.landing-family-habits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.landing-family-habit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  border: 0.5px solid var(--line-soft);
+  color: var(--ink-4);
+}
+.landing-family-habit.is-done {
+  background: var(--brand-soft);
+  border-color: transparent;
+  color: var(--brand);
+}
+.landing-family-tick { font-size: 10px; width: 8px; }
+.landing-family-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-top: 0.5px solid var(--line-soft);
+  padding-top: 12px;
+}
+.landing-family-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  font-size: 12.5px;
+}
+.landing-family-row-dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+.landing-family-row-name { flex: 1; min-width: 0; color: var(--ink-2); }
+.landing-family-row-when { font-size: 11.5px; color: var(--ink-4); white-space: nowrap; }
+.landing-family-verdict {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  background: var(--brand-soft);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.landing-family-verdict-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-right: 7px;
+}
+
+/* Six sub-feature tiles */
+.landing-family-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.landing-family-tile {
+  background: var(--paper);
+  border: 0.5px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  padding: 22px 20px;
+  box-shadow: var(--shadow-1);
+  transition: box-shadow 220ms var(--ease-out), border-color 220ms var(--ease-out);
+}
+.landing-family-tile:hover {
+  border-color: var(--tile-accent, var(--brand));
+  box-shadow: var(--shadow-2, var(--shadow-1));
+}
+.landing-family-tile-icon { color: var(--tile-accent, var(--brand)); margin-bottom: 12px; }
+.landing-family-tile-name {
+  font-size: 14.5px;
+  font-weight: 650;
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.landing-family-tile-line {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-3);
+  margin: 0;
+}
+
 @media (max-width: 960px) {
   .landing-hero {
     grid-template-columns: 1fr;
@@ -2306,6 +2499,10 @@ input:focus, select:focus, textarea:focus {
   .landing-costs     { grid-template-columns: repeat(2, 1fr); }
   .landing-rwanda    { grid-template-columns: repeat(2, 1fr); }
   .landing-advisor   { grid-template-columns: 1fr; gap: 40px; }
+  .landing-family      { grid-template-columns: 1fr; gap: 40px; }
+  .landing-family-grid { grid-template-columns: repeat(2, 1fr); }
+  .landing-pillars     { grid-template-columns: 1fr; max-width: none; }
+  .landing-pillar      { grid-template-areas: 'icon label' 'line line'; }
   .landing-spline-card  { grid-template-columns: 1fr; }
   .landing-spline-copy  { padding: 36px 28px 8px; }
   .landing-spline-stage { min-height: 340px; }
@@ -2328,6 +2525,7 @@ input:focus, select:focus, textarea:focus {
     align-items: center;
   }
   .landing-features { grid-template-columns: 1fr; }
+  .landing-family-grid { grid-template-columns: 1fr; }
   .landing-costs { grid-template-columns: 1fr; }
   .landing-pain { padding: 22px 18px; }
   .landing-trust-card { padding: 20px 18px; gap: 14px; }

@@ -279,6 +279,75 @@ function AdvisorMock() {
   );
 }
 
+// ── Family module — the second product pillar ─────────────────────────────
+// Six tiles mirroring the real Family nav group (Family.jsx and siblings).
+const FAMILY = [
+  { icon: 'target', accent: 'var(--brand)', name: 'Weekly scorecard',
+    line: '33 shared habits across 7 areas. You both tick; the score is the household\u2019s, not one person\u2019s.' },
+  { icon: 'clock', accent: 'var(--sky)', name: 'Shared calendar',
+    line: 'School fees, policy renewals, licence expiries \u2014 with a subscribable feed for your phone.' },
+  { icon: 'chat', accent: 'var(--gold)', name: 'Household board',
+    line: 'Tasks and notes both of you can see, so the plan never lives in one head.' },
+  { icon: 'umbrella', accent: 'var(--plum)', name: 'Insurance vault',
+    line: 'Every policy, premium and renewal date \u2014 and a flag for assets carrying no cover at all.' },
+  { icon: 'doc', accent: 'var(--clay)', name: 'Document vault',
+    line: 'Titles, passports and contracts stored privately, attached to the asset they belong to.' },
+  { icon: 'spark', accent: 'var(--brand)', name: 'Wish list with verdicts',
+    line: 'Add what you want and when. Imari answers \u201ccan we afford it?\u201d from your real runway.' },
+];
+
+// Miniature of the Family home: this week's score, what's coming, one verdict.
+const FAMILY_HABITS = [
+  { area: 'Faith & rest', done: true },
+  { area: 'Marriage', done: true },
+  { area: 'Children', done: true },
+  { area: 'Health', done: false },
+  { area: 'Finance', done: true },
+  { area: 'Growth', done: false },
+];
+
+function FamilyMock() {
+  return (
+    (<div className="landing-family-mock" aria-hidden>
+      <div className="landing-family-mock-head">
+        <div>
+          <div className="landing-mock-label">{tx('Weekly scorecard')}</div>
+          <div className="landing-family-score font-serif">
+            26<span className="landing-family-score-max">/33</span>
+          </div>
+        </div>
+        <span className="landing-family-streak num">{tx('4-week streak')}</span>
+      </div>
+      <div className="landing-family-habits">
+        {FAMILY_HABITS.map(h => (
+          <span key={h.area} className={`landing-family-habit${h.done ? ' is-done' : ''}`}>
+            <span className="landing-family-tick" aria-hidden>{h.done ? '\u2713' : ''}</span>
+            {tx(h.area)}
+          </span>
+        ))}
+      </div>
+      <div className="landing-family-rows">
+        <div className="landing-family-row">
+          <span className="landing-family-row-dot" style={{ background: 'var(--gold)' }} />
+          <span className="landing-family-row-name">{tx('Health cover renewal')}</span>
+          <span className="landing-family-row-when num">{tx('in 12 days')}</span>
+        </div>
+        <div className="landing-family-row">
+          <span className="landing-family-row-dot" style={{ background: 'var(--sky)' }} />
+          <span className="landing-family-row-name">{tx('School fees \u00b7 Term 2')}</span>
+          <span className="landing-family-row-when num">{tx('in 29 days')}</span>
+        </div>
+      </div>
+      <div className="landing-family-verdict">
+        <span className="landing-family-verdict-tag">{tx('Affordable now')}</span>
+        <span className="landing-family-verdict-body">
+          {tx('Family trip \u00b7 RWF 1.2M \u2014 fits without touching your 3-month buffer.')}
+        </span>
+      </div>
+    </div>)
+  );
+}
+
 // 3D advisor showcase — Spline scene, loaded ONLY when the card scrolls near
 // the viewport, and skipped entirely under reduced motion or data-saver.
 // Costs ~0 KB until then: the runtime is a dynamic import, never in the
@@ -418,6 +487,7 @@ export default function Landing({ onSignIn }) {
           <div className="landing-nav-actions">
             <a href="#cost" className="landing-link">{COST_HEAD.eyebrow}</a>
             <a href="#advisor" className="landing-link">{tx('AI Advisor')}</a>
+            <a href="#family" className="landing-link">{t('landing.nav.family')}</a>
             <a href="#features" className="landing-link">{t('landing.nav.features')}</a>
             <a href="#security" className="landing-link">{t('landing.nav.security')}</a>
             <select
@@ -454,6 +524,21 @@ export default function Landing({ onSignIn }) {
             <em className="landing-headline-em">{t('landing.hero.headline_2')}</em>
           </h1>
           <p className="landing-sub">{t('landing.hero.sub')}</p>
+          {/* Three pillars — what the product is, readable in one glance,
+              before any scrolling. Order matches the nav and the app itself. */}
+          <ul className="landing-pillars">
+            {[
+              { icon: 'cube', accent: 'var(--brand)', label: t('landing.hero.pillar_1_label'), line: t('landing.hero.pillar_1_line') },
+              { icon: 'target', accent: 'var(--gold)', label: t('landing.hero.pillar_2_label'), line: t('landing.hero.pillar_2_line') },
+              { icon: 'spark', accent: 'var(--plum)', label: t('landing.hero.pillar_3_label'), line: t('landing.hero.pillar_3_line') },
+            ].map(p => (
+              <li key={p.label} className="landing-pillar" style={{ '--pillar-accent': p.accent }}>
+                <span className="landing-pillar-icon" aria-hidden><Icon name={p.icon} /></span>
+                <span className="landing-pillar-label">{p.label}</span>
+                <span className="landing-pillar-line">{p.line}</span>
+              </li>
+            ))}
+          </ul>
           <div className="landing-hero-ctas">
             <button onClick={goSignup} className="btn btn-primary landing-cta">
               {t('landing.hero.cta_primary')} <Icon name="arrow" />
@@ -545,6 +630,35 @@ export default function Landing({ onSignIn }) {
           <AdvisorMock />
         </div>
       </section>
+      {/* Family — the second pillar, given its own room right after the advisor */}
+      <section id="family" className="landing-section landing-section--family">
+        <div className="landing-family">
+          <div className="landing-family-copy">
+            <span className="landing-section-eyebrow">{t('landing.family.eyebrow')}</span>
+            <h2 className="font-serif landing-section-title">{t('landing.family.title')}</h2>
+            <p className="landing-section-sub">{t('landing.family.sub')}</p>
+            <p className="landing-family-note">
+              <Icon name="chat" />
+              <span>{t('landing.family.note')}</span>
+            </p>
+          </div>
+          <FamilyMock />
+        </div>
+        <div className="landing-family-grid">
+          {FAMILY.map((f, i) => (
+            <article
+              key={f.name}
+              data-reveal
+              className="landing-family-tile landing-reveal"
+              style={{ '--reveal-delay': `${Math.min(i * 45, 220)}ms`, '--tile-accent': f.accent }}
+            >
+              <div className="landing-family-tile-icon"><Icon name={f.icon} /></div>
+              <h3 className="landing-family-tile-name">{tx(f.name)}</h3>
+              <p className="landing-family-tile-line">{tx(f.line)}</p>
+            </article>
+          ))}
+        </div>
+      </section>
       {/* Features */}
       <section id="features" className="landing-section landing-section-alt">
         <div className="landing-section-head">
@@ -586,7 +700,7 @@ export default function Landing({ onSignIn }) {
         </div>
         <p className="landing-rwanda-langs">
           {tx(
-            'Kinyarwanda · Français · English — landing, sign-in and navigation today; the full app interior is on its way.'
+            'Kinyarwanda · Français · English — every screen, every report, and the AI advisor, which answers in the language you choose.'
           )}
         </p>
       </section>
