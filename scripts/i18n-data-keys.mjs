@@ -26,6 +26,7 @@ const TEXT_KEYS = new Set(['label','labelDesktop','labelMobile','hint','group','
 const isProse = (s) => typeof s === 'string' && s.length > 1 && s.length < 300
   && /[A-Za-z]/.test(s) && /[a-z]/.test(s)
   && !/^[a-z][a-zA-Z0-9]*$/.test(s)                      // camelCase identifier
+  && !/^[a-z0-9]+(-[a-z0-9]+)+$/.test(s)                  // kebab-case id (school-fees)
   && !/^[A-Z0-9_./:-]+$/.test(s)                          // CONST / code
   && !/^(https?:|data:|mailto:|#|\/)/.test(s)
   && !/(solid |dashed |var\(--|\d+px|color-mix|rgba?\(|cubic-bezier)/.test(s);
@@ -46,6 +47,18 @@ for (const file of files) {
   try { ast = parse(code, { sourceType: 'module', plugins: ['jsx'] }); }
   catch (e) { console.error('parse fail', relative(root, file), e.message); continue; }
   traverse(ast, {
+    // Module-level SCREAMING_CASE arrays of plain strings — prompt suggestions,
+    // preset lists, step labels. The render site wraps the variable (tx(q)),
+    // so the values only ever appear here.
+    VariableDeclarator(path) {
+      if (path.getFunctionParent()) return;
+      const id = path.node.id, init = path.node.init;
+      if (id.type !== 'Identifier' || !/^[A-Z][A-Z0-9_]+$/.test(id.name)) return;
+      if (!init || init.type !== 'ArrayExpression') return;
+      for (const el of init.elements) {
+        if (el && el.type === 'StringLiteral' && isProse(el.value)) keys.add(el.value);
+      }
+    },
     ObjectProperty(path) {
       if (path.getFunctionParent()) return;                     // module level only
       const k = path.node.key;

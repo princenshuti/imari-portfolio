@@ -5,7 +5,7 @@ import { netWorthRWF, monthlyFlowsRWF } from '../engine/insights/_shared.js';
 import { getApiKey, completeText } from '../ai.js';
 import { Reveal, Stagger, StaggerItem, CountUp } from '../components/motion.jsx';
 
-import { tx } from '../i18n/tx.js';
+import { tx, getTxLocale, LOCALE_NAMES } from '../i18n/tx.js';
 
 // B12a/b — Fast Forward: deterministic projection + scenario controls, with an
 // optional AI narration grounded ONLY in the engine output. Modeled, never a guarantee.
@@ -49,7 +49,7 @@ export default function ProjectionsView({ state }) {
 
 ${lines}
 
-Write 2 short paragraphs in plain English explaining what this trajectory means and one lever to improve it. Use the given figures only. No headings. End with a one-line reminder that this is a modeled estimate, not professional advice.`;
+Write 2 short paragraphs in ${LOCALE_NAMES[getTxLocale()] || 'English'} explaining what this trajectory means and one lever to improve it. Use the given figures only. No headings. End with a one-line reminder that this is a modeled estimate, not professional advice.`;
     try {
       setAiText((await completeText(key, prompt)).trim());
     } catch (e) { setAiErr(e.message || tx('Could not reach the AI service.')); }

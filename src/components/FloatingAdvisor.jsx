@@ -317,7 +317,7 @@ You are a financial advisor. Only answer financial questions grounded in the dat
                       key={q}
                       type="button"
                       className="fa-chip"
-                      onClick={() => ask(q)}
+                      onClick={() => ask(tx(q))}
                       style={{
                         padding: '8px 11px', borderRadius: 8, cursor: 'pointer',
                         background: 'var(--bg-2)', border: '1px solid transparent',
@@ -325,7 +325,7 @@ You are a financial advisor. Only answer financial questions grounded in the dat
                         textAlign: 'left', fontFamily: 'inherit',
                       }}
                     >
-                      <span aria-hidden="true">→ </span>{q}
+                      <span aria-hidden="true">→ </span>{tx(q)}
                     </button>
                   ))}
                 </div>
