@@ -16,6 +16,8 @@ import { MaxventuresBadge } from '../components/MaxventuresLogo.jsx';
 import { RowSkeleton } from '../components/Skeleton.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 
+import { tx, txLocale } from '../i18n/tx.js';
+
 /** Resize + center-crop an image File to a square JPEG data URI. */
 async function resizeAvatar(file, px = 160) {
   return new Promise((resolve, reject) => {
@@ -67,7 +69,7 @@ function MembersSection({ portfolioId, role, session }) {
     // of an indefinite skeleton. listMembers/listInvitations can hang quietly
     // when Supabase RLS is misconfigured or the network's flaky.
     const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Timed out loading members. Please retry.')), 5000)
+      setTimeout(() => reject(new Error(tx('Timed out loading members. Please retry.'))), 5000)
     );
     try {
       const [m, i] = await Promise.race([
@@ -90,7 +92,7 @@ function MembersSection({ portfolioId, role, session }) {
       const inv = await createInvitation(portfolioId, email, inviteRole);
       setEmail('');
       await refresh();
-      setInfo(`Invitation email sent to ${targetEmail}.`);
+      setInfo(tx('Invitation email sent to {0}.', [targetEmail]));
       setTimeout(() => setInfo(null), 4000);
       // Best-effort: also copy the link to clipboard for the owner's convenience.
       const link = `${window.location.origin}${window.location.pathname}?invite=${inv.token}`;
@@ -114,7 +116,7 @@ function MembersSection({ portfolioId, role, session }) {
       await sendInvitationEmail(inv.id);
       setResentId(inv.id);
       setTimeout(() => setResentId(null), 2500);
-    } catch (e) { setError(`Could not resend: ${e.message}`); }
+    } catch (e) { setError(tx('Could not resend: {0}', [e.message])); }
     finally { setResendingId(null); }
   };
 
@@ -125,7 +127,7 @@ function MembersSection({ portfolioId, role, session }) {
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2500);
     } catch {
-      setError('Could not copy to clipboard. Long-press the link to copy manually: ' + link);
+      setError(tx('Could not copy to clipboard. Long-press the link to copy manually: ') + link);
     }
   };
 
@@ -157,34 +159,40 @@ function MembersSection({ portfolioId, role, session }) {
   const atCap = invitedCount >= MAX_INVITES;
 
   return (
-    <Section
-      title="Members"
+    (<Section
+      title={tx('Members')}
       subtitle={isOwner
-        ? 'Invite people by email — they\'ll get a message with an accept link. Editors can add and update assets. Viewers can see your portfolio but not modify it.'
-        : 'You can view who has access to this portfolio. Only the owner can invite or remove members.'}
+        ? tx(
+        'Invite people by email — they\'ll get a message with an accept link. Editors can add and update assets. Viewers can see your portfolio but not modify it.'
+      )
+        : tx(
+        'You can view who has access to this portfolio. Only the owner can invite or remove members.'
+      )}
     >
       {isOwner && (
         <>
           <form onSubmit={invite} className="row" style={{ gap: 8, marginBottom: atCap ? 8 : 18 }}>
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
               disabled={atCap}
-              placeholder="invite-friend@example.com" style={{ ...inputStyle, flex: 1, opacity: atCap ? 0.55 : 1 }} />
+              placeholder={tx('invite-friend@example.com')} style={{ ...inputStyle, flex: 1, opacity: atCap ? 0.55 : 1 }} />
             <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} disabled={atCap} style={{ ...inputStyle, width: 130, opacity: atCap ? 0.55 : 1 }}>
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
+              <option value="editor">{tx('Editor')}</option>
+              <option value="viewer">{tx('Viewer')}</option>
             </select>
             <button type="submit" disabled={busy || atCap} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
-              {busy ? 'Sending…' : '＋ Send invite'}
+              {busy ? tx('Sending…') : tx('＋ Send invite')}
             </button>
           </form>
           <div className="muted" style={{ fontSize: 11, marginBottom: 18 }}>
             {atCap
-              ? `${invitedCount} of ${MAX_INVITES} member slots used — remove someone or revoke a pending invite to add another.`
-              : `${invitedCount} of ${MAX_INVITES} member slots used.`}
+              ? tx(
+              '{0} of {1} member slots used — remove someone or revoke a pending invite to add another.',
+              [invitedCount, MAX_INVITES]
+            )
+              : tx('{0} of {1} member slots used.', [invitedCount, MAX_INVITES])}
           </div>
         </>
       )}
-
       {info && (
         <div style={{
           padding: 10, borderRadius: 8, background:'var(--up-soft, #e6f4ea)', color:'var(--up, #1b6e2c)',
@@ -193,7 +201,6 @@ function MembersSection({ portfolioId, role, session }) {
           {info}
         </div>
       )}
-
       {error && (
         <div style={{
           padding: 12, borderRadius: 8, background:'var(--down-soft)', color:'var(--down)',
@@ -211,24 +218,23 @@ function MembersSection({ portfolioId, role, session }) {
               whiteSpace: 'nowrap',
             }}
           >
-            {loading ? 'Retrying…' : 'Retry'}
+            {loading ? tx('Retrying…') : tx('Retry')}
           </button>
         </div>
       )}
-
       {loading ? (
         <RowSkeleton count={3} showAvatar />
       ) : (
         <>
           <div className="muted" style={{ fontSize: 10.5, fontWeight: 600, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom: 8 }}>
-            Members ({members.length})
-          </div>
+            {tx('Members (')}{members.length})
+                      </div>
           <div className="col" style={{ gap: 6, marginBottom: 18 }}>
             {members.map(m => (
               <div key={m.id} className="row" style={{ padding: '10px 12px', borderRadius: 8, background:'var(--bg-2)', justifyContent:'space-between', gap: 10 }}>
                 <div className="col" style={{ minWidth: 0, gap: 2 }}>
                   <div style={{ fontSize: 13, fontWeight: 500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                    {m.email}{m.user_id === session?.user?.id && <span className="muted" style={{ marginLeft: 6, fontSize: 11 }}>(you)</span>}
+                    {m.email}{m.user_id === session?.user?.id && <span className="muted" style={{ marginLeft: 6, fontSize: 11 }}>{tx('(you)')}</span>}
                   </div>
                   <div className="muted" style={{ fontSize: 11, textTransform:'capitalize' }}>{m.role}</div>
                 </div>
@@ -237,12 +243,12 @@ function MembersSection({ portfolioId, role, session }) {
                     <select value={m.role} onChange={e => handleRoleChange(m.id, e.target.value)} style={{
                       padding:'5px 8px', fontSize: 11, borderRadius: 6, border:'1px solid var(--line)', background:'var(--paper)', fontFamily:'inherit',
                     }}>
-                      <option value="editor">Editor</option>
-                      <option value="viewer">Viewer</option>
+                      <option value="editor">{tx('Editor')}</option>
+                      <option value="viewer">{tx('Viewer')}</option>
                     </select>
                     <button onClick={() => handleRemove(m)} className="btn-unstyled" style={{
                       padding:'8px 12px', minHeight: 32, fontSize: 11, borderRadius: 6, border:'1px solid var(--down-soft)', background:'var(--paper)', color:'var(--down-ink)',
-                    }}>Remove</button>
+                    }}>{tx('Remove')}</button>
                   </div>
                 )}
               </div>
@@ -252,21 +258,21 @@ function MembersSection({ portfolioId, role, session }) {
           {isOwner && invitations.length > 0 && (
             <>
               <div className="muted" style={{ fontSize: 10.5, fontWeight: 600, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom: 8 }}>
-                Pending invitations ({invitations.length})
-              </div>
+                {tx('Pending invitations (')}{invitations.length})
+                              </div>
               <div className="col" style={{ gap: 6 }}>
                 {invitations.map(inv => (
                   <div key={inv.id} className="row" style={{ padding: '10px 12px', borderRadius: 8, background:'var(--gold-soft)', justifyContent:'space-between', gap: 10 }}>
                     <div className="col" style={{ minWidth: 0, gap: 2 }}>
                       <div style={{ fontSize: 13, fontWeight: 500 }}>{inv.email}</div>
                       <div className="muted" style={{ fontSize: 11 }}>
-                        {inv.role} · expires {new Date(inv.expires_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })}
+                        {inv.role} {tx('· expires')} {new Date(inv.expires_at).toLocaleDateString(txLocale(), { day:'numeric', month:'short' })}
                       </div>
                     </div>
                     <div className="row" style={{ gap: 6 }}>
                       <button onClick={() => copyLink(inv.token)} className="btn-unstyled" style={{
                         padding:'8px 12px', minHeight: 32, fontSize: 11, borderRadius: 6, border:'1px solid var(--line)', background:'var(--paper)', color:'var(--ink-2)',
-                      }}>{copiedToken === inv.token ? '✓ Copied' : 'Copy link'}</button>
+                      }}>{copiedToken === inv.token ? tx('✓ Copied') : tx('Copy link')}</button>
                       <button
                         onClick={() => handleResend(inv)}
                         disabled={resendingId === inv.id}
@@ -279,11 +285,11 @@ function MembersSection({ portfolioId, role, session }) {
                           opacity: resendingId === inv.id ? 0.6 : 1,
                         }}
                       >
-                        {resendingId === inv.id ? 'Sending…' : resentId === inv.id ? '✓ Sent' : 'Resend email'}
+                        {resendingId === inv.id ? tx('Sending…') : resentId === inv.id ? tx('✓ Sent') : tx('Resend email')}
                       </button>
                       <button onClick={() => handleRevoke(inv)} className="btn-unstyled" style={{
                         padding:'8px 12px', minHeight: 32, fontSize: 11, borderRadius: 6, border:'1px solid var(--down-soft)', background:'var(--paper)', color:'var(--down-ink)',
-                      }}>Revoke</button>
+                      }}>{tx('Revoke')}</button>
                     </div>
                   </div>
                 ))}
@@ -292,31 +298,30 @@ function MembersSection({ portfolioId, role, session }) {
           )}
         </>
       )}
-
       {/* B4 — in-portfolio member chat (realtime, members only) */}
       {portfolioId && <PortfolioChat portfolioId={portfolioId} session={session} />}
-
       <ConfirmDestructive
         open={!!memberAction}
         onClose={() => setMemberAction(null)}
         onConfirm={confirmMemberAction}
-        title={memberAction?.kind === 'remove' ? 'Remove this member?' : 'Revoke this invitation?'}
+        title={memberAction?.kind === 'remove' ? tx('Remove this member?') : tx('Revoke this invitation?')}
         description={
           memberAction?.kind === 'remove' ? (
             <span>
-              <strong style={{ color: 'var(--ink)' }}>{memberAction.member.email}</strong> loses access
-              to this portfolio immediately. You can re-invite them later.
+              <strong style={{ color: 'var(--ink)' }}>{memberAction.member.email}</strong> {tx(
+                'loses access\n              to this portfolio immediately. You can re-invite them later.'
+              )}
             </span>
           ) : (
             <span>
-              The pending invite for <strong style={{ color: 'var(--ink)' }}>{memberAction?.inv?.email}</strong>
-              {' '}stops working immediately.
+              {tx('The pending invite for')} <strong style={{ color: 'var(--ink)' }}>{memberAction?.inv?.email}</strong>
+              {' '}{tx('stops working immediately.')}
             </span>
           )
         }
-        confirmLabel={memberAction?.kind === 'remove' ? 'Remove member' : 'Revoke invite'}
+        confirmLabel={memberAction?.kind === 'remove' ? tx('Remove member') : tx('Revoke invite')}
       />
-    </Section>
+    </Section>)
   );
 }
 
@@ -332,8 +337,8 @@ function MilestoneSection({ profile, dispatch, showToast }) {
   const remove = (m) => {
     const next = current.filter(x => x !== m);
     save(next);
-    showToast?.(`Removed ${fmt(m)} milestone.`, 'info', {
-      action: { label: 'Undo', onClick: () => save([...next, m].sort((a, b) => a - b)) },
+    showToast?.(tx('Removed {0} milestone.', [fmt(m)]), 'info', {
+      action: { label: tx('Undo'), onClick: () => save([...next, m].sort((a, b) => a - b)) },
     });
   };
 
@@ -360,7 +365,7 @@ function MilestoneSection({ profile, dispatch, showToast }) {
   const fmt = (n) => `${fmtNum(n / (n >= 1e9 ? 1e9 : n >= 1e6 ? 1e6 : n >= 1e3 ? 1e3 : 1), 1)}${n >= 1e9 ? 'B' : n >= 1e6 ? 'M' : n >= 1e3 ? 'K' : ''}`;
 
   return (
-    <Section title="Net Worth Milestones" subtitle="Celebrate when your net worth crosses these RWF thresholds.">
+    (<Section title={tx('Net Worth Milestones')} subtitle={tx('Celebrate when your net worth crosses these RWF thresholds.')}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
         {current.map(m => (
           <div key={m} style={{
@@ -369,7 +374,7 @@ function MilestoneSection({ profile, dispatch, showToast }) {
             background: 'var(--up-soft)', color: 'var(--up)', border: '1px solid var(--up-soft)',
           }}>
             {fmt(m)}
-            <button type="button" onClick={() => remove(m)} aria-label={`Remove milestone ${fmt(m)}`} style={{
+            <button type="button" onClick={() => remove(m)} aria-label={tx('Remove milestone {0}', [fmt(m)])} style={{
               background: 'none', border: 'none', cursor: 'pointer', color: 'var(--up)',
               fontSize: 14, lineHeight: 1, padding: 0, marginTop: -1,
             }}><span aria-hidden="true">×</span></button>
@@ -381,19 +386,19 @@ function MilestoneSection({ profile, dispatch, showToast }) {
           value={inputVal}
           onChange={e => setInputVal(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && add()}
-          placeholder="e.g. 500M or 500000000"
+          placeholder={tx('e.g. 500M or 500000000')}
           style={{ ...inputStyle, flex: 1 }}
         />
         <button onClick={add} className="btn" style={{
           background: 'var(--up)', color: '#fff', border: 0,
           padding: '8px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-        }}>Add</button>
-        <button onClick={reset} className="btn btn-ghost" style={{ fontSize: 12 }}>Reset defaults</button>
+        }}>{tx('Add')}</button>
+        <button onClick={reset} className="btn btn-ghost" style={{ fontSize: 12 }}>{tx('Reset defaults')}</button>
       </div>
       <div className="muted" style={{ fontSize: 11, marginTop: 8 }}>
-        Enter shorthand like <strong>10M</strong>, <strong>250M</strong>, <strong>1B</strong> or full numbers. Press Enter or click Add.
+        {tx('Enter shorthand like')} <strong>10M</strong>, <strong>250M</strong>, <strong>1B</strong> {tx('or full numbers. Press Enter or click Add.')}
       </div>
-    </Section>
+    </Section>)
   );
 }
 
@@ -413,26 +418,28 @@ function FeaturesSection({ state, dispatch }) {
   };
 
   return (
-    <Section title="Features" subtitle="Imari starts simple and switches features on when you add related data. Force any of them on or off here — hidden features stay reachable via search and links.">
+    (<Section title={tx('Features')} subtitle={tx(
+      'Imari starts simple and switches features on when you add related data. Force any of them on or off here — hidden features stay reachable via search and links.'
+    )}>
       <div className="col" style={{ gap: 8 }}>
-        {FEATURE_MODULES.map(m => {
+        {FEATURE_MODULES.filter(m => !m.gated).map(m => {
           const explicit = features[m.key];
           const on = isFeatureEnabled(state, m.key);
           return (
-            <div key={m.key} className="row" style={{ gap: 10, padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            (<div key={m.key} className="row" style={{ gap: 10, padding: '10px 12px', background: 'var(--bg-2)', borderRadius: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="row" style={{ gap: 8, alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{m.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{tx(m.label)}</span>
                   {explicit === undefined && (
-                    <span className="pill pill-soft" style={{ fontSize: 10 }} title="Switches on automatically when you add related data">auto</span>
+                    <span className="pill pill-soft" style={{ fontSize: 10 }} title={tx('Switches on automatically when you add related data')}>auto</span>
                   )}
                 </div>
-                <div className="muted" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.4 }}>{m.hint}</div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.4 }}>{tx(m.hint)}</div>
               </div>
               <div className="row" style={{ gap: 8, flexShrink: 0 }}>
                 {explicit !== undefined && (
                   <button type="button" className="btn-link" style={{ fontSize: 11 }} onClick={() => resetFeature(m.key)}>
-                    reset to auto
+                    {tx('reset to auto')}
                   </button>
                 )}
                 <button
@@ -444,14 +451,14 @@ function FeaturesSection({ state, dispatch }) {
                   className={`btn ${on ? 'btn-primary' : 'btn-ghost'}`}
                   style={{ minWidth: 64, padding: '6px 12px', fontSize: 12 }}
                 >
-                  {on ? 'On' : 'Off'}
+                  {on ? tx('On') : tx('Off')}
                 </button>
               </div>
-            </div>
+            </div>)
           );
         })}
       </div>
-    </Section>
+    </Section>)
   );
 }
 
@@ -467,7 +474,7 @@ function CatRulesSection({ catRules, dispatch, showToast }) {
   const add = () => {
     const rule = { id: newId(), pattern: pattern.trim(), category };
     if (!isValidRule(rule)) {
-      showToast?.('Rule needs at least 2 characters to match on.', 'error');
+      showToast?.(tx('Rule needs at least 2 characters to match on.'), 'error');
       return;
     }
     dispatch({ type: 'upsertCatRule', rule });
@@ -476,13 +483,15 @@ function CatRulesSection({ catRules, dispatch, showToast }) {
 
   const remove = (rule) => {
     dispatch({ type: 'deleteCatRule', id: rule.id });
-    showToast?.(`Removed the "${rule.pattern}" rule.`, 'info', {
-      action: { label: 'Undo', onClick: () => dispatch({ type: 'upsertCatRule', rule }) },
+    showToast?.(tx('Removed the "{0}" rule.', [rule.pattern]), 'info', {
+      action: { label: tx('Undo'), onClick: () => dispatch({ type: 'upsertCatRule', rule }) },
     });
   };
 
   return (
-    <Section title="Categorisation rules" subtitle="When an imported description contains your text, Imari files it under your category — before any AI guess.">
+    (<Section title={tx('Categorisation rules')} subtitle={tx(
+      'When an imported description contains your text, Imari files it under your category — before any AI guess.'
+    )}>
       {catRules.length > 0 && (
         <div className="col" style={{ gap: 6, marginBottom: 14 }}>
           {catRules.map(r => (
@@ -492,7 +501,7 @@ function CatRulesSection({ catRules, dispatch, showToast }) {
                 <span className="muted"> → </span>
                 <span style={{ fontWeight: 600 }}>{labelOf(r.category)}</span>
               </div>
-              <button type="button" onClick={() => remove(r)} className="btn-icon-sm" aria-label={`Delete rule for ${r.pattern}`}>
+              <button type="button" onClick={() => remove(r)} className="btn-icon-sm" aria-label={tx('Delete rule for {0}', [r.pattern])}>
                 <span aria-hidden="true">×</span>
               </button>
             </div>
@@ -504,26 +513,28 @@ function CatRulesSection({ catRules, dispatch, showToast }) {
           value={pattern}
           onChange={e => setPattern(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') add(); }}
-          placeholder='Description contains… e.g. "MTN" or "Vision City"'
-          aria-label="Text the description must contain"
+          placeholder={tx('Description contains… e.g. "MTN" or "Vision City"')}
+          aria-label={tx('Text the description must contain')}
           style={{ ...inputStyle, flex: 2, minWidth: 180 }}
         />
-        <select value={category} onChange={e => setCategory(e.target.value)} aria-label="Category to apply" style={{ ...inputStyle, flex: 1, minWidth: 140 }}>
-          <optgroup label="Expense">
-            {EXPENSE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+        <select value={category} onChange={e => setCategory(e.target.value)} aria-label={tx('Category to apply')} style={{ ...inputStyle, flex: 1, minWidth: 140 }}>
+          <optgroup label={tx('Expense')}>
+            {EXPENSE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{tx(c.label)}</option>)}
           </optgroup>
-          <optgroup label="Income">
-            {INCOME_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+          <optgroup label={tx('Income')}>
+            {INCOME_CATEGORIES.map(c => <option key={c.id} value={c.id}>{tx(c.label)}</option>)}
           </optgroup>
         </select>
-        <button type="button" onClick={add} className="btn btn-primary">Add rule</button>
+        <button type="button" onClick={add} className="btn btn-primary">{tx('Add rule')}</button>
       </div>
       {catRules.length === 0 && (
         <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
-          No rules yet. Every statement line your rules would have caught is one you'll re-categorise by hand — teach Imari once, it files them forever.
+          {tx(
+            'No rules yet. Every statement line your rules would have caught is one you\'ll re-categorise by hand — teach Imari once, it files them forever.'
+          )}
         </div>
       )}
-    </Section>
+    </Section>)
   );
 }
 
@@ -534,20 +545,24 @@ function ConnectionsSection({ profile, dispatch }) {
   const flag = { fontSize: 10.5, color: 'var(--gold-ink, var(--gold))', marginTop: 6 };
 
   return (
-    <Section title="Connections & sync" subtitle="Diaspora oversight tier and account-level integrations.">
+    (<Section title={tx('Connections & sync')} subtitle={tx('Diaspora oversight tier and account-level integrations.')}>
       {/* §10 Diaspora Oversight waitlist */}
       <div style={card}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Diaspora Oversight (≈ $9.99/mo)</div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{tx('Diaspora Oversight (≈ $9.99/mo)')}</div>
         <div className="muted" style={{ fontSize: 11.5, marginBottom: 8, lineHeight: 1.5 }}>
-          Read-only trustee access, twice-monthly “State of Your Rwanda Assets” PDF, accountant export pack, document vault, USD/EUR/GBP display. Free core stays fully functional.
+          {tx(
+            'Read-only trustee access, twice-monthly “State of Your Rwanda Assets” PDF, accountant export pack, document vault, USD/EUR/GBP display. Free core stays fully functional.'
+          )}
         </div>
         <button type="button" onClick={() => set({ diasporaWaitlist: !onWaitlist })}
           className={onWaitlist ? 'btn btn-ghost' : 'btn btn-primary'} style={{ fontSize: 12 }}>
-          {onWaitlist ? '✓ On the waitlist — leave' : 'Join the waitlist'}
+          {onWaitlist ? tx('✓ On the waitlist — leave') : tx('Join the waitlist')}
         </button>
-        <div style={flag}>⚠ Billing is handled by the payment processor — Imari never stores card data or auto-charges.</div>
+        <div style={flag}>{tx(
+          '⚠ Billing is handled by the payment processor — Imari never stores card data or auto-charges.'
+        )}</div>
       </div>
-    </Section>
+    </Section>)
   );
 }
 
@@ -571,14 +586,14 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
 
   const handleAvatarFile = async (file) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) { showToast?.('Please choose an image file.', 'error'); return; }
+    if (!file.type.startsWith('image/')) { showToast?.(tx('Please choose an image file.'), 'error'); return; }
     setAvatarLoading(true);
     try {
       const dataUrl = await resizeAvatar(file, 160);
       dispatch({ type: 'setProfile', patch: { avatar: dataUrl } });
-      showToast?.('Profile photo updated.', 'success');
+      showToast?.(tx('Profile photo updated.'), 'success');
     } catch (e) {
-      showToast?.('Could not process the image: ' + e.message, 'error');
+      showToast?.(tx('Could not process the image: ') + e.message, 'error');
     } finally {
       setAvatarLoading(false);
       if (avatarRef.current) avatarRef.current.value = '';
@@ -592,25 +607,25 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
       // app — it gets the typed-confirmation dialog, not a native confirm().
       setPendingJsonImport(await importJSONFile(file));
     } catch (e) {
-      showToast?.('Import failed: ' + e.message, 'error');
+      showToast?.(tx('Import failed: ') + e.message, 'error');
     }
   };
 
   const handleSaveFx = () => {
     dispatch({ type:'setFx', fx: Object.fromEntries(Object.entries(fxLocal).map(([k,v]) => [k, +v || 1])) });
-    showToast?.('Exchange rates saved.', 'success');
+    showToast?.(tx('Exchange rates saved.'), 'success');
   };
 
   const handleSaveApiKey = () => {
     setApiKey(apiKey);
     setApiKeySaved(true);
-    showToast?.('API key saved to this browser.', 'success');
+    showToast?.(tx('API key saved to this browser.'), 'success');
     setTimeout(() => setApiKeySaved(false), 2000);
   };
 
   return (
-    <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)', maxWidth: 820 }}>
-      <Section title={i18n.t('settings.appearance_title')} subtitle="Choose how Imari looks. Auto follows your system setting.">
+    (<div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)', maxWidth: 820 }}>
+      <Section title={i18n.t('settings.appearance_title')} subtitle={tx('Choose how Imari looks. Auto follows your system setting.')}>
         <div className="row" style={{ gap: 8 }}>
           {[
             { value: 'auto',  label: `⟳ ${i18n.t('settings.theme_auto')}`  },
@@ -624,16 +639,16 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
               className={`btn ${themePref === opt.value ? 'btn-primary' : 'btn-ghost'}`}
               style={{ minWidth: 90 }}
             >
-              {opt.label}
+              {tx(opt.label)}
             </button>
           ))}
         </div>
         <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
           {themePref === 'auto'
-            ? 'Currently following your system preference.'
+            ? tx('Currently following your system preference.')
             : themePref === 'dark'
-            ? 'Dark mode is active.'
-            : 'Light mode is active.'}
+            ? tx('Dark mode is active.')
+            : tx('Light mode is active.')}
         </div>
 
         {/* Locale switcher — UX review #53. Persists to profile.locale so it
@@ -658,10 +673,11 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
           </div>
         </div>
       </Section>
-
       <Section
-        title="Profile"
-        subtitle="Your name, photo, and contact details. Stored with your portfolio — only visible to people you invite."
+        title={tx('Profile')}
+        subtitle={tx(
+          'Your name, photo, and contact details. Stored with your portfolio — only visible to people you invite.'
+        )}
       >
         {/* ── Avatar + name row ── */}
         <div className="row" style={{ gap: 20, alignItems: 'flex-start', marginBottom: 20 }}>
@@ -669,7 +685,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <div
               onClick={() => avatarRef.current?.click()}
-              title="Click to change photo"
+              title={tx('Click to change photo')}
               style={{
                 width: 80, height: 80, borderRadius: '50%', cursor: 'pointer',
                 background: state.profile.avatar
@@ -686,7 +702,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
               {state.profile.avatar
-                ? <img src={state.profile.avatar} alt="Profile photo"
+                ? <img src={state.profile.avatar} alt={tx('Profile photo')}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : ((state.profile.name || 'Y').split(' ').slice(0,2).map(s => s[0] || '').join('').toUpperCase().slice(0,2) || '?')
               }
@@ -709,7 +725,7 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
           {/* Name + email stacked */}
           <div className="col" style={{ flex: 1, gap: 4, minWidth: 0, justifyContent: 'center' }}>
             <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.2, color: 'var(--ink)' }}>
-              {state.profile.name || 'Your name'}
+              {state.profile.name || tx('Your name')}
             </div>
             {session?.user?.email && (
               <div className="muted" style={{ fontSize: 12 }}>{session.user.email}</div>
@@ -721,39 +737,39 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
             )}
             {state.profile.avatar && (
               <button
-                onClick={() => { dispatch({ type:'setProfile', patch: { avatar: null } }); showToast?.('Photo removed.', 'success'); }}
+                onClick={() => { dispatch({ type:'setProfile', patch: { avatar: null } }); showToast?.(tx('Photo removed.'), 'success'); }}
                 style={{
                   alignSelf: 'flex-start', marginTop: 4,
                   padding: '3px 9px', borderRadius: 'var(--r-pill)', fontSize: 11, cursor: 'pointer',
                   border: '1px solid var(--down-soft)', background: 'transparent', color: 'var(--down)',
                 }}
               >
-                Remove photo
+                {tx('Remove photo')}
               </button>
             )}
           </div>
         </div>
 
         {/* ── Identity fields ── */}
-        <Field label="Display name">
+        <Field label={tx('Display name')}>
           <input value={state.profile.name}
             onChange={e => dispatch({ type:'setProfile', patch: { name: e.target.value } })}
-            placeholder="e.g. Prince Nshuti" style={{ ...inputStyle }} />
+            placeholder={tx('e.g. Prince Nshuti')} style={{ ...inputStyle }} />
         </Field>
 
-        <Field label="Primary display currency" top={14}>
+        <Field label={tx('Primary display currency')} top={14}>
           <select value={state.profile.displayCurrency}
             onChange={e => dispatch({ type:'setProfile', patch: { displayCurrency: e.target.value } })}
             style={{ ...inputStyle }}>
-            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.label}</option>)}
+            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {tx(c.label)}</option>)}
           </select>
         </Field>
 
-        <Field label="Short bio" top={14}>
+        <Field label={tx('Short bio')} top={14}>
           <textarea
             value={state.profile.bio || ''}
             onChange={e => dispatch({ type:'setProfile', patch: { bio: e.target.value } })}
-            placeholder="e.g. Entrepreneur & investor based in Kigali"
+            placeholder={tx('e.g. Entrepreneur & investor based in Kigali')}
             rows={2}
             style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', paddingTop: 8, lineHeight: 1.5 }}
           />
@@ -762,43 +778,42 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         {/* ── Contact information ── */}
         <div style={{ marginTop: 22, paddingTop: 18, borderTop: '0.5px solid var(--line)' }}>
           <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: 14 }}>
-            Contact information
+            {tx('Contact information')}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <Field label="Phone number">
+            <Field label={tx('Phone number')}>
               <input
                 type="tel"
                 value={state.profile.phone || ''}
                 onChange={e => dispatch({ type:'setProfile', patch: { phone: e.target.value } })}
-                placeholder="+250 7XX XXX XXX"
+                placeholder={tx('+250 7XX XXX XXX')}
                 style={{ ...inputStyle }}
               />
             </Field>
-            <Field label="Location">
+            <Field label={tx('Location')}>
               <input
                 value={state.profile.location || ''}
                 onChange={e => dispatch({ type:'setProfile', patch: { location: e.target.value } })}
-                placeholder="e.g. Kigali, Rwanda"
+                placeholder={tx('e.g. Kigali, Rwanda')}
                 style={{ ...inputStyle }}
               />
             </Field>
           </div>
         </div>
       </Section>
-
       <MembersSection portfolioId={portfolioId} role={role} session={session} />
-
       <ConnectionsSection profile={state.profile} dispatch={dispatch} />
-
       <Section
-        title="AI Advisor"
+        title={tx('AI Advisor')}
         subtitle={hasEnvKey
-          ? 'AI Advisor is enabled for all users via a shared key managed by the app owner.'
-          : 'Your Anthropic API key powers the AI Advisor and dashboard insights.'}
+          ? tx(
+          'AI Advisor is enabled for all users via a shared key managed by the app owner.'
+        )
+          : tx('Your Anthropic API key powers the AI Advisor and dashboard insights.')}
       >
         {hasEnvKey ? (
           /* ── Shared env key is active ─ no user input needed ─── */
-          <div style={{
+          (<div style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '14px 18px', borderRadius: 10,
             background: 'color-mix(in oklab, var(--up) 10%, var(--paper))',
@@ -810,40 +825,43 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
             }} />
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--up)' }}>
-                AI Advisor is active
+                {tx('AI Advisor is active')}
               </div>
               <div className="muted" style={{ fontSize: 11, marginTop: 2, lineHeight: 1.5 }}>
-                A shared API key is configured for this deployment — you don't need to enter anything.
-                All users on this app can access the AI Advisor automatically.
+                {tx(
+                  'A shared API key is configured for this deployment — you don\'t need to enter anything.\n                All users on this app can access the AI Advisor automatically.'
+                )}
               </div>
             </div>
-          </div>
+          </div>)
         ) : (
           /* ── No env key — user must supply their own ─────────── */
-          <>
-            <Field label="Anthropic API key" hint="sk-ant-…">
+          (<>
+            <Field label={tx('Anthropic API key')} hint={tx('sk-ant-…')}>
               <div className="row" style={{ gap: 8 }}>
                 <input
                   type="password"
                   value={apiKey}
                   onChange={e => setApiKeyLocal(e.target.value)}
-                  placeholder="sk-ant-api03-…"
+                  placeholder={tx('sk-ant-api03-…')}
                   style={{ ...inputStyle, flex: 1, fontFamily:'Geist Mono, monospace' }}
                 />
                 <button onClick={handleSaveApiKey} className="btn btn-primary" style={{ whiteSpace:'nowrap' }}>
-                  {apiKeySaved ? '✓ Saved' : 'Save key'}
+                  {apiKeySaved ? tx('✓ Saved') : tx('Save key')}
                 </button>
               </div>
             </Field>
             <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
-              Get a key at <strong>console.anthropic.com</strong>.
-              The key is stored only in this browser — it's sent directly to the Anthropic API.
+              {tx('Get a key at')} <strong>{tx('console.anthropic.com')}</strong>{tx(
+                '.\n              The key is stored only in this browser — it\'s sent directly to the Anthropic API.'
+              )}
             </div>
-          </>
+          </>)
         )}
       </Section>
-
-      <Section title="Exchange rates" subtitle="Auto-synced daily from the National Bank of Rwanda. Your manual values below are used only as a fallback.">
+      <Section title={tx('Exchange rates')} subtitle={tx(
+        'Auto-synced daily from the National Bank of Rwanda. Your manual values below are used only as a fallback.'
+      )}>
         {bnrInfo?.date && bnrInfo?.source === 'bnr' && (
           <div style={{
             display:'flex', alignItems:'center', gap:10, marginBottom:14,
@@ -854,100 +872,95 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
             <div style={{ width:8, height:8, borderRadius:'50%', background:'var(--up)', flexShrink:0 }} />
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:12, fontWeight:600, color:'var(--up)' }}>
-                BNR rates · as of {bnrInfo.date}
+                {tx('BNR rates · as of')} {bnrInfo.date}
               </div>
               <div className="muted" style={{ fontSize:11, marginTop:4, fontFamily:'Geist Mono, monospace' }}>
                 {Object.entries(bnrInfo.rates).map(([c, r]) =>
-                  `${c}: buy ${fmtNum(r.buy, 2)} / sell ${fmtNum(r.sell, 2)}`
+                  tx('{0}: buy {1} / sell {2}', [c, fmtNum(r.buy, 2), fmtNum(r.sell, 2)])
                 ).join('  ·  ')}
               </div>
               <div className="muted" style={{ fontSize:10, marginTop:4, lineHeight:1.5 }}>
-                Buying rate values foreign → RWF · selling rate values RWF → foreign.
+                {tx('Buying rate values foreign → RWF · selling rate values RWF → foreign.')}
               </div>
             </div>
           </div>
         )}
         {bnrInfo?.source && bnrInfo.source !== 'bnr' && (
           <div className="muted" style={{ fontSize:11, marginBottom:14 }}>
-            BNR feed unavailable — using {bnrInfo.source} as fallback.
+            {tx('BNR feed unavailable — using')} {bnrInfo.source} {tx('as fallback.')}
           </div>
         )}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap: 12 }}>
           {CURRENCIES.filter(c => c.code !== 'RWF').map(c => (
-            <Field key={c.code} label={`1 ${c.code} = ? RWF`} hint={`${c.label} · manual override`}>
+            <Field key={c.code} label={tx('1 {0} = ? RWF', [c.code])} hint={tx('{0} · manual override', [c.label])}>
               <input type="number" value={fxLocal[c.code]} onChange={e => setFxLocal(s => ({ ...s, [c.code]: e.target.value }))}
                 style={{ ...inputStyle, fontFamily:'Geist Mono, monospace' }}/>
             </Field>
           ))}
         </div>
-        <button onClick={handleSaveFx} className="btn btn-primary" style={{ marginTop: 14 }}>Save FX rates</button>
+        <button onClick={handleSaveFx} className="btn btn-primary" style={{ marginTop: 14 }}>{tx('Save FX rates')}</button>
       </Section>
-
-      <Section title="Backup & restore" subtitle="Export your portfolio as JSON, or import a previously exported file.">
+      <Section title={tx('Backup & restore')} subtitle={tx('Export your portfolio as JSON, or import a previously exported file.')}>
         <div className="row" style={{ gap: 10, flexWrap:'wrap' }}>
-          <button onClick={() => exportJSON(state)} className="btn btn-primary">↓ Export to JSON</button>
-          <button onClick={() => fileRef.current?.click()} className="btn btn-ghost">↑ Import from JSON</button>
+          <button onClick={() => exportJSON(state)} className="btn btn-primary">{tx('↓ Export to JSON')}</button>
+          <button onClick={() => fileRef.current?.click()} className="btn btn-ghost">{tx('↑ Import from JSON')}</button>
           <input ref={fileRef} type="file" accept="application/json" style={{ display:'none' }}
             onChange={e => e.target.files?.[0] && onImport(e.target.files[0])} />
         </div>
       </Section>
-
       <MilestoneSection profile={state.profile} dispatch={dispatch} showToast={showToast} />
-
       <FeaturesSection state={state} dispatch={dispatch} />
-
       <CatRulesSection catRules={state.catRules || []} dispatch={dispatch} showToast={showToast} />
-
       {/* F9 — the full glossary; the same explainers surface inline under insights. */}
-      <Section title="Glossary" subtitle="The terms Imari's insights use, in plain language. Tap one to read it.">
+      <Section title={tx('Glossary')} subtitle={tx('The terms Imari\'s insights use, in plain language. Tap one to read it.')}>
         <Explain entries={Object.entries(GLOSSARY).map(([gid, e]) => ({ id: gid, ...e }))} />
       </Section>
-
-      <Section title="Tax & Reporting" subtitle="View your estimated Rwanda tax liability and capital gains breakdown.">
+      <Section title={tx('Tax & Reporting')} subtitle={tx('View your estimated Rwanda tax liability and capital gains breakdown.')}>
         <div className="row" style={{ gap: 10 }}>
-          <button onClick={() => onNav?.('tax')} className="btn btn-ghost">§ Open Tax Report</button>
+          <button onClick={() => onNav?.('tax')} className="btn btn-ghost">{tx('§ Open Tax Report')}</button>
         </div>
         <div className="muted" style={{ fontSize: 11, marginTop: 10, lineHeight: 1.5 }}>
-          Calculates estimated CGT and withholding tax per asset using Rwanda RRA rules. Printable as PDF.
+          {tx(
+            'Calculates estimated CGT and withholding tax per asset using Rwanda RRA rules. Printable as PDF.'
+          )}
         </div>
       </Section>
-
-      <Section title="Danger zone">
-        <button onClick={() => setDangerAction('reset')} className="btn btn-ghost">↻ Reset to sample portfolio</button>
-        <button onClick={() => setDangerAction('clear')} className="btn btn-danger" style={{ marginLeft: 8 }}>✕ Delete all assets</button>
+      <Section title={tx('Danger zone')}>
+        <button onClick={() => setDangerAction('reset')} className="btn btn-ghost">{tx('↻ Reset to sample portfolio')}</button>
+        <button onClick={() => setDangerAction('clear')} className="btn btn-danger" style={{ marginLeft: 8 }}>{tx('✕ Delete all assets')}</button>
         <div className="muted" style={{ fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
-          Both actions are irreversible. Deleting requires typing <strong style={{ fontFamily: 'monospace', color: 'var(--down)' }}>DELETE</strong> to confirm.
+          {tx('Both actions are irreversible. Deleting requires typing')} <strong style={{ fontFamily: 'monospace', color: 'var(--down)' }}>DELETE</strong> {tx('to confirm.')}
         </div>
       </Section>
-
       <ConfirmDestructive
         open={dangerAction === 'reset'}
         onClose={() => setDangerAction(null)}
-        onConfirm={() => { dispatch({ type: 'reset' }); setDangerAction(null); showToast?.('Portfolio reset to sample data.', 'success'); }}
-        title="Reset to sample portfolio?"
+        onConfirm={() => { dispatch({ type: 'reset' }); setDangerAction(null); showToast?.(tx('Portfolio reset to sample data.'), 'success'); }}
+        title={tx('Reset to sample portfolio?')}
         description={
           <span>
-            Your current data ({state.assets.length} assets, {(state.liabilities||[]).length} liabilities,
-            {' '}{(state.goals||[]).length} goals) will be replaced with the demo seed.
-            <br />Type <strong style={{ fontFamily: 'monospace' }}>DELETE</strong> to confirm.
+            {tx('Your current data (')}{state.assets.length} {tx('assets,')} {(state.liabilities||[]).length} {tx('liabilities,')}
+            {' '}{(state.goals||[]).length} {tx('goals) will be replaced with the demo seed.')}
+            <br />{tx('Type')} <strong style={{ fontFamily: 'monospace' }}>DELETE</strong> {tx('to confirm.')}
           </span>
         }
-        confirmLabel="Reset everything"
+        confirmLabel={tx('Reset everything')}
         requireType="DELETE"
       />
       <ConfirmDestructive
         open={dangerAction === 'clear'}
         onClose={() => setDangerAction(null)}
-        onConfirm={() => { dispatch({ type: 'clearAssets' }); setDangerAction(null); showToast?.('All assets deleted.', 'success'); }}
-        title="Delete ALL your assets?"
+        onConfirm={() => { dispatch({ type: 'clearAssets' }); setDangerAction(null); showToast?.(tx('All assets deleted.'), 'success'); }}
+        title={tx('Delete ALL your assets?')}
         description={
           <span>
-            All <strong style={{ color: 'var(--ink)' }}>{state.assets.length}</strong> assets will be permanently removed
-            from your portfolio. Liabilities, goals, and cashflows are kept.
-            <br />Type <strong style={{ fontFamily: 'monospace' }}>DELETE</strong> to confirm.
+            {tx('All')} <strong style={{ color: 'var(--ink)' }}>{state.assets.length}</strong> {tx(
+              'assets will be permanently removed\n            from your portfolio. Liabilities, goals, and cashflows are kept.'
+            )}
+            <br />{tx('Type')} <strong style={{ fontFamily: 'monospace' }}>DELETE</strong> {tx('to confirm.')}
           </span>
         }
-        confirmLabel="Delete all assets"
+        confirmLabel={tx('Delete all assets')}
         requireType="DELETE"
       />
       <ConfirmDestructive
@@ -956,21 +969,18 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         onConfirm={() => {
           dispatch({ type: 'replaceAll', state: pendingJsonImport });
           setPendingJsonImport(null);
-          showToast?.('Portfolio imported successfully.', 'success');
+          showToast?.(tx('Portfolio imported successfully.'), 'success');
         }}
-        title="Replace your whole portfolio?"
+        title={tx('Replace your whole portfolio?')}
         description={
           <span>
-            The imported file replaces everything you have now
-            ({state.assets.length} assets → {pendingJsonImport?.assets?.length ?? 0}).
-            This cannot be undone.
-            <br />Type <strong style={{ fontFamily: 'monospace' }}>REPLACE</strong> to confirm.
+            {tx('The imported file replaces everything you have now\n            (')}{state.assets.length} {tx('assets →')} {pendingJsonImport?.assets?.length ?? 0}{tx(').\n            This cannot be undone.')}
+            <br />{tx('Type')} <strong style={{ fontFamily: 'monospace' }}>REPLACE</strong> {tx('to confirm.')}
           </span>
         }
-        confirmLabel="Replace portfolio"
+        confirmLabel={tx('Replace portfolio')}
         requireType="REPLACE"
       />
-
       {/* About / brand footer */}
       <div style={{ marginTop: 30, padding: 20, background: 'var(--bg-2)', borderRadius: 'var(--r-lg)', lineHeight: 1.55 }}>
         {/* Maxventures badge */}
@@ -979,15 +989,13 @@ export default function SettingsView({ state, dispatch, session, portfolioId, ro
         </div>
         <div style={{ height: '0.5px', background: 'var(--line)', marginBottom: 14 }} />
         <p style={{ margin: 0, fontSize: 11, color: 'var(--ink-3)' }}>
-          <strong style={{ color: 'var(--ink-2)' }}>Imari</strong> is a personal asset &amp; wealth tracker built for Rwanda,
-          by <strong style={{ color: 'var(--ink-2)' }}>Maxventures</strong> — Innovative Solutions, Limitless Possibilities.
-          When signed in, your data is stored in a Supabase Postgres database protected by Row Level Security,
-          accessible only to you and the members you invite.
+          <strong style={{ color: 'var(--ink-2)' }}>{tx('Imari')}</strong> {tx('is a personal asset & wealth tracker built for Rwanda,\n          by')} <strong style={{ color: 'var(--ink-2)' }}>{tx('Maxventures')}</strong> {tx(
+            '— Innovative Solutions, Limitless Possibilities.\n          When signed in, your data is stored in a Supabase Postgres database protected by Row Level Security,\n          accessible only to you and the members you invite.'
+          )}
         </p>
-        <p style={{ margin: '10px 0 0', fontSize: 10.5, color: 'var(--ink-4)' }}>
-          © {new Date().getFullYear()} Maxventures · All rights reserved
+        <p style={{ margin: '10px 0 0', fontSize: 10.5, color: 'var(--ink-4)' }}>© {new Date().getFullYear()} {tx('Maxventures · All rights reserved')}
         </p>
       </div>
-    </div>
+    </div>)
   );
 }

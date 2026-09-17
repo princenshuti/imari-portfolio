@@ -22,6 +22,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { fetchMarket, getCachedMarket } from '../services/market.js';
 
+import { tx } from '../i18n/tx.js';
+
 const MarketContext = createContext(null);
 
 /** Build per-domain overrides from a market fetch result. */
@@ -44,33 +46,33 @@ function buildOverrides(market) {
       live: true,
       fetchedAt,
       source: bnrUSD
-        ? 'BNR official daily rate · buying & selling spread'
-        : 'ExchangeRate-API · updated every 24h · BNR-tracked rate',
+        ? tx('BNR official daily rate · buying & selling spread')
+        : tx('ExchangeRate-API · updated every 24h · BNR-tracked rate'),
       spread: bnrUSD ?? null,  // { buy, sell, avg, date } when from BNR
     };
   }
   if (market.goldUsd && market.goldUsdLive) {
     out['gold'] = {
       value: market.goldUsd, change: null, live: true, fetchedAt,
-      source: 'metals.live · XAU/USD spot price',
+      source: tx('metals.live · XAU/USD spot price'),
     };
   }
   if (market.btcUsd && market.btcLive) {
     out['btc'] = {
       value: market.btcUsd, change: market.btcChange, live: true, fetchedAt,
-      source: 'CoinGecko · real-time',
+      source: tx('CoinGecko · real-time'),
     };
   }
   if (market.ethUsd && market.ethLive) {
     out['eth'] = {
       value: market.ethUsd, change: market.ethChange, live: true, fetchedAt,
-      source: 'CoinGecko · real-time',
+      source: tx('CoinGecko · real-time'),
     };
   }
   if (market.sp500 && market.sp500Live) {
     out['sp500'] = {
       value: market.sp500, change: market.sp500Change, live: true, fetchedAt,
-      source: 'Yahoo Finance · last close',
+      source: tx('Yahoo Finance · last close'),
     };
   }
   return out;
@@ -90,7 +92,7 @@ export function MarketProvider({ children }) {
       setStatus('done');
       return m;
     } catch (e) {
-      setError(e?.message || 'Could not reach market data sources.');
+      setError(e?.message || tx('Could not reach market data sources.'));
       setStatus('error');
       throw e;
     }
@@ -114,6 +116,6 @@ export function MarketProvider({ children }) {
 
 export function useMarket() {
   const ctx = useContext(MarketContext);
-  if (!ctx) throw new Error('useMarket must be used within <MarketProvider>');
+  if (!ctx) throw new Error(tx('useMarket must be used within <MarketProvider>'));
   return ctx;
 }

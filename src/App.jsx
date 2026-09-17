@@ -2,7 +2,7 @@ import { useState, useEffect, useReducer, useMemo, useRef, lazy, Suspense, Compo
 import { motion, MotionConfig } from 'motion/react';
 import { EASE_OUT } from './components/motion.jsx';
 import { FX, valueRWF, costRWF, toBase, fmtBase, MILESTONES } from './data.js';
-import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, fetchPortfolio, subscribePortfolio, peekInvitation, acceptInvitation } from './cloud.js';
+import { isConfigured, getSession, onAuthStateChange, loadOrCreatePortfolio, savePortfolio, fetchPortfolio, subscribePortfolio, peekInvitation, acceptInvitation, getEntitlements } from './cloud.js';
 import { loadState as loadLocal, saveState as saveLocal, defaultState } from './store.js';
 import { seedHistory } from './services/snapshots.js';
 import { reducer } from './reducer.js';
@@ -11,6 +11,7 @@ import TopBar from './components/TopBar.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import { NAV_ITEMS } from './nav.js';
 import { visibleNavIds } from './features.js';
+import { isEntitled, FEATURES } from './services/entitlements.js';
 import { InsightsProvider } from './contexts/InsightsContext.jsx';
 import { useMarket } from './contexts/MarketContext.jsx';
 import MobileTabBar from './components/MobileTabBar.jsx';
@@ -24,6 +25,7 @@ import NamePrompt from './views/NamePrompt.jsx';
 import Onboarding from './views/Onboarding.jsx';
 import ResetPassword from './views/ResetPassword.jsx';
 import { I18nProvider } from './contexts/I18nContext.jsx';
+import { tx, txLocale } from './i18n/tx.js';
 // All views — lazy loaded on first navigation
 const DashboardView   = lazy(() => import('./views/Dashboard.jsx'));
 const AssetsView      = lazy(() => import('./views/Assets.jsx'));
@@ -40,23 +42,34 @@ const ProjectionsView = lazy(() => import('./views/Projections.jsx'));
 const RetirementView  = lazy(() => import('./views/Retirement.jsx'));
 const YearReviewView  = lazy(() => import('./views/YearReview.jsx'));
 const ReportsView     = lazy(() => import('./views/Reports.jsx'));
+// Family module — gated by entitlement; chunks only download when opened.
+const FamilyView      = lazy(() => import('./views/Family.jsx'));
+const ScorecardView   = lazy(() => import('./views/FamilyScorecard.jsx'));
+const CalendarView    = lazy(() => import('./views/FamilyCalendar.jsx'));
+const HouseholdView   = lazy(() => import('./views/Household.jsx'));
+const InsuranceView   = lazy(() => import('./views/Insurance.jsx'));
+const DocumentsView   = lazy(() => import('./views/Documents.jsx'));
+const WishlistView    = lazy(() => import('./views/Wishlist.jsx'));
+// Family data layer for the engine + advisor — a lazy, render-nothing bridge so
+// nothing under src/family ships to households without the entitlement.
+const FamilyBridge    = lazy(() => import('./family/FamilyBridge.jsx'));
 
 // ─ Shared UI primitives ───────────────────────────────────────
 function FullScreenLoader({ message = 'Loading…' }) {
   return (
-    <div style={{
-      position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', background: 'var(--bg)',
-      gap: 14,
-    }}>
+    (<div style={{
+        position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', background: 'var(--bg)',
+        gap: 14,
+      }}>
       <div style={{
         width: 36, height: 36, borderRadius: '50%',
         border: '3px solid var(--line)', borderTopColor: 'var(--brand)',
         animation: 'spin 0.7s linear infinite',
       }} />
       <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>{message}</div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+      <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
+    </div>)
   );
 }
 
@@ -66,19 +79,19 @@ class ErrorBoundary extends Component {
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div style={{
+      (<div style={{
         position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 32, textAlign: 'center',
       }}>
         <div style={{ fontSize: 32, marginBottom: 12 }}>⚠</div>
-        <div className="font-serif" style={{ fontSize: 20, marginBottom: 8 }}>Something went wrong</div>
+        <div className="font-serif" style={{ fontSize: 20, marginBottom: 8 }}>{tx('Something went wrong')}</div>
         <div className="muted" style={{ fontSize: 12, marginBottom: 20, maxWidth: 420, lineHeight: 1.6 }}>
           {this.state.error.message}
         </div>
         <button onClick={() => window.location.reload()} className="btn btn-primary">
-          Reload app
+          {tx('Reload app')}
         </button>
-      </div>
+      </div>)
     );
   }
 }
@@ -131,7 +144,7 @@ export default function App() {
   // which fires after useEffect (too late, causes a Login flash or missed event).
   const [isRecoveryMode, setIsRecoveryMode] = useState(() => {
     const h = window.location.hash;
-    return h.includes('type=recovery') || h.includes('type=signup');
+    return h.includes('type=recovery') || h.includes('type=signup') || h.includes('type=invite');
   });
   const [pendingInvite, setPendingInvite] = useState(null);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
@@ -164,6 +177,9 @@ export default function App() {
   const [authPage, setAuthPage] = useState(readAuthHash);
   const [portfolioId, setPortfolioId] = useState(null);
   const [role, setRole] = useState('owner');
+  // §10 entitlements (read-only, server-set). Gates the Family module's menu;
+  // the tables behind it enforce the same feature in RLS.
+  const [entitlements, setEntitlements] = useState(null);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   // true once the authoritative state (cloud or confirmed-local) has been loaded.
   // Milestone alerts are gated on this so they never fire before reachedMilestones
@@ -241,10 +257,10 @@ export default function App() {
   // The current view is always included so a hidden-but-visited feature
   // (deep link, search result) still shows an oriented, active menu item.
   const visibleIds = useMemo(() => {
-    const ids = visibleNavIds(state);
+    const ids = visibleNavIds(state, { entitlements });
     ids.add(nav);
     return ids;
-  }, [state, nav]);
+  }, [state, nav, entitlements]);
 
   // ─ Hash-based navigation (survives reload & enables back/fwd)
   function navigateTo(view) {
@@ -270,7 +286,7 @@ export default function App() {
     getSession().then(s => {
       setSession(s);
       // Don't mark stateReady if we're in recovery mode — wait for the recovery session
-      if (!s && !window.location.hash.includes('type=recovery')) setStateReady(true);
+      if (!s && !window.location.hash.includes('type=recovery') && !window.location.hash.includes('type=invite')) setStateReady(true);
     });
     const unsub = onAuthStateChange((s, event) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -305,7 +321,7 @@ export default function App() {
         clearInviteFromURL();
       })
       .catch(e => {
-        showToast('Could not accept invitation: ' + e.message, 'error');
+        showToast(tx('Could not accept invitation: ') + e.message, 'error');
         setPendingInvite(null);
         clearInviteFromURL();
       })
@@ -344,13 +360,34 @@ export default function App() {
       })
       .catch(e => {
         if (aborted) return;
-        showToast('Failed to load portfolio: ' + e.message, 'error');
+        showToast(tx('Failed to load portfolio: ') + e.message, 'error');
       })
       .finally(() => {
         if (!aborted) setLoadingPortfolio(false);
       });
     return () => { aborted = true; };
   }, [session?.user?.id]);
+
+  // Last-resort error handling: anything that escapes a component or a promise
+  // becomes a visible toast (with the message) instead of a silent console line.
+  useEffect(() => {
+    const onRejection = (e) => { const m = e?.reason?.message || String(e?.reason || tx('Unexpected error')); showToast(tx('Something went wrong: {0}', [m.slice(0, 160)]), 'error'); };
+    const onError = (e) => { if (e?.message) showToast(tx('Something went wrong: {0}', [String(e.message).slice(0, 160)]), 'error'); };
+    window.addEventListener('unhandledrejection', onRejection);
+    window.addEventListener('error', onError);
+    return () => { window.removeEventListener('unhandledrejection', onRejection); window.removeEventListener('error', onError); };
+  }, []);
+
+  // Family data for the insight engine + advisor — set by FamilyBridge (entitled households only).
+  const [family, setFamily] = useState(null);
+  const familyEnabled = Boolean(portfolioId) && isEntitled(entitlements, FEATURES.FAMILY);
+
+  useEffect(() => {
+    if (!portfolioId) { setEntitlements(null); return; }
+    let aborted = false;
+    getEntitlements(portfolioId).then(e => { if (!aborted) setEntitlements(e); });
+    return () => { aborted = true; };
+  }, [portfolioId]);
 
   // Live FX / market data is owned by MarketProvider in main.jsx — it fetches
   // on app mount, primes LIVE_FX so converters use BNR rates, and exposes
@@ -402,9 +439,9 @@ export default function App() {
           skipNextSave.current = true;
           if (fresh.state.fx) Object.assign(FX, fresh.state.fx);
           dispatch({ type: 'replaceAll', state: fresh.state });
-          showToast('Another session saved newer changes — refreshed to the latest data.', 'warning');
+          showToast(tx('Another session saved newer changes — refreshed to the latest data.'), 'warning');
         }).catch(e => {
-          showToast('Auto-save failed — ' + e.message, 'error');
+          showToast(tx('Auto-save failed — ') + e.message, 'error');
         });
       }, 350);
       return () => clearTimeout(t);
@@ -495,7 +532,10 @@ export default function App() {
     // Subsequent runs — only toast milestones genuinely crossed right now.
     thresholds.forEach(m => {
       if (!reached.has(m) && prev < m && netWorth >= m) {
-        showToast(`🎉 Milestone reached: ${fmtBase(m, state.profile.displayCurrency, { compact: true })} net worth!`, 'success');
+        showToast(tx(
+          '🎉 Milestone reached: {0} net worth!',
+          [fmtBase(m, state.profile.displayCurrency, { compact: true })]
+        ), 'success');
         dispatch({ type: 'reachMilestone', value: m });
       }
     });
@@ -517,15 +557,15 @@ export default function App() {
         const d = new Date(dateStr);
         const days = Math.ceil((d - today) / 86400000);
         if (days < 0) {
-          showToast(`⚠ "${a.name}" ${label} ${Math.abs(days)} days ago`, 'warning');
+          showToast(tx('⚠ "{0}" {1} {2} days ago', [a.name, label, Math.abs(days)]), 'warning');
           alertedMaturitiesRef.current.add(key);
         } else if (days <= WARN_DAYS) {
-          showToast(`⏰ "${a.name}" ${label} in ${days} days`, 'info');
+          showToast(tx('⏰ "{0}" {1} in {2} days', [a.name, label, days]), 'info');
           alertedMaturitiesRef.current.add(key);
         }
       };
       if (a.kind === 'bond')        checkDate(a.maturity, 'matures');
-      if (a.kind === 'receivable')  checkDate(a.dueDate,  'was due');
+      if (a.kind === 'receivable')  checkDate(a.dueDate,  tx('was due'));
     });
   }, [stateReady, state.profile.name, state.assets]);
 
@@ -558,7 +598,7 @@ export default function App() {
     </I18nProvider>
   );
 
-  if (session === undefined) return i18nWrap(<FullScreenLoader message="Checking session…" />);
+  if (session === undefined) return i18nWrap(<FullScreenLoader message={tx('Checking session…')} />);
   if (isRecoveryMode) return i18nWrap(<ResetPassword session={session} onDone={() => { setIsRecoveryMode(false); }} />);
 
   // Force-preview the landing at any time via #landing (signed in or not).
@@ -572,7 +612,7 @@ export default function App() {
     }
     return i18nWrap(<Landing onSignIn={() => setAuthPage('login')} />);
   }
-  if (!stateReady) return i18nWrap(<FullScreenLoader message="Loading your portfolio…" />);
+  if (!stateReady) return i18nWrap(<FullScreenLoader message={tx('Loading your portfolio…')} />);
 
   // Wrap dispatch in a read-only guard for viewers — declared early so the
   // Onboarding gate below can use it.
@@ -588,7 +628,7 @@ export default function App() {
       'reachMilestone','appendChat','clearChat','setInsight',
     ]);
     if (role === 'viewer' && writeActions.has(action.type)) {
-      showToast('You have view-only access to this portfolio.', 'warning');
+      showToast(tx('You have view-only access to this portfolio.'), 'warning');
       return;
     }
     dispatch(action);
@@ -619,21 +659,30 @@ export default function App() {
     || (typeof localStorage !== 'undefined' && localStorage.getItem('imari:locale'))
     || 'en';
   const titles = {
-    dashboard:   { title: `${greetingFor(activeLocale)}, ${state.profile.name.split(' ')[0]}.`, subtitle: `Today · ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' })}` },
-    accounts:    { title: 'Accounts', subtitle: `${accountCount} bank / mobile money` },
-    assets:      { title: 'Your assets', subtitle: `${state.assets.length} positions tracked` },
-    trends:      { title: 'Markets & trends', subtitle: 'Domains you watch' },
-    advisor:     { title: 'AI Advisor', subtitle: 'Grounded in your portfolio' },
-    settings:    { title: 'Settings', subtitle: 'Profile · FX · members · backup' },
-    liabilities: { title: 'Liabilities', subtitle: `${(state.liabilities||[]).length} debts tracked` },
-    goals:       { title: 'Goals', subtitle: `${(state.goals||[]).filter(g=>!g.achieved).length} active goals` },
-    cashflow:    { title: 'Cash Flow', subtitle: 'Income · Expenses · Savings rate' },
-    tax:         { title: 'Tax Report', subtitle: `${new Date().getFullYear()} · Rwanda RRA estimate` },
-    balancesheet:{ title: 'Balance Sheet', subtitle: 'Assets − liabilities = net worth' },
-    projections: { title: 'Fast Forward', subtitle: 'Net-worth projection · modeled' },
-    retirement:  { title: 'Retirement readiness', subtitle: 'RSSB / Ejo Heza pension projection' },
-    yearreview:  { title: 'Year in Review', subtitle: 'Your net worth, month by month' },
-    reports:     { title: 'Monthly Report', subtitle: 'Auto-generated from your entries' },
+    dashboard:   { title: `${greetingFor(activeLocale)}, ${state.profile.name.split(' ')[0]}.`, subtitle: tx('Today · {0}', [
+      new Date().toLocaleDateString(txLocale(), { weekday:'long', day:'numeric', month:'long' })
+    ]) },
+    accounts:    { title: tx('Accounts'), subtitle: tx('{0} bank / mobile money', [accountCount]) },
+    assets:      { title: tx('Your assets'), subtitle: tx('{0} positions tracked', [state.assets.length]) },
+    trends:      { title: tx('Markets & trends'), subtitle: tx('Domains you watch') },
+    advisor:     { title: tx('AI Advisor'), subtitle: tx('Grounded in your portfolio') },
+    settings:    { title: tx('Settings'), subtitle: tx('Profile · FX · members · backup') },
+    liabilities: { title: tx('Liabilities'), subtitle: tx('{0} debts tracked', [(state.liabilities||[]).length]) },
+    goals:       { title: tx('Goals'), subtitle: tx('{0} active goals', [(state.goals||[]).filter(g=>!g.achieved).length]) },
+    cashflow:    { title: tx('Cash Flow'), subtitle: tx('Income · Expenses · Savings rate') },
+    tax:         { title: tx('Tax Report'), subtitle: tx('{0} · Rwanda RRA estimate', [new Date().getFullYear()]) },
+    balancesheet:{ title: tx('Balance Sheet'), subtitle: tx('Assets − liabilities = net worth') },
+    projections: { title: tx('Fast Forward'), subtitle: tx('Net-worth projection · modeled') },
+    retirement:  { title: tx('Retirement readiness'), subtitle: tx('RSSB / Ejo Heza pension projection') },
+    yearreview:  { title: tx('Year in Review'), subtitle: tx('Your net worth, month by month') },
+    reports:     { title: tx('Monthly Report'), subtitle: tx('Auto-generated from your entries') },
+    family:      { title: tx('Family Home'), subtitle: tx('Money · this week · milestones · shared plan') },
+    scorecard:   { title: tx('Weekly scorecard'), subtitle: tx('33 habits · 7 areas · shared with your members') },
+    calendar:    { title: tx('Family calendar'), subtitle: tx('Events · renewals · bills · deadlines · statutory dates') },
+    household:   { title: tx('Household'), subtitle: tx('Tasks and recurring bills') },
+    insurance:   { title: tx('Insurance'), subtitle: tx('Policies · cover · renewals · gaps') },
+    documents:   { title: tx('Documents vault'), subtitle: tx('IDs, titles, contracts · private files · expiry dates') },
+    wishlist:    { title: tx('Wish list'), subtitle: tx('What you want, and when it fits') },
   };
 
   const view = (() => {
@@ -652,6 +701,13 @@ export default function App() {
       case 'retirement':  return <RetirementView   state={state} dispatch={guardedDispatch} />;
       case 'yearreview':  return <YearReviewView   state={state} />;
       case 'reports':     return <ReportsView      state={state} />;
+      case 'family':      return <FamilyView       state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} />;
+      case 'scorecard':   return <ScorecardView    portfolioId={portfolioId} role={role} showToast={showToast} />;
+      case 'calendar':    return <CalendarView     state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} showToast={showToast} />;
+      case 'household':   return <HouseholdView    state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} />;
+      case 'insurance':   return <InsuranceView    state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} showToast={showToast} />;
+      case 'documents':   return <DocumentsView    portfolioId={portfolioId} role={role} showToast={showToast} />;
+      case 'wishlist':    return <WishlistView     state={state} dispatch={guardedDispatch} portfolioId={portfolioId} role={role} showToast={showToast} />;
       default:            return <DashboardView   state={state} dispatch={(a) => { if (a.type === 'nav') navigateTo(a.to); else guardedDispatch(a); }} netWorth={netWorth} totalCost={totalCost} />;
     }
   })();
@@ -661,8 +717,9 @@ export default function App() {
 
   return i18nWrap(
     <ErrorBoundary>
-      <InsightsProvider state={state} dispatch={guardedDispatch}>
-      <a href="#main-content" className="skip-to-main">Skip to main content</a>
+      <InsightsProvider state={state} dispatch={guardedDispatch} family={family}>
+      {familyEnabled && <Suspense fallback={null}><FamilyBridge portfolioId={portfolioId} role={role} onChange={setFamily} /></Suspense>}
+      <a href="#main-content" className="skip-to-main">{tx('Skip to main content')}</a>
       <div className="row" style={{ minHeight:'100vh', alignItems:'stretch' }}>
         <Sidebar
           active={nav} onNav={navigateTo}
@@ -674,8 +731,8 @@ export default function App() {
           {showTopBar && (
             <div data-noprint>
               <TopBar
-                title={titles[nav].title}
-                subtitle={titles[nav].subtitle}
+                title={tx(titles[nav].title)}
+                subtitle={tx(titles[nav].subtitle)}
                 profile={state.profile}
                 displayCurrency={state.profile.displayCurrency}
                 onCurrency={c => guardedDispatch({ type:'setProfile', patch: { displayCurrency: c } })}
@@ -697,7 +754,7 @@ export default function App() {
         </div>
         <MobileTabBar active={nav} onNav={navigateTo} visibleIds={visibleIds} />
         <div data-noprint><ToastContainer toasts={toasts} dismiss={dismiss} /></div>
-        <div data-noprint><FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} /></div>
+        <div data-noprint><FloatingAdvisor state={state} dispatch={guardedDispatch} nav={nav} family={family} /></div>
       </div>
       </InsightsProvider>
     </ErrorBoundary>

@@ -4,6 +4,8 @@
 import { REFERENCE } from './refs.js';
 import { liquidIds as liquidIdsOf, liquidValueRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export default function runwayMonths(state, { now = new Date(), refs = REFERENCE } = {}) {
   const assets = state.assets || [];
   const { monthlyExpense } = monthlyFlowsRWF(state.cashflows || [], now);
@@ -21,13 +23,19 @@ export default function runwayMonths(state, { now = new Date(), refs = REFERENCE
     id: 'runway-months',
     type: 'foresight',
     category: 'liquidity',
-    headline: `${monthsStr} months of runway`,
-    body: `Your liquid assets (${rwf(liquid)}) cover about ${monthsStr} months at your current spend of ${rwf(monthlyExpense)}/month.`,
+    headline: tx('{0} months of runway', [monthsStr]),
+    body: tx(
+      'Your liquid assets ({0}) cover about {1} months at your current spend of {2}/month.',
+      [rwf(liquid), monthsStr, rwf(monthlyExpense)]
+    ),
     costOfAbsence: {
       severity,
       amount: monthlyExpense,
-      costStatement: `If income stopped today, ${rwf(liquid)} lasts ~${monthsStr} months — below the 3-month safety floor.`,
-      action: { label: 'Review cash & savings', to: 'accounts' },
+      costStatement: tx(
+        'If income stopped today, {0} lasts ~{1} months — below the 3-month safety floor.',
+        [rwf(liquid), monthsStr]
+      ),
+      action: { label: tx('Review cash & savings'), to: 'accounts' },
     },
     sourceRefs: liquidIds,
     dataAsOf: inputsAsOf(state, liquidIds, now),

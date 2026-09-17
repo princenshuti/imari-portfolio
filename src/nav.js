@@ -20,9 +20,17 @@ export const NAV_ITEMS = {
   projections: { id: 'projections', labelDesktop: 'Fast Forward', labelMobile: 'Forecast', glyph: '⤴', group: 'Tools'    },
   retirement:  { id: 'retirement',  labelDesktop: 'Retirement',   labelMobile: 'Pension',  glyph: '☂', group: 'Tools'    },
   settings:    { id: 'settings',    labelDesktop: 'Settings',    labelMobile: 'Settings',  glyph: '⚙', group: 'Tools'    },
+  // Family module (entitlement-gated, see features.js) — the household's shared screens.
+  family:      { id: 'family',      labelDesktop: 'Family Home', labelMobile: 'Family',    glyph: '⌂', group: 'Family'   },
+  scorecard:   { id: 'scorecard',   labelDesktop: 'Scorecard',   labelMobile: 'Scorecard', glyph: '☑', group: 'Family'   },
+  calendar:    { id: 'calendar',    labelDesktop: 'Calendar',    labelMobile: 'Calendar',  glyph: '◷', group: 'Family'   },
+  household:   { id: 'household',   labelDesktop: 'Household',   labelMobile: 'Household', glyph: '⌂', group: 'Family'   },
+  insurance:   { id: 'insurance',   labelDesktop: 'Insurance',   labelMobile: 'Insurance', glyph: '☂', group: 'Family'   },
+  documents:   { id: 'documents',   labelDesktop: 'Documents',   labelMobile: 'Documents', glyph: '▤', group: 'Family'   },
+  wishlist:    { id: 'wishlist',    labelDesktop: 'Wish list',   labelMobile: 'Wishes',    glyph: '✦', group: 'Family'   },
 };
 
-export const NAV_GROUPS = ['Overview', 'Wealth', 'Money & Markets', 'Reports', 'Tools'];
+export const NAV_GROUPS = ['Overview', 'Wealth', 'Family', 'Money & Markets', 'Reports', 'Tools'];
 
 export function navItemsByGroup() {
   return NAV_GROUPS.map(label => ({
@@ -36,5 +44,5 @@ export function navItemsByGroup() {
 export const MAIN_TABS = ['dashboard', 'advisor', 'assets', 'cashflow']
   .map(k => ({ id: NAV_ITEMS[k].id, label: NAV_ITEMS[k].labelMobile, glyph: NAV_ITEMS[k].glyph }));
 
-export const MORE_ITEMS = ['goals', 'liabilities', 'accounts', 'trends', 'yearreview', 'tax', 'balancesheet', 'reports', 'projections', 'retirement', 'settings']
+export const MORE_ITEMS = ['family', 'scorecard', 'calendar', 'household', 'insurance', 'documents', 'wishlist', 'goals', 'liabilities', 'accounts', 'trends', 'yearreview', 'tax', 'balancesheet', 'reports', 'projections', 'retirement', 'settings']
   .map(k => ({ id: NAV_ITEMS[k].id, label: NAV_ITEMS[k].labelMobile, glyph: NAV_ITEMS[k].glyph }));

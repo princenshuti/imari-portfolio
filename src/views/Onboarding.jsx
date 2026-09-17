@@ -17,6 +17,8 @@ import AssetEditor from '../components/AssetEditor.jsx';
 import { useT } from '../contexts/I18nContext.jsx';
 import { Reveal, Stagger, StaggerItem } from '../components/motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 // Each template seeds the AssetEditor with sensible Rwanda defaults. Values are
 // suggestions — the user adjusts before saving.
 const TEMPLATES = [
@@ -80,19 +82,19 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
   const handleSave = (asset) => {
     dispatch({ type: 'upsertAsset', asset });
     setEditing(null);
-    showToast?.(`Added "${asset.name}" to your portfolio.`, 'success');
+    showToast?.(tx('Added "{0}" to your portfolio.', [asset.name]), 'success');
   };
 
   const loadSample = () => {
     dispatch({ type: 'reset' });
-    showToast?.('Loaded sample portfolio. Edit or replace anything from the Assets page.', 'success');
+    showToast?.(tx('Loaded sample portfolio. Edit or replace anything from the Assets page.'), 'success');
     onComplete?.();
   };
 
   const firstName = (profile?.name || '').split(' ')[0] || 'there';
 
   return (
-    <div
+    (<div
       style={{
         position: 'fixed', inset: 0, background: 'var(--bg)',
         overflowY: 'auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
@@ -147,10 +149,10 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
               }}>{tpl.glyph}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>
-                  {tpl.title}
+                  {tx(tpl.title)}
                 </div>
                 <div className="muted" style={{ fontSize: 11.5, lineHeight: 1.4 }}>
-                  {tpl.subtitle}
+                  {tx(tpl.subtitle)}
                 </div>
               </div>
             </button>
@@ -183,7 +185,6 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
           {t('onboarding.privacy')}
         </div>
       </div>
-
       {editing && (
         <AssetEditor
           asset={editing}
@@ -192,6 +193,6 @@ export default function Onboarding({ profile, dispatch, showToast, onComplete })
           showToast={showToast}
         />
       )}
-    </div>
+    </div>)
   );
 }

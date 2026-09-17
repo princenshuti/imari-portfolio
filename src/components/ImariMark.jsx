@@ -1,3 +1,4 @@
+import { tx } from '../i18n/tx.js';
 /**
  * ImariMark — the one canonical product mark (design review #16 / round-3 #14).
  * The green rounded square with the serif dot, as established on Login and
@@ -19,9 +20,9 @@ export default function ImariMark({ size = 36, radius = null }) {
 /** Monochrome Maxventures wordmark for footers — replaces the white-boxed PNG. */
 export function MaxventuresWordmark({ fontSize = 12 }) {
   return (
-    <span className="num" style={{
+    (<span className="num" style={{
       fontSize, fontWeight: 700, letterSpacing: '0.18em',
       color: 'var(--ink-3)', textTransform: 'uppercase',
-    }}>Maxventures</span>
+    }}>{tx('Maxventures')}</span>)
   );
 }

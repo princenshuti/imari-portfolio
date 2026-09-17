@@ -5,6 +5,8 @@ import Modal from '../components/Modal.jsx';
 import { ConfirmDestructive } from '../components/ConfirmDestructive.jsx';
 import { Stagger, StaggerItem } from '../components/motion.jsx';
 
+import { tx, txLocale } from '../i18n/tx.js';
+
 const ACCOUNT_KINDS = new Set(['savings', 'momo-cash']);
 
 function AccountEditor({ account, onSave, onCancel }) {
@@ -47,85 +49,78 @@ function AccountEditor({ account, onSave, onCancel }) {
   };
 
   return (
-    <Modal open onClose={onCancel} maxWidth={520} title={isNew ? 'Add account' : 'Edit account'}>
-        <div className="row" style={{ justifyContent:'space-between', alignItems:'flex-start', marginBottom: 18 }}>
-          <div>
-            <div className="muted" style={{ fontSize: 11, letterSpacing:'0.08em', textTransform:'uppercase' }}>{isNew ? 'Add account' : 'Edit account'}</div>
-            <h2 className="font-serif" style={{ fontSize: 26, marginTop: 2, margin: 0, fontWeight: 400 }}>{institution || 'New account'}</h2>
-          </div>
-          <button type="button" onClick={onCancel} aria-label="Close dialog" className="btn-icon-sm">
-            <span aria-hidden="true">×</span>
-          </button>
+    (<Modal open onClose={onCancel} maxWidth={520} title={isNew ? tx('Add account') : tx('Edit account')}>
+      <div className="row" style={{ justifyContent:'space-between', alignItems:'flex-start', marginBottom: 18 }}>
+        <div>
+          <div className="muted" style={{ fontSize: 11, letterSpacing:'0.08em', textTransform:'uppercase' }}>{isNew ? tx('Add account') : tx('Edit account')}</div>
+          <h2 className="font-serif" style={{ fontSize: 26, marginTop: 2, margin: 0, fontWeight: 400 }}>{institution || tx('New account')}</h2>
         </div>
-
-        <Field label="Account type" top={4}>
-          <div role="radiogroup" aria-label="Account type" className="row" style={{ gap: 6 }}>
-            {[
-              { v: 'bank',  label: '⌬ Bank account' },
-              { v: 'momo',  label: '○ Mobile money' },
-            ].map(o => {
-              const selected = type === o.v;
-              return (
-                <button
-                  key={o.v}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => { setType(o.v); const l = o.v === 'bank' ? RWANDA_BANKS : MOMO_PROVIDERS; setInstitutionPick(l[0]); }}
-                  style={{
-                    flex: 1, padding: '11px 12px', borderRadius: 9, cursor:'pointer', textAlign:'center',
-                    background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
-                    color: selected ? 'var(--brand)' : 'var(--ink-2)',
-                    border: selected ? '1px solid var(--brand)' : '1px solid transparent',
-                    fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
-                  }}
-                ><span aria-hidden="true">{o.label.split(' ')[0]} </span>{o.label.split(' ').slice(1).join(' ')}</button>
-              );
-            })}
-          </div>
+        <button type="button" onClick={onCancel} aria-label={tx('Close dialog')} className="btn-icon-sm">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <Field label={tx('Account type')} top={4}>
+        <div role="radiogroup" aria-label={tx('Account type')} className="row" style={{ gap: 6 }}>
+          {[
+            { v: 'bank',  label: tx('⌬ Bank account') },
+            { v: 'momo',  label: tx('○ Mobile money') },
+          ].map(o => {
+            const selected = type === o.v;
+            return (
+              <button
+                key={o.v}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => { setType(o.v); const l = o.v === 'bank' ? RWANDA_BANKS : MOMO_PROVIDERS; setInstitutionPick(l[0]); }}
+                style={{
+                  flex: 1, padding: '11px 12px', borderRadius: 9, cursor:'pointer', textAlign:'center',
+                  background: selected ? 'var(--brand-soft)' : 'var(--bg-2)',
+                  color: selected ? 'var(--brand)' : 'var(--ink-2)',
+                  border: selected ? '1px solid var(--brand)' : '1px solid transparent',
+                  fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
+                }}
+              ><span aria-hidden="true">{o.label.split(' ')[0]} </span>{o.label.split(' ').slice(1).join(' ')}</button>
+            );
+          })}
+        </div>
+      </Field>
+      <Field label={type === 'bank' ? tx('Bank') : tx('Provider')}>
+        <select value={institutionPick} onChange={e => setInstitutionPick(e.target.value)} style={inputStyle}>
+          {list.map(b => <option key={b} value={b}>{b}</option>)}
+          <option value="__custom__">{tx('— Other (custom name)')}</option>
+        </select>
+      </Field>
+      {institutionPick === '__custom__' && (
+        <Field label={tx('Custom name')} top={10}>
+          <Input value={customName} onChange={setCustomName} placeholder={type === 'bank' ? tx('e.g. SACCO Imbaraga') : tx('e.g. Wave')} />
         </Field>
-
-        <Field label={type === 'bank' ? 'Bank' : 'Provider'}>
-          <select value={institutionPick} onChange={e => setInstitutionPick(e.target.value)} style={inputStyle}>
-            {list.map(b => <option key={b} value={b}>{b}</option>)}
-            <option value="__custom__">— Other (custom name)</option>
+      )}
+      <Field label={tx('Account number')} hint="optional">
+        <Input value={accountNumber} onChange={setAccountNumber} placeholder={type === 'bank' ? tx('e.g. 00040-12345678-01') : tx('e.g. 078XXXXXXX')} />
+      </Field>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: 14 }}>
+        <Field label={tx('Current balance')} hint={tx('in {0}', [currency])}>
+          <Input value={amount} onChange={setAmount} type="number" placeholder="0" />
+        </Field>
+        <Field label={tx('Currency')}>
+          <select value={currency} onChange={e => setCurrency(e.target.value)} style={inputStyle}>
+            {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {tx(c.label)}</option>)}
           </select>
         </Field>
-
-        {institutionPick === '__custom__' && (
-          <Field label="Custom name" top={10}>
-            <Input value={customName} onChange={setCustomName} placeholder={type === 'bank' ? 'e.g. SACCO Imbaraga' : 'e.g. Wave'} />
-          </Field>
-        )}
-
-        <Field label="Account number" hint="optional">
-          <Input value={accountNumber} onChange={setAccountNumber} placeholder={type === 'bank' ? 'e.g. 00040-12345678-01' : 'e.g. 078XXXXXXX'} />
+      </div>
+      {type === 'bank' && (
+        <Field label={tx('Interest rate (% / year)')} hint={tx('optional · used to project growth')}>
+          <Input value={yieldPct} onChange={setYieldPct} type="number" placeholder={tx('e.g. 5')} />
         </Field>
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: 14 }}>
-          <Field label="Current balance" hint={`in ${currency}`}>
-            <Input value={amount} onChange={setAmount} type="number" placeholder="0" />
-          </Field>
-          <Field label="Currency">
-            <select value={currency} onChange={e => setCurrency(e.target.value)} style={inputStyle}>
-              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code} — {c.label}</option>)}
-            </select>
-          </Field>
-        </div>
-
-        {type === 'bank' && (
-          <Field label="Interest rate (% / year)" hint="optional · used to project growth">
-            <Input value={yieldPct} onChange={setYieldPct} type="number" placeholder="e.g. 5" />
-          </Field>
-        )}
-
-        <div className="row" style={{ gap: 10, marginTop: 22, justifyContent:'flex-end' }}>
-          <button type="button" onClick={onCancel} className="btn btn-ghost">Cancel</button>
-          <button type="button" onClick={handleSave} className="btn btn-primary" disabled={!canSave}>
-            {isNew ? 'Add account' : 'Save changes'}
-          </button>
-        </div>
-    </Modal>
+      )}
+      <div className="row" style={{ gap: 10, marginTop: 22, justifyContent:'flex-end' }}>
+        <button type="button" onClick={onCancel} className="btn btn-ghost">{tx('Cancel')}</button>
+        <button type="button" onClick={handleSave} className="btn btn-primary" disabled={!canSave}>
+          {isNew ? tx('Add account') : tx('Save changes')}
+        </button>
+      </div>
+    </Modal>)
   );
 }
 
@@ -147,7 +142,7 @@ function AccountCard({ acc, displayCurrency, cfCount, lastActivity, onEdit, onDe
   const institution = acc.bank || acc.wallet || 'Account';
   const balance = acc.currentValue !== '' && acc.currentValue != null ? acc.currentValue : acc.purchasePrice;
   return (
-    <div className="card" style={{ padding: 18, display:'grid', gridTemplateColumns:'auto 1fr auto', gap: 14, alignItems:'center' }}>
+    (<div className="card" style={{ padding: 18, display:'grid', gridTemplateColumns:'auto 1fr auto', gap: 14, alignItems:'center' }}>
       <div style={{
         width: 44, height: 44, borderRadius: 11,
         background: isBank ? 'color-mix(in oklab, var(--sky) 16%, transparent)' : 'color-mix(in oklab, var(--brand) 16%, transparent)',
@@ -163,15 +158,15 @@ function AccountCard({ acc, displayCurrency, cfCount, lastActivity, onEdit, onDe
           <span
             className="pill pill-soft"
             style={{ fontSize: 10, padding: '1px 6px', flexShrink: 0 }}
-            title={`Stored in ${acc.currency}`}
+            title={tx('Stored in {0}', [acc.currency])}
           >{acc.currency}</span>
         </div>
         <div className="muted" style={{ fontSize: 11.5 }}>
-          {isBank ? 'Bank account' : 'Mobile money'}
+          {isBank ? tx('Bank account') : tx('Mobile money')}
           {acc.accountNumber && ` · ${maskAccountNumber(acc.accountNumber)}`}
-          {isBank && acc.yieldPct ? ` · ${acc.yieldPct}% / yr` : ''}
-          {cfCount > 0 && ` · ${cfCount} cashflow${cfCount === 1 ? '' : 's'} linked`}
-          {lastActivity && ` · last activity ${lastActivity}`}
+          {isBank && acc.yieldPct ? tx(' · {0}% / yr', [acc.yieldPct]) : ''}
+          {cfCount > 0 && tx(' · {0} cashflow{1} linked', [cfCount, cfCount === 1 ? '' : 's'])}
+          {lastActivity && tx(' · last activity {0}', [lastActivity])}
         </div>
       </div>
       <div className="col" style={{ alignItems:'flex-end', gap: 2 }}>
@@ -182,15 +177,15 @@ function AccountCard({ acc, displayCurrency, cfCount, lastActivity, onEdit, onDe
           {acc.currency !== displayCurrency && `≈ ${fmtBase(toBase(balance, acc.currency), displayCurrency, { compact: true })}`}
         </div>
         <div className="row" style={{ gap: 2, marginTop: 6 }}>
-          <button type="button" onClick={() => onEdit(acc)} aria-label={`Edit ${acc.bank || acc.wallet || 'account'}`} className="btn-icon-sm is-row-action">
+          <button type="button" onClick={() => onEdit(acc)} aria-label={tx('Edit {0}', [acc.bank || acc.wallet || 'account'])} className="btn-icon-sm is-row-action">
             <span aria-hidden="true">✎</span>
           </button>
-          <button type="button" onClick={() => onDelete(acc)} aria-label={`Delete ${acc.bank || acc.wallet || 'account'}`} className="btn-icon-sm is-row-action is-danger">
+          <button type="button" onClick={() => onDelete(acc)} aria-label={tx('Delete {0}', [acc.bank || acc.wallet || 'account'])} className="btn-icon-sm is-row-action is-danger">
             <span aria-hidden="true">×</span>
           </button>
         </div>
       </div>
-    </div>
+    </div>)
   );
 }
 
@@ -230,10 +225,10 @@ export default function AccountsView({ state, dispatch }) {
       const d = new Date(iso);
       const days = Math.floor((Date.now() - d.getTime()) / 86400000);
       if (days < 1)  return 'today';
-      if (days < 7)  return `${days}d ago`;
-      if (days < 30) return `${Math.floor(days / 7)}w ago`;
-      if (days < 365) return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-      return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+      if (days < 7)  return tx('{0}d ago', [days]);
+      if (days < 30) return tx('{0}w ago', [Math.floor(days / 7)]);
+      if (days < 365) return d.toLocaleDateString(txLocale(), { month: 'short', year: 'numeric' });
+      return d.toLocaleDateString(txLocale(), { month: 'short', year: 'numeric' });
     };
     const out = {};
     for (const [id, iso] of Object.entries(map)) out[id] = fmt(iso);
@@ -259,26 +254,26 @@ export default function AccountsView({ state, dispatch }) {
   const handleDelete = (acc) => setPendingDelete(acc);
 
   return (
-    <div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)' }}>
+    (<div style={{ padding: 28, background:'var(--bg)', minHeight:'calc(100vh - 70px)' }}>
       {/* Summary card */}
       <div className="card" style={{ padding: 24, marginBottom: 18 }}>
         <div className="row" style={{ justifyContent:'space-between', alignItems:'flex-start' }}>
           <div>
-            <div className="muted" style={{ fontSize: 11, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>Liquid balance</div>
+            <div className="muted" style={{ fontSize: 11, letterSpacing:'0.06em', textTransform:'uppercase', fontWeight: 600 }}>{tx('Liquid balance')}</div>
             <div className="font-serif" style={{ fontSize: 42, lineHeight: 1, marginTop: 6, letterSpacing:'-0.02em' }}>
               {fmtBase(totalsRWF.total, profile.displayCurrency, { compact: totalsRWF.total > 1e8 })}
             </div>
             <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-              {accounts.length} account{accounts.length === 1 ? '' : 's'} · counted toward your net worth
+              {accounts.length}account{accounts.length === 1 ? '' : 's'} {tx('· counted toward your net worth')}
             </div>
           </div>
-          <button onClick={() => setEditing({})} className="btn btn-primary">＋ Add account</button>
+          <button onClick={() => setEditing({})} className="btn btn-primary">{tx('＋ Add account')}</button>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap: 12, marginTop: 20 }}>
           <div style={{ padding: 14, background:'var(--bg-2)', borderRadius: 10 }}>
             <div className="row" style={{ gap: 8, marginBottom: 4 }}>
               <span style={{ color:'var(--sky)', fontSize: 14 }}>⌬</span>
-              <span className="muted" style={{ fontSize: 11, fontWeight: 600, letterSpacing:'0.06em', textTransform:'uppercase' }}>Bank accounts</span>
+              <span className="muted" style={{ fontSize: 11, fontWeight: 600, letterSpacing:'0.06em', textTransform:'uppercase' }}>{tx('Bank accounts')}</span>
             </div>
             <div className="num" style={{ fontSize: 20, fontWeight: 600 }}>{fmtBase(totalsRWF.bank, profile.displayCurrency, { compact: true })}</div>
             <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{banks.length} account{banks.length === 1 ? '' : 's'}</div>
@@ -286,17 +281,16 @@ export default function AccountsView({ state, dispatch }) {
           <div style={{ padding: 14, background:'var(--bg-2)', borderRadius: 10 }}>
             <div className="row" style={{ gap: 8, marginBottom: 4 }}>
               <span style={{ color:'var(--brand)', fontSize: 14 }}>○</span>
-              <span className="muted" style={{ fontSize: 11, fontWeight: 600, letterSpacing:'0.06em', textTransform:'uppercase' }}>Mobile money</span>
+              <span className="muted" style={{ fontSize: 11, fontWeight: 600, letterSpacing:'0.06em', textTransform:'uppercase' }}>{tx('Mobile money')}</span>
             </div>
             <div className="num" style={{ fontSize: 20, fontWeight: 600 }}>{fmtBase(totalsRWF.momo, profile.displayCurrency, { compact: true })}</div>
             <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{momos.length} wallet{momos.length === 1 ? '' : 's'}</div>
           </div>
         </div>
       </div>
-
       {/* Bank list */}
       <div className="row" style={{ justifyContent:'space-between', marginBottom: 10 }}>
-        <div className="font-serif" style={{ fontSize: 20 }}>Bank accounts</div>
+        <div className="font-serif" style={{ fontSize: 20 }}>{tx('Bank accounts')}</div>
         <span className="muted" style={{ fontSize: 11 }}>{banks.length} account{banks.length === 1 ? '' : 's'}</span>
       </div>
       {banks.length > 0 ? (
@@ -305,14 +299,13 @@ export default function AccountsView({ state, dispatch }) {
         </Stagger>
       ) : (
         <div className="card" style={{ padding: 28, textAlign:'center', marginBottom: 22 }}>
-          <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>No bank accounts yet.</div>
-          <button onClick={() => setEditing({ kind: 'savings' })} className="btn btn-ghost">＋ Add bank account</button>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>{tx('No bank accounts yet.')}</div>
+          <button onClick={() => setEditing({ kind: 'savings' })} className="btn btn-ghost">{tx('＋ Add bank account')}</button>
         </div>
       )}
-
       {/* MoMo list */}
       <div className="row" style={{ justifyContent:'space-between', marginBottom: 10 }}>
-        <div className="font-serif" style={{ fontSize: 20 }}>Mobile money</div>
+        <div className="font-serif" style={{ fontSize: 20 }}>{tx('Mobile money')}</div>
         <span className="muted" style={{ fontSize: 11 }}>{momos.length} wallet{momos.length === 1 ? '' : 's'}</span>
       </div>
       {momos.length > 0 ? (
@@ -321,11 +314,10 @@ export default function AccountsView({ state, dispatch }) {
         </Stagger>
       ) : (
         <div className="card" style={{ padding: 28, textAlign:'center' }}>
-          <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>No mobile money wallets yet.</div>
-          <button onClick={() => setEditing({ kind: 'momo-cash' })} className="btn btn-ghost">＋ Add MoMo wallet</button>
+          <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>{tx('No mobile money wallets yet.')}</div>
+          <button onClick={() => setEditing({ kind: 'momo-cash' })} className="btn btn-ghost">{tx('＋ Add MoMo wallet')}</button>
         </div>
       )}
-
       <div
         style={{
           fontSize: 11.5, marginTop: 28, padding: '14px 16px',
@@ -334,8 +326,10 @@ export default function AccountsView({ state, dispatch }) {
         }}
       >
         <span className="muted">
-          This is the <strong>Cash & MoMo</strong> lens on your portfolio — same records that appear under
-          <strong> Cash &amp; savings</strong> on the Assets page. Balances flow into your net worth on the Dashboard automatically.
+          {tx('This is the')} <strong>{tx('Cash & MoMo')}</strong> {tx('lens on your portfolio — same records that appear under')}
+          <strong> {tx('Cash & savings')}</strong> {tx(
+            'on the Assets page. Balances flow into your net worth on the Dashboard automatically.'
+          )}
         </span>
         <button
           type="button"
@@ -343,12 +337,10 @@ export default function AccountsView({ state, dispatch }) {
           className="btn btn-ghost"
           style={{ padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap' }}
         >
-          Open in Assets →
+          {tx('Open in Assets →')}
         </button>
       </div>
-
       {editing && <AccountEditor account={editing} onSave={handleSave} onCancel={() => setEditing(null)} />}
-
       <ConfirmDestructive
         open={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
@@ -356,17 +348,19 @@ export default function AccountsView({ state, dispatch }) {
           dispatch({ type: 'deleteAsset', id: pendingDelete.id });
           setPendingDelete(null);
         }}
-        title="Delete this account?"
+        title={tx('Delete this account?')}
         description={pendingDelete && (
           <span>
             <strong style={{ color: 'var(--ink)' }}>{pendingDelete.bank || pendingDelete.wallet || pendingDelete.name}</strong>
             {pendingDelete.currentValue || pendingDelete.purchasePrice ? <> · <span className="num">{fmt(pendingDelete.currentValue || pendingDelete.purchasePrice, pendingDelete.currency || 'RWF')}</span></> : null}
             <br />
-            This removes the account from your portfolio and your net worth permanently. You can't undo this.
+            {tx(
+              'This removes the account from your portfolio and your net worth permanently. You can\'t undo this.'
+            )}
           </span>
         )}
-        confirmLabel="Delete account"
+        confirmLabel={tx('Delete account')}
       />
-    </div>
+    </div>)
   );
 }

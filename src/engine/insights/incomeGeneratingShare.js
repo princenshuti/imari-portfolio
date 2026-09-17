@@ -5,6 +5,8 @@ import { REFERENCE } from './refs.js';
 import { isIncomeGenerating, makeInsight, inputsAsOf } from './_shared.js';
 import { valueRWF } from '../../data.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export default function incomeGeneratingShare(state, { now = new Date(), refs = REFERENCE } = {}) {
   const assets = state.assets || [];
   const total = assets.reduce((s, a) => s + valueRWF(a, now), 0);
@@ -36,13 +38,18 @@ export default function incomeGeneratingShare(state, { now = new Date(), refs = 
     id: 'income-generating-share',
     type: 'comparison',
     category: 'allocation',
-    headline: `Only ${shareStr}% of wealth earns income`,
-    body: `${shareStr}% of your assets generate income; the rest is idle or purely appreciating.`,
+    headline: tx('Only {0}% of wealth earns income', [shareStr]),
+    body: tx(
+      '{0}% of your assets generate income; the rest is idle or purely appreciating.',
+      [shareStr]
+    ),
     costOfAbsence: {
       severity,
       amount: idleValue,
-      costStatement: `About that much of your wealth isn't producing cash flow — idle capital is opportunity cost you can't see on a balance sheet.`,
-      action: { label: 'Review assets', to: 'assets' },
+      costStatement: tx(
+        'About that much of your wealth isn\'t producing cash flow — idle capital is opportunity cost you can\'t see on a balance sheet.'
+      ),
+      action: { label: tx('Review assets'), to: 'assets' },
     },
     sourceRefs: topIdle.length ? topIdle : idleIds.slice(0, 1),
     dataAsOf: inputsAsOf(state, topIdle, now),

@@ -1,3 +1,4 @@
+import { tx } from '../i18n/tx.js';
 /**
  * MaxventuresLogo — SVG recreation of the Maxventures brand mark.
  *
@@ -19,12 +20,12 @@ export function MaxventuresIcon({ size = 36, id = 'mv' }) {
   const mid = `${id}-mask`;
 
   return (
-    <svg
+    (<svg
       viewBox="0 0 64 64"
       width={size}
       height={size}
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Maxventures"
+      aria-label={tx('Maxventures')}
       style={{ display: 'block', flexShrink: 0 }}
     >
       <defs>
@@ -36,7 +37,6 @@ export function MaxventuresIcon({ size = 36, id = 'mv' }) {
           <stop offset="100%" stopColor="#E85010" />
         </linearGradient>
       </defs>
-
       {/* ── Dispersing pixel squares (upper-left quadrant) ──────── */}
       {/* Larger squares — near the loop */}
       <rect x="3"  y="9"  width="6" height="6" rx="0.8" fill="#1848D8" opacity="0.95" />
@@ -44,20 +44,17 @@ export function MaxventuresIcon({ size = 36, id = 'mv' }) {
       <rect x="3"  y="18" width="6" height="6" rx="0.8" fill="#1848D8" opacity="0.90" />
       <rect x="10" y="13" width="5" height="5" rx="0.7" fill="#1848D8" opacity="0.85" />
       <rect x="18" y="7"  width="5" height="5" rx="0.7" fill="#E87820" opacity="0.80" />
-
       {/* Medium squares */}
       <rect x="4"  y="27" width="4" height="4" rx="0.6" fill="#1848D8" opacity="0.78" />
       <rect x="11" y="22" width="4" height="4" rx="0.6" fill="#1848D8" opacity="0.72" />
       <rect x="19" y="15" width="4" height="4" rx="0.6" fill="#E87820" opacity="0.65" />
       <rect x="18" y="23" width="3" height="3" rx="0.5" fill="#1848D8" opacity="0.58" />
-
       {/* Small squares — dissolving effect */}
       <rect x="6"  y="33" width="3" height="3" rx="0.4" fill="#1848D8" opacity="0.50" />
       <rect x="13" y="29" width="3" height="3" rx="0.4" fill="#1848D8" opacity="0.42" />
       <rect x="22" y="30" width="2" height="2" rx="0.3" fill="#E87820" opacity="0.35" />
       <rect x="8"  y="39" width="2" height="2" rx="0.3" fill="#1848D8" opacity="0.28" />
       <rect x="16" y="35" width="2" height="2" rx="0.3" fill="#1848D8" opacity="0.22" />
-
       {/* ── Infinity symbol — stroked centerline path ─────────────── */}
       {/*
         Path traces the centerline of the infinity shape.
@@ -81,7 +78,7 @@ export function MaxventuresIcon({ size = 36, id = 'mv' }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
+    </svg>)
   );
 }
 
@@ -92,12 +89,12 @@ export function MaxventuresIcon({ size = 36, id = 'mv' }) {
 export function MaxventuresBadge({ height = 44 }) {
   const scale = height / 44;
   return (
-    <svg
+    (<svg
       viewBox="0 0 320 44"
       height={height}
       width={320 * scale}
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Maxventures"
+      aria-label={tx('Maxventures')}
       style={{ display: 'block' }}
     >
       <defs>
@@ -108,7 +105,6 @@ export function MaxventuresBadge({ height = 44 }) {
           <stop offset="100%" stopColor="#E85010" />
         </linearGradient>
       </defs>
-
       {/* ── Compact infinity icon (left side) ─────────────────── */}
       {/* Pixel squares scaled to 44-high context */}
       <rect x="1"  y="5"  width="4" height="4" rx="0.5" fill="#1848D8" opacity="0.90" />
@@ -120,7 +116,6 @@ export function MaxventuresBadge({ height = 44 }) {
       <rect x="8"  y="14" width="2" height="2" rx="0.3" fill="#1848D8" opacity="0.50" />
       <rect x="12" y="10" width="2" height="2" rx="0.3" fill="#1848D8" opacity="0.38" />
       <rect x="4"  y="22" width="2" height="2" rx="0.3" fill="#1848D8" opacity="0.28" />
-
       {/* Infinity path */}
       <path
         d="
@@ -136,7 +131,6 @@ export function MaxventuresBadge({ height = 44 }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-
       {/* ── "MAXVENTURES" wordmark ────────────────────────────── */}
       <text
         x="52" y="30"
@@ -146,6 +140,6 @@ export function MaxventuresBadge({ height = 44 }) {
         letterSpacing="1.5"
         fill="url(#mvb-grad)"
       >MAXVENTURES</text>
-    </svg>
+    </svg>)
   );
 }

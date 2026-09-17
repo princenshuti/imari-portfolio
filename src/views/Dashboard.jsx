@@ -25,6 +25,8 @@ import { severityColor } from '../severity.js';
 import CostOfAbsence from '../components/CostOfAbsence.jsx';
 import MetricWidget from '../components/MetricWidget.jsx';
 
+import { tx, txLocale } from '../i18n/tx.js';
+
 // ─── Asset classification ──────────────────────────────────────────────────
 // Liquid = cash or near-cash (withdrawable same-day)
 const LIQUID_KINDS = new Set(['savings', 'momo-cash']);
@@ -50,10 +52,10 @@ function assetMonthlyIncomeRWF(a) {
 // ─── Helpers ──────────────────────────────────────────────────────────────
 function timeAgo(ts) {
   const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  if (s < 60) return tx('just now');
+  if (s < 3600) return tx('{0}m ago', [Math.floor(s / 60)]);
+  if (s < 86400) return tx('{0}h ago', [Math.floor(s / 3600)]);
+  return tx('{0}d ago', [Math.floor(s / 86400)]);
 }
 function renderMD(s) {
   const esc = s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -72,22 +74,22 @@ function IdleCashCard({ insight, displayCurrency, now }) {
   const days = insight.dataAsOf ? Math.max(0, Math.floor((now - new Date(insight.dataAsOf)) / 86400000)) : 0;
   const cumulative = (monthly / 30.44) * days;
   return (
-    <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
+    (<div className="card dash-section-card" style={{ padding: '22px 24px' }}>
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
         <div>
-          <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>Idle cash is costing you</h2>
-          <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{insight.body}</div>
+          <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>{tx('Idle cash is costing you')}</h2>
+          <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{tx(insight.body)}</div>
         </div>
-        <span className="muted" style={{ fontSize: 10, padding: '3px 8px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', alignSelf: 'flex-start' }}>Reference yield</span>
+        <span className="muted" style={{ fontSize: 10, padding: '3px 8px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', alignSelf: 'flex-start' }}>{tx('Reference yield')}</span>
       </div>
       <div className="row" style={{ gap: 22, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div>
-          <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Forgone / month</div>
+          <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Forgone / month')}</div>
           <div className="num" style={{ fontSize: 24, fontWeight: 700, color: 'var(--gold-ink, var(--gold))' }}>{fmtBase(monthly, displayCurrency, { compact: true })}</div>
         </div>
         {days > 0 && (
           <div>
-            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Forgone since {new Date(insight.dataAsOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+            <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Forgone since')} {new Date(insight.dataAsOf).toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' })}</div>
             <div className="num" style={{ fontSize: 24, fontWeight: 700, color: 'var(--down)' }}>{fmtBase(cumulative, displayCurrency, { compact: true })}</div>
           </div>
         )}
@@ -97,19 +99,21 @@ function IdleCashCard({ insight, displayCurrency, now }) {
           padding: '8px 16px', borderRadius: 'var(--r-pill)', border: 0,
           background: 'var(--brand)', color: 'var(--brand-ink)', cursor: 'pointer',
           fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-        }}>{showBroker ? 'Hide' : 'Request a broker introduction →'}</button>
+        }}>{showBroker ? tx('Hide') : tx('Request a broker introduction →')}</button>
         {showBroker && (
           <div role="region" style={{ marginTop: 12, padding: '14px 16px', borderRadius: 'var(--r-md)', background: 'var(--bg-2)', border: '0.5px solid var(--line)' }}>
             <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-              Imari can introduce you to a <strong>CMA-licensed intermediary</strong> who runs BNR Treasury-bill / bond auctions. This is an <strong>introduction only</strong> — Imari does not give investment advice, execute trades, or move your money. You deal with the broker directly and decide everything yourself.
+              {tx('Imari can introduce you to a')} <strong>{tx('CMA-licensed intermediary')}</strong> {tx('who runs BNR Treasury-bill / bond auctions. This is an')} <strong>{tx('introduction only')}</strong> {tx(
+                '— Imari does not give investment advice, execute trades, or move your money. You deal with the broker directly and decide everything yourself.'
+              )}
             </div>
             <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>
-              To proceed, contact your bank's treasury desk or a CMA-licensed broker. <em>Not professional financial advice.</em>
+              {tx('To proceed, contact your bank\'s treasury desk or a CMA-licensed broker.')} <em>{tx('Not professional financial advice.')}</em>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </div>)
   );
 }
 
@@ -126,7 +130,7 @@ function RatioBar({ label, value, color, hint, thresholds }) {
   const capped = Math.min(Math.max(value, 0), 100);
   const c = color || (capped > 55 ? 'var(--up)' : capped > 25 ? 'var(--gold)' : 'var(--down)');
   return (
-    <div>
+    (<div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
         <span className="muted" style={{ fontSize: 11.5 }}>{label}</span>
         <span className="num" style={{ fontSize: 13, fontWeight: 700, color: c }}>{value.toFixed(1)}%</span>
@@ -136,8 +140,8 @@ function RatioBar({ label, value, color, hint, thresholds }) {
         {thresholds && thresholds.map(t => (
           <span
             key={t.at}
-            title={`${t.label} threshold: ${t.at}%`}
-            aria-label={`${t.label} threshold at ${t.at}%`}
+            title={tx('{0} threshold: {1}%', [t.label, t.at])}
+            aria-label={tx('{0} threshold at {1}%', [t.label, t.at])}
             style={{
               position: 'absolute', top: -2, left: `${t.at}%`,
               width: 2, height: 8, background: 'var(--ink-3)', opacity: 0.5,
@@ -149,12 +153,12 @@ function RatioBar({ label, value, color, hint, thresholds }) {
       {thresholds && (
         <div className="muted" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 3 }}>
           {thresholds.map(t => (
-            <span key={t.at} style={{ flex: `0 0 ${t.at}%`, textAlign: 'right', paddingRight: 2 }}>{t.label} {t.at}%</span>
+            <span key={t.at} style={{ flex: `0 0 ${t.at}%`, textAlign: 'right', paddingRight: 2 }}>{tx(t.label)} {t.at}%</span>
           ))}
         </div>
       )}
       {hint && <div className="muted" style={{ fontSize: 10, marginTop: 3, lineHeight: 1.4 }}>{hint}</div>}
-    </div>
+    </div>)
   );
 }
 
@@ -163,26 +167,26 @@ function IncomeTrendBars({ months, displayCurrency }) {
   const maxVal = Math.max(...months.map(m => Math.max(m.inc, m.exp)), 1);
   const hasData = months.some(m => m.inc > 0 || m.exp > 0);
   if (!hasData) return (
-    <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-4)', fontSize: 12 }}>
-      No cashflow data — add entries to see trends
-    </div>
+    (<div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-4)', fontSize: 12 }}>
+      {tx('No cashflow data — add entries to see trends')}
+    </div>)
   );
   return (
-    <div>
+    (<div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 72 }}>
         {months.map((m, i) => (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
             <div style={{ width: '100%', display: 'flex', gap: 2, alignItems: 'flex-end', height: 56 }}>
-              <motion.div title={`Income: ${fmtBase(m.inc, displayCurrency, { compact: true })}`}
+              <motion.div title={tx('Income: {0}', [fmtBase(m.inc, displayCurrency, { compact: true })])}
                 initial={{ scaleY: 0 }} whileInView={{ scaleY: 1 }} viewport={{ once: true, amount: 0.6 }}
                 transition={{ duration: 0.7, delay: i * 0.06, ease: EASE_OUT }}
                 style={{ flex: 1, background: 'var(--up)', borderRadius: '3px 3px 0 0', height: `${(m.inc / maxVal) * 100}%`, minHeight: m.inc > 0 ? 3 : 0, opacity: 0.75, transformOrigin: 'bottom center' }} />
-              <motion.div title={`Expenses: ${fmtBase(m.exp, displayCurrency, { compact: true })}`}
+              <motion.div title={tx('Expenses: {0}', [fmtBase(m.exp, displayCurrency, { compact: true })])}
                 initial={{ scaleY: 0 }} whileInView={{ scaleY: 1 }} viewport={{ once: true, amount: 0.6 }}
                 transition={{ duration: 0.7, delay: 0.05 + i * 0.06, ease: EASE_OUT }}
                 style={{ flex: 1, background: 'var(--down)', borderRadius: '3px 3px 0 0', height: `${(m.exp / maxVal) * 100}%`, minHeight: m.exp > 0 ? 3 : 0, opacity: 0.75, transformOrigin: 'bottom center' }} />
             </div>
-            <div style={{ fontSize: 10, color: 'var(--ink-4)', letterSpacing: '0.02em' }}>{m.label}</div>
+            <div style={{ fontSize: 10, color: 'var(--ink-4)', letterSpacing: '0.02em' }}>{tx(m.label)}</div>
           </div>
         ))}
       </div>
@@ -194,7 +198,7 @@ function IncomeTrendBars({ months, displayCurrency }) {
           </div>
         ))}
       </div>
-    </div>
+    </div>)
   );
 }
 
@@ -213,8 +217,8 @@ function CategoryBars({ groups, totalValue }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0, flex: 1 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{g.group}</span>
-                <span className="muted" style={{ fontSize: 10 }}>{g.count} asset{g.count !== 1 ? 's' : ''} · {alloc}%</span>
+                <span style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{tx(g.group)}</span>
+                <span className="muted" style={{ fontSize: 10 }}>{tx('{0} asset{1} · {2}%', [g.count, g.count !== 1 ? 's' : '', alloc])}</span>
               </div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
                 <span className="num" style={{ fontSize: 13, fontWeight: 700, color: isUp ? 'var(--up)' : 'var(--down)', minWidth: 72, textAlign: 'right' }}>
@@ -238,11 +242,11 @@ function MoverCard({ asset, delay, onClick }) {
   const isUp = asset._pct >= 0;
   const isInteractive = !!onClick;
   return (
-    <motion.button
+    (<motion.button
       type="button"
       onClick={onClick}
       disabled={!isInteractive}
-      aria-label={isInteractive ? `Open ${asset.name} in Assets` : undefined}
+      aria-label={isInteractive ? tx('Open {0} in Assets', [asset.name]) : undefined}
       className={isInteractive ? 'dash-mover-card btn-unstyled' : 'btn-unstyled'}
       initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0, transition: { ...SPRING, delay: delay / 1000 } }}
@@ -268,9 +272,9 @@ function MoverCard({ asset, delay, onClick }) {
         {isUp ? '+' : ''}{asset._pct.toFixed(1)}%
       </div>
       <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>
-        {isUp ? '+' : ''}{fmt(asset._gain, asset.currency, { compact: true })} · {cls.label}
+        {isUp ? '+' : ''}{fmt(asset._gain, asset.currency, { compact: true })} · {tx(cls.label)}
       </div>
-    </motion.button>
+    </motion.button>)
   );
 }
 
@@ -278,7 +282,7 @@ function MoverCard({ asset, delay, onClick }) {
 function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
   if (emptyHide && items.length === 0) return null;
   return (
-    <div className="card" style={{ padding: '18px 20px' }}>
+    (<div className="card" style={{ padding: '18px 20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: items.length > 0 ? 14 : 0 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
@@ -286,13 +290,13 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
         </div>
         {onNav && (
           <button onClick={onNav} style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit', padding: 0 }}>
-            {navLabel || 'View all →'}
+            {navLabel || tx('View all →')}
           </button>
         )}
       </div>
       {items.length === 0 ? (
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-          <span style={{ color: 'var(--up)', marginRight: 6 }}>✓</span>No issues detected
+          <span style={{ color: 'var(--up)', marginRight: 6 }}>✓</span>{tx('No issues detected')}
         </div>
       ) : (
         <motion.div className="col" style={{ gap: 9 }}
@@ -307,7 +311,7 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
                 <AssetIcon kind={item.kind} size={20} color={accentColor} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
-                  {item.sub && <div className="muted" style={{ fontSize: 10, marginTop: 1 }}>{item.sub}</div>}
+                  {item.sub && <div className="muted" style={{ fontSize: 10, marginTop: 1 }}>{tx(item.sub)}</div>}
                 </div>
               </div>
               <span style={{ fontSize: 11, fontWeight: 600, color: accentColor, flexShrink: 0, marginLeft: 8 }}>{item.badge}</span>
@@ -315,7 +319,7 @@ function AlertCard({ title, accentColor, items, emptyHide, onNav, navLabel }) {
           ))}
         </motion.div>
       )}
-    </div>
+    </div>)
   );
 }
 
@@ -335,13 +339,13 @@ function ModelPulse({ stats, trueNetWorth, monthlyNet, savingsRate, signalCount,
   const fmtC = (v) => fmtBase(v, displayCurrency, { compact: true });
 
   const outputs = [
-    { label: 'Net flow / month', value: monthlyNet, signed: true, color: monthlyNet >= 0 ? 'var(--up)' : 'var(--down)' },
-    oneYear && { label: `Modeled +1Y · ${DEFAULT_ASSUMPTIONS.expectedAnnualGrowthPct}%/yr`, value: oneYear.expected, sub: `${fmtC(oneYear.low)} – ${fmtC(oneYear.high)} band`, color: 'var(--brand)' },
-    savingsRate != null && { label: 'Savings rate', text: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up)' : 'var(--gold)' },
+    { label: tx('Net flow / month'), value: monthlyNet, signed: true, color: monthlyNet >= 0 ? 'var(--up)' : 'var(--down)' },
+    oneYear && { label: tx('Modeled +1Y · {0}%/yr', [DEFAULT_ASSUMPTIONS.expectedAnnualGrowthPct]), value: oneYear.expected, sub: tx('{0} – {1} band', [fmtC(oneYear.low), fmtC(oneYear.high)]), color: 'var(--brand)' },
+    savingsRate != null && { label: tx('Savings rate'), text: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up)' : 'var(--gold)' },
   ].filter(Boolean);
 
   return (
-    <div className="card" style={{ padding: '18px 22px' }}>
+    (<div className="card" style={{ padding: '18px 22px' }}>
       {/* Status row — live dot + the provenance the model reasons with */}
       <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         <div className="row" style={{ gap: 8, alignItems: 'center' }}>
@@ -351,14 +355,13 @@ function ModelPulse({ stats, trueNetWorth, monthlyNet, savingsRate, signalCount,
             transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
             style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--up)', boxShadow: '0 0 0 3px var(--up-soft)', display: 'inline-block' }}
           />
-          <span className="num" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Portfolio model</span>
+          <span className="num" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{tx('Portfolio model')}</span>
           <span className="pill pill-soft" style={{ fontSize: 10 }}>{signalCount} signal{signalCount === 1 ? '' : 's'}</span>
         </div>
         <span className="muted num" style={{ fontSize: 10.5 }}>
-          refs · T-bill {REFERENCE.tBillYieldPct}% · CPI {REFERENCE.cpiYoYPct}% · {snapshotCount} snapshots
-        </span>
+          {tx('refs · T-bill')} {REFERENCE.tBillYieldPct}{tx('% · CPI')} {REFERENCE.cpiYoYPct}% · {snapshotCount}snapshots
+                  </span>
       </div>
-
       <div className="dash-pulse-grid">
         {/* Allocation flow — each group's share springs to its current size */}
         <div className="col" style={{ gap: 9, minWidth: 0 }}>
@@ -367,7 +370,7 @@ function ModelPulse({ stats, trueNetWorth, monthlyNet, savingsRate, signalCount,
             return (
               <div key={g.group} className="row" style={{ gap: 10, alignItems: 'center', minWidth: 0 }}>
                 <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, width: 110, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.group}</span>
+                <span style={{ fontSize: 12, width: 110, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx(g.group)}</span>
                 <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--bg-2)', overflow: 'hidden' }}>
                   <motion.div
                     initial={{ scaleX: 0 }}
@@ -389,20 +392,21 @@ function ModelPulse({ stats, trueNetWorth, monthlyNet, savingsRate, signalCount,
         <div className="col" style={{ gap: 10 }}>
           {outputs.map(o => (
             <div key={o.label} style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--bg-2)' }}>
-              <div className="muted" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{o.label}</div>
+              <div className="muted" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{tx(o.label)}</div>
               <div className="num" style={{ fontSize: 17, fontWeight: 700, color: o.color, marginTop: 2 }}>
                 {o.text ?? <>{o.signed && o.value >= 0 ? '+' : ''}<CountUp value={o.value} duration={0.8} format={fmtC} /></>}
               </div>
-              {o.sub && <div className="muted num" style={{ fontSize: 9.5, marginTop: 2 }}>{o.sub}</div>}
+              {o.sub && <div className="muted num" style={{ fontSize: 9.5, marginTop: 2 }}>{tx(o.sub)}</div>}
             </div>
           ))}
         </div>
       </div>
-
       <div className="muted" style={{ fontSize: 10, marginTop: 12 }}>
-        Computed from your entries against engine reference rates — modeled, not a guarantee.
+        {tx(
+          'Computed from your entries against engine reference rates — modeled, not a guarantee.'
+        )}
       </div>
-    </div>
+    </div>)
   );
 }
 
@@ -522,7 +526,7 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onToggl
   const collapsed = isHidden || !hasData || editMode;
 
   return (
-    <Reorder.Item
+    (<Reorder.Item
       as="div"
       value={id}
       dragListener={false}
@@ -558,7 +562,7 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onToggl
             ))}
           </svg>
           <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-2)', flex: 1 }}>{label}</span>
-          {!hasData && <span style={{ fontSize: 10, color: 'var(--ink-4)', fontStyle: 'italic' }}>no data yet</span>}
+          {!hasData && <span style={{ fontSize: 10, color: 'var(--ink-4)', fontStyle: 'italic' }}>{tx('no data yet')}</span>}
           {canHide && hasData && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleHide(id); }}
@@ -572,14 +576,13 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onToggl
                 borderColor: isHidden ? 'var(--brand)'     : 'transparent',
                 transition: 'background 0.12s ease, color 0.12s ease, border-color 0.12s ease',
               }}
-            >{isHidden ? '◎ Shown' : '◯ Hide'}</button>
+            >{isHidden ? tx('◎ Shown') : tx('◯ Hide')}</button>
           )}
           {!canHide && (
-            <span style={{ fontSize: 10, color: 'var(--ink-4)', padding: '3px 10px' }}>always visible</span>
+            <span style={{ fontSize: 10, color: 'var(--ink-4)', padding: '3px 10px' }}>{tx('always visible')}</span>
           )}
         </div>
       )}
-
       {/* Section content — animated collapse (true height:auto, no max-height cap) */}
       <motion.div
         initial={false}
@@ -589,7 +592,7 @@ function SectionShell({ id, label, canHide, isHidden, hasData, editMode, onToggl
       >
         {children}
       </motion.div>
-    </Reorder.Item>
+    </Reorder.Item>)
   );
 }
 
@@ -710,7 +713,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         else ma = toBase(cf.amount || 0, cf.currency || 'RWF');
         if (cf.type === 'income') inc += ma; else exp += ma;
       });
-      return { label: d.toLocaleDateString('en-GB', { month: 'short' }), inc, exp, net: inc - exp };
+      return { label: d.toLocaleDateString(txLocale(), { month: 'short' }), inc, exp, net: inc - exp };
     });
   }, [cashflows]);
 
@@ -741,7 +744,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       const mo = assetMonthlyIncomeRWF(a);
       if (mo > 0) {
         assetIncomeMonthly += mo;
-        const kindLabel = CLASSES.find(c => c.kind === a.kind)?.group || 'Other';
+        const kindLabel = CLASSES.find(c => c.kind === a.kind)?.group || 'Other';  // translated at render
         assetIncomeByKind[kindLabel] = (assetIncomeByKind[kindLabel] || 0) + mo;
         // Passive = not salary/freelance
         passiveIncomeMonthly += mo;
@@ -835,7 +838,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       .map(a => ({
         name: a.name, kind: a.kind,
         badge: `${a._concPct.toFixed(0)}%`,
-        sub: 'of portfolio — consider diversifying',
+        sub: tx('of portfolio — consider diversifying'),
       }));
   }, [moversAll, stats.totalValue]);
 
@@ -844,13 +847,13 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     moversAll.forEach(a => {
       if (a.kind === 'receivable' && a.dueDate) {
         const d = new Date(a.dueDate);
-        if (d < today) alerts.push({ name: a.name, kind: a.kind, badge: `${Math.ceil((today - d) / 86400000)}d overdue`, sub: 'Receivable past due date' });
+        if (d < today) alerts.push({ name: a.name, kind: a.kind, badge: tx('{0}d overdue', [Math.ceil((today - d) / 86400000)]), sub: tx('Receivable past due date') });
       }
       if (a.kind === 'bond' && a.maturity) {
         const d = new Date(a.maturity); const days = Math.ceil((d - today) / 86400000);
-        if (days > 0 && days < 90) alerts.push({ name: a.name, kind: a.kind, badge: `${days}d left`, sub: 'Bond approaching maturity' });
+        if (days > 0 && days < 90) alerts.push({ name: a.name, kind: a.kind, badge: tx('{0}d left', [days]), sub: tx('Bond approaching maturity') });
       }
-      if (a._pct < -20) alerts.push({ name: a.name, kind: a.kind, badge: `${a._pct.toFixed(0)}%`, sub: 'Significant unrealised loss' });
+      if (a._pct < -20) alerts.push({ name: a.name, kind: a.kind, badge: `${a._pct.toFixed(0)}%`, sub: tx('Significant unrealised loss') });
     });
     return alerts.slice(0, 5);
   }, [moversAll]);
@@ -860,7 +863,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       .filter(a => MAINT_KINDS.has(a.kind))
       .map(a => {
         const cls = CLASSES.find(c => c.kind === a.kind) || CLASSES[CLASSES.length - 1];
-        return { name: a.name, kind: a.kind, badge: cls.label, sub: 'Ongoing upkeep required' };
+        return { name: a.name, kind: a.kind, badge: cls.label, sub: tx('Ongoing upkeep required') };
       })
       .slice(0, 5),
   [assets]);
@@ -953,10 +956,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
   }, [assets, expenseByCategory, yearAgo]);
 
   const benchmarks = [
-    { label: 'USD/RWF appreciation',   ret: 1.2 },
-    { label: 'Rwanda CPI (inflation)', ret: 4.8 },
-    { label: 'RSE All-Share Index',    ret: 6.2 },
-    { label: 'BNR T-bond (13.5%/yr)', ret: chartRange === '1Y' ? 13.5 : chartRange === '6M' ? 6.75 : chartRange === '3M' ? 3.375 : 1.125 },
+    { label: tx('USD/RWF appreciation'),   ret: 1.2 },
+    { label: tx('Rwanda CPI (inflation)'), ret: 4.8 },
+    { label: tx('RSE All-Share Index'),    ret: 6.2 },
+    { label: tx('BNR T-bond (13.5%/yr)'), ret: chartRange === '1Y' ? 13.5 : chartRange === '6M' ? 6.75 : chartRange === '3M' ? 3.375 : 1.125 },
   ];
 
   const activeGoals = useMemo(() => goals.filter(g => !g.achieved).slice(0, 3), [goals]);
@@ -1022,51 +1025,65 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       const forgoneYr = investable * REFERENCE.tBillYieldPct / 100;
 
       const widgets = [
-        <MetricWidget key="cash" delay={0} title="Cash in Hand"
+        <MetricWidget key="cash" delay={0} title={tx('Cash in Hand')}
           value={fmtBase(liquid, profile.displayCurrency, { compact: true })}
           subtext={months != null && months <= 120
-            ? `${months.toFixed(1)} months of expenses`
+            ? tx('{0} months of expenses', [months.toFixed(1)])
             : months != null
-              ? '10+ years at recorded spending — add expenses for a real figure'
-              : 'cash + mobile money + bank'}
+              ? tx('10+ years at recorded spending — add expenses for a real figure')
+              : tx('cash + mobile money + bank')}
           asOf={wAsOf} now={today} deepLink="accounts" onNav={nav}
           severity={months != null && months < 3 ? 'warning' : 'good'}
-          costHook={months != null && months < 3 ? 'Below the 3-month safety floor — thin cover if income pauses.' : undefined} />,
+          costHook={months != null && months < 3 ? tx('Below the 3-month safety floor — thin cover if income pauses.') : undefined} />,
       ];
       if (taxTotal > 0) widgets.push(
-        <MetricWidget key="tax" delay={40} title="Tax Estimate"
+        <MetricWidget key="tax" delay={40} title={tx('Tax Estimate')}
           value={fmtBase(taxTotal, profile.displayCurrency, { compact: true })}
-          subtext={taxDays != null ? `next deadline in ${taxDays} days` : 'RRA obligations'}
+          subtext={taxDays != null ? tx('next deadline in {0} days', [taxDays]) : tx('RRA obligations')}
           deepLink="tax" onNav={nav}
           severity={taxDays != null && taxDays <= 30 ? 'warning' : 'info'}
-          costHook="Estimate, not a filing — late penalties accrue if a deadline is missed." />);
+          costHook={tx('Estimate, not a filing — late penalties accrue if a deadline is missed.')} />);
       if (liabilities.length > 0) widgets.push(
-        <MetricWidget key="debt" delay={80} title="Debt"
+        <MetricWidget key="debt" delay={80} title={tx('Debt')}
           value={fmtBase(totalDebt, profile.displayCurrency, { compact: true })}
           subtext={`${debtToAsset.toFixed(1)}% debt-to-asset`}
           deepLink="liabilities" onNav={nav}
           severity={debtToAsset > 50 ? 'warning' : 'info'}
-          costHook={financialStats.monthlyObligations > 0 ? `${fmtBase(financialStats.monthlyObligations, profile.displayCurrency, { compact: true })}/mo in repayments.` : undefined} />);
+          costHook={financialStats.monthlyObligations > 0 ? tx('{0}/mo in repayments.', [
+            fmtBase(financialStats.monthlyObligations, profile.displayCurrency, { compact: true })
+          ]) : undefined} />);
       // F6 — budget envelopes: only renders once the user has set limits.
       const bs = budgetStatus(cashflows, state.budgets || {}, today);
       if (bs.totalBudget > 0) widgets.push(
-        <MetricWidget key="budgets" delay={160} title="Budgets"
+        <MetricWidget key="budgets" delay={160} title={tx('Budgets')}
           value={`${fmtBase(bs.totalSpent, profile.displayCurrency, { compact: true })} / ${fmtBase(bs.totalBudget, profile.displayCurrency, { compact: true })}`}
-          subtext={`${Math.round(bs.monthPct)}% through the month · ${bs.rows.length} envelope${bs.rows.length > 1 ? 's' : ''}`}
+          subtext={tx(
+            '{0}% through the month · {1} envelope{2}',
+            [Math.round(bs.monthPct), bs.rows.length, bs.rows.length > 1 ? 's' : '']
+          )}
           deepLink="cashflow" onNav={nav}
           severity={bs.overCount > 0 ? 'critical' : bs.rows.some(r => r.pace === 'hot') ? 'warning' : 'good'}
           costHook={bs.overCount > 0
-            ? `${bs.overCount} envelope${bs.overCount > 1 ? 's' : ''} over plan — ${fmtBase(bs.totalOver, profile.displayCurrency, { compact: true })} past budget.`
+            ? tx('{0} envelope{1} over plan — {2} past budget.', [
+            bs.overCount,
+            bs.overCount > 1 ? 's' : '',
+            fmtBase(bs.totalOver, profile.displayCurrency, { compact: true })
+          ])
             : bs.rows.some(r => r.pace === 'hot')
-              ? `${bs.rows.filter(r => r.pace === 'hot').map(r => r.label).slice(0, 2).join(', ')} burning faster than the month.`
+              ? tx('{0} burning faster than the month.', [
+            bs.rows.filter(r => r.pace === 'hot').map(r => r.label).slice(0, 2).join(', ')
+          ])
               : undefined} />);
       widgets.push(
-        <MetricWidget key="investable" delay={120} title="Investable"
+        <MetricWidget key="investable" delay={120} title={tx('Investable')}
           value={fmtBase(investable, profile.displayCurrency, { compact: true })}
-          subtext="liquid minus a 3-month buffer"
+          subtext={tx('liquid minus a 3-month buffer')}
           deepLink="trends" onNav={nav}
           severity={investable > REFERENCE.idleCashFloorRWF ? 'warning' : 'good'}
-          costHook={investable > REFERENCE.idleCashFloorRWF ? `Idle — at ~${REFERENCE.tBillYieldPct}% T-bill that's ~${fmtBase(forgoneYr, profile.displayCurrency, { compact: true })}/yr forgone.` : undefined} />);
+          costHook={investable > REFERENCE.idleCashFloorRWF ? tx('Idle — at ~{0}% T-bill that\'s ~{1}/yr forgone.', [
+            REFERENCE.tBillYieldPct,
+            fmtBase(forgoneYr, profile.displayCurrency, { compact: true })
+          ]) : undefined} />);
       // One calm row of four — the rest of the story lives in its own views.
       return <div className="dash-kpi-grid">{widgets.slice(0, 4)}</div>;
     })(),
@@ -1080,13 +1097,13 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
         ? chartSnaps[chartSnaps.length - 1].netWorth - chartSnaps[0].netWorth : 0;
       const realYoY = yearAgo ? yearAgo.pct - REFERENCE.cpiYoYPct : null;
       const subStats = [
-        { label: 'Gross assets', value: fmtBase(stats.totalValue, profile.displayCurrency, { compact: true }), to: 'assets' },
-        liabilities.length > 0 && { label: 'Debt', value: `−${fmtBase(totalDebt, profile.displayCurrency, { compact: true })}`, color: 'var(--down-ink)', to: 'liabilities' },
-        { label: 'Unrealised P/L', value: `${stats.gain >= 0 ? '+' : ''}${fmtBase(stats.gain, profile.displayCurrency, { compact: true })}`, color: stats.gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)', to: 'assets' },
-        savingsRate !== null && { label: 'Savings rate', value: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up-ink)' : 'var(--gold-ink)', to: 'cashflow' },
+        { label: tx('Gross assets'), value: fmtBase(stats.totalValue, profile.displayCurrency, { compact: true }), to: 'assets' },
+        liabilities.length > 0 && { label: tx('Debt'), value: `−${fmtBase(totalDebt, profile.displayCurrency, { compact: true })}`, color: 'var(--down-ink)', to: 'liabilities' },
+        { label: tx('Unrealised P/L'), value: `${stats.gain >= 0 ? '+' : ''}${fmtBase(stats.gain, profile.displayCurrency, { compact: true })}`, color: stats.gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)', to: 'assets' },
+        savingsRate !== null && { label: tx('Savings rate'), value: `${savingsRate.toFixed(1)}%`, color: savingsRate >= 20 ? 'var(--up-ink)' : 'var(--gold-ink)', to: 'cashflow' },
       ].filter(Boolean);
       return (
-        <div className="card-hero dash-hero-card beam-border" style={{ position: 'relative' }}>
+        (<div className="card-hero dash-hero-card beam-border" style={{ position: 'relative' }}>
           <motion.div
             aria-hidden="true"
             animate={{ scale: [1, 1.18, 1], opacity: [0.6, 1, 0.6] }}
@@ -1099,7 +1116,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             }} />
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
             <div>
-              <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>Net worth</div>
+              <div className="muted" style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>{tx('Net worth')}</div>
               <div className="font-serif dash-hero-amount" style={{ lineHeight: 1, letterSpacing: '-0.025em' }}>
                 <CountUp value={trueNetWorth} duration={1.3}
                   format={v => fmtBase(v, profile.displayCurrency, { compact: true })} />
@@ -1110,28 +1127,30 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                     initial={{ opacity: 0, scale: 0.85, y: 4 }} animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ ...SPRING, delay: 0.25 }}>
                     {rangeDelta >= 0 ? '▲' : '▼'} {rangeDelta >= 0 ? '+' : ''}{fmtBase(rangeDelta, profile.displayCurrency, { compact: true })}
-                    {Number.isFinite(rangeReturn) && rangeReturn !== 0 ? ` (${rangeReturn >= 0 ? '+' : ''}${rangeReturn.toFixed(1)}%)` : ''} {chartRange === 'ALL' ? 'all time' : `past ${chartRange}`}
+                    {Number.isFinite(rangeReturn) && rangeReturn !== 0 ? ` (${rangeReturn >= 0 ? '+' : ''}${rangeReturn.toFixed(1)}%)` : ''} {chartRange === 'ALL' ? tx('all time') : tx('past {0}', [chartRange])}
                   </motion.span>
                 )}
                 {realYoY != null && (
-                  <span className="muted num" style={{ fontSize: 11.5 }} title={`Nominal ${yearAgo.pct >= 0 ? '+' : ''}${yearAgo.pct.toFixed(1)}% YoY minus ${REFERENCE.cpiYoYPct}% CPI (NISR reference)`}>
-                    real {realYoY >= 0 ? '+' : ''}{realYoY.toFixed(1)}%/yr after {REFERENCE.cpiYoYPct}% inflation
+                  <span className="muted num" style={{ fontSize: 11.5 }} title={tx(
+                    'Nominal {0}{1}% YoY minus {2}% CPI (NISR reference)',
+                    [yearAgo.pct >= 0 ? '+' : '', yearAgo.pct.toFixed(1), REFERENCE.cpiYoYPct]
+                  )}>real {realYoY >= 0 ? '+' : ''}{realYoY.toFixed(1)}{tx('%/yr after')} {REFERENCE.cpiYoYPct}{tx('% inflation')}
                   </span>
                 )}
               </div>
             </div>
             <div className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-              <div className="seg-tabs" role="group" aria-label="Chart range">
+              <div className="seg-tabs" role="group" aria-label={tx('Chart range')}>
                 {['1M', '3M', '6M', '1Y', 'ALL'].map(r => (
                   <button key={r} onClick={() => { setProjMode(false); setChartRange(r); }}
                     className={`seg-tab${!projMode && chartRange === r ? ' active' : ''}`}
-                    aria-pressed={!projMode && chartRange === r}>{r}</button>
+                    aria-pressed={!projMode && chartRange === r}>{tx(r)}</button>
                 ))}
               </div>
               {/* Fast Forward lives here now — the same chart, continued past today */}
               <button onClick={() => setProjMode(v => !v)} aria-pressed={projMode}
                 className={`seg-tab seg-tab-gold${projMode ? ' active' : ''}`}
-                style={{ flexShrink: 0 }}>Project ⤴</button>
+                style={{ flexShrink: 0 }}>{tx('Project ⤴')}</button>
             </div>
           </div>
           <div style={{ marginTop: 16 }}>
@@ -1144,12 +1163,12 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           {projMode && fan && (
             <div className="row" style={{ gap: 14, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <label className="row" style={{ gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--ink-2)' }}>
-                Saving
+                {tx('Saving')}
                 <input
                   type="range" min="0" max={Math.max(baseMonthlySaving * 3, 1_000_000)} step="50000"
                   value={effMonthly}
                   onChange={e => setProjMonthly(+e.target.value)}
-                  aria-label="Monthly saving for the projection"
+                  aria-label={tx('Monthly saving for the projection')}
                   style={{ width: 160, accentColor: 'var(--brand)' }}
                 />
                 <span className="num" style={{ fontWeight: 700, color: 'var(--ink)' }}>
@@ -1158,17 +1177,19 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               </label>
               {projMonthly != null && projMonthly !== baseMonthlySaving && (
                 <button type="button" className="btn-link" style={{ fontSize: 11 }} onClick={() => setProjMonthly(null)}>
-                  reset to your real rate ({fmtBase(baseMonthlySaving, profile.displayCurrency, { compact: true })}/mo)
-                </button>
+                  {tx('reset to your real rate (')}{fmtBase(baseMonthlySaving, profile.displayCurrency, { compact: true })}/mo)
+                                  </button>
               )}
               <span className="muted" style={{ fontSize: 10.5, marginLeft: 'auto' }}>
-                Modeled · {DEFAULT_ASSUMPTIONS.expectedAnnualGrowthPct}% ±{DEFAULT_ASSUMPTIONS.bandSpreadPct}% nominal · prefilled from your cash flow · not a guarantee
+                {tx('Modeled ·')} {DEFAULT_ASSUMPTIONS.expectedAnnualGrowthPct}% ±{DEFAULT_ASSUMPTIONS.bandSpreadPct}{tx('% nominal · prefilled from your cash flow · not a guarantee')}
               </span>
             </div>
           )}
           {!projMode && chartHasSynthetic && (
             <div className="muted" style={{ fontSize: 10.5, marginTop: 6, fontStyle: 'italic' }}>
-              Early history is a synthetic seed for illustration — real daily snapshots accrue from when you started using Imari.
+              {tx(
+                'Early history is a synthetic seed for illustration — real daily snapshots accrue from when you started using Imari.'
+              )}
             </div>
           )}
           {/* Drill-down sub-stats — each is a real number from the same engine the views use */}
@@ -1177,13 +1198,13 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
             {subStats.map(st => (
               <motion.button key={st.label} type="button" className="dash-link btn-unstyled" onClick={() => dispatch({ type: 'nav', to: st.to })}
                 variants={staggerItem} whileHover={{ y: -2 }} whileTap={{ scale: 0.96 }}
-                aria-label={`${st.label}: ${st.value} — open`}>
-                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{st.label}</div>
+                aria-label={tx('{0}: {1} — open', [st.label, st.value])}>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{tx(st.label)}</div>
                 <div className="num" style={{ fontSize: 15, fontWeight: 700, marginTop: 2, color: st.color || 'var(--ink)' }}>{st.value}</div>
               </motion.button>
             ))}
           </motion.div>
-        </div>
+        </div>)
       );
     })(),
 
@@ -1191,12 +1212,14 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     // Full-width layout: donut beside a multi-column legend.
     allocation: (
       <div className="card" style={{ padding: 22 }}>
-        <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 16px', letterSpacing: '-0.01em', fontWeight: 400 }}>Asset allocation</h2>
+        <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 16px', letterSpacing: '-0.01em', fontWeight: 400 }}>{tx('Asset allocation')}</h2>
         <div style={{ display: 'flex', gap: 26, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <Donut size={114} thickness={15}
-              slices={stats.groups.map(g => ({ value: g.value, color: g.color, label: g.group }))}
-              ariaLabel={`Asset allocation: ${stats.groups.map(g => `${g.group} ${stats.totalValue > 0 ? (g.value / stats.totalValue * 100).toFixed(0) : 0} percent`).join(', ')}`} />
+              slices={stats.groups.map(g => ({ value: g.value, color: g.color, label: tx(g.group) }))}
+              ariaLabel={tx('Asset allocation: {0}', [
+                stats.groups.map(g => `${tx(g.group)} ${stats.totalValue > 0 ? (g.value / stats.totalValue * 100).toFixed(0) : 0} percent`).join(', ')
+              ])} />
             <div style={{
               position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
               textAlign: 'center', pointerEvents: 'none',
@@ -1205,7 +1228,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 {stats.totalValue > 0 && stats.groups[0] ? `${Math.round(stats.groups[0].value / stats.totalValue * 100)}%` : stats.groups.length}
               </div>
               <div className="muted" style={{ fontSize: 10, marginTop: 2, maxWidth: 72, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {stats.totalValue > 0 && stats.groups[0] ? stats.groups[0].group : 'groups'}
+                {stats.totalValue > 0 && stats.groups[0] ? tx(stats.groups[0].group) : tx('groups')}
               </div>
             </div>
           </div>
@@ -1214,7 +1237,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               <div key={g.group} className="row" style={{ gap: 8, fontSize: 12, justifyContent: 'space-between' }}>
                 <div className="row" style={{ gap: 8, minWidth: 0 }}>
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: g.color, flexShrink: 0, marginTop: 1 }} />
-                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink-2)' }}>{g.group}</span>
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ink-2)' }}>{tx(g.group)}</span>
                 </div>
                 <span className="num" style={{ color: 'var(--ink)', fontWeight: 600, fontSize: 11, flexShrink: 0 }}>
                   {stats.totalValue > 0 ? (g.value / stats.totalValue * 100).toFixed(0) : 0}%
@@ -1222,7 +1245,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               </div>
             ))}
             {stats.groups.length > 6 && (
-              <div className="muted" style={{ fontSize: 10 }}>+{stats.groups.length - 6} more group{stats.groups.length - 6 > 1 ? 's' : ''}</div>
+              <div className="muted" style={{ fontSize: 10 }}>+{stats.groups.length - 6} {tx('more group')}{stats.groups.length - 6 > 1 ? 's' : ''}</div>
             )}
           </div>
         </div>
@@ -1232,44 +1255,47 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     // ── RATIOS — independent widget (was 1/3 of the old 'position' composite).
     ratios: (
       <div className="card" style={{ padding: '18px 20px' }}>
-            <h2 className="font-serif" style={{ fontSize: 15, margin: '0 0 14px', fontWeight: 400 }}>Financial ratios</h2>
+            <h2 className="font-serif" style={{ fontSize: 15, margin: '0 0 14px', fontWeight: 400 }}>{tx('Financial ratios')}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '14px 26px' }}>
               <RatioBar
-                label="Liquidity ratio"
+                label={tx('Liquidity ratio')}
                 value={stats.liquidityRatio}
                 color={stats.liquidityRatio > 15 ? 'var(--up)' : stats.liquidityRatio > 5 ? 'var(--gold)' : 'var(--down)'}
-                hint={stats.liquidityRatio < 10 ? 'Low — keep 3-6 months expenses liquid' : 'Cash & savings as % of total assets'}
+                hint={stats.liquidityRatio < 10 ? tx('Low — keep 3-6 months expenses liquid') : tx('Cash & savings as % of total assets')}
                 thresholds={[
-                  { at: 5,  label: 'Low' },
-                  { at: 15, label: 'Healthy' },
+                  { at: 5,  label: tx('Low') },
+                  { at: 15, label: tx('Healthy') },
                 ]}
               />
               <RatioBar
-                label="Income-generating"
+                label={tx('Income-generating')}
                 value={stats.incomeGenRatio}
                 color={stats.incomeGenRatio > 50 ? 'var(--up)' : stats.incomeGenRatio > 25 ? 'var(--gold)' : 'var(--down)'}
-                hint="% of portfolio actively yielding returns"
+                hint={tx('% of portfolio actively yielding returns')}
               />
               <RatioBar
-                label="Passive income"
+                label={tx('Passive income')}
                 value={financialStats.passiveIncomeRatio}
                 color={financialStats.passiveIncomeRatio > 50 ? 'var(--up)' : financialStats.passiveIncomeRatio > 25 ? 'var(--gold)' : 'var(--down)'}
-                hint="Share of monthly income not from salary"
+                hint={tx('Share of monthly income not from salary')}
               />
               {savingsRate !== null && (
                 <RatioBar
-                  label="Savings rate (6M)"
+                  label={tx('Savings rate (6M)')}
                   value={savingsRate}
                   color={savingsRate >= 20 ? 'var(--up)' : savingsRate > 0 ? 'var(--gold)' : 'var(--down)'}
-                  hint="Income saved after all expenses"
+                  hint={tx('Income saved after all expenses')}
                 />
               )}
               {liabilities.length > 0 && (
                 <RatioBar
-                  label="Debt-to-asset"
+                  label={tx('Debt-to-asset')}
                   value={debtToAsset}
                   color={debtToAsset < 30 ? 'var(--up)' : debtToAsset < 60 ? 'var(--gold)' : 'var(--down)'}
-                  hint={`${fmtBase(totalDebt, profile.displayCurrency, { compact: true })} total liabilities`}
+                  hint={tx(
+                    '{0} total liabilities',
+                    [fmtBase(totalDebt, profile.displayCurrency, { compact: true })]
+                  )}
                 />
               )}
               {/* Debt-to-income — gold standard household-leverage metric.
@@ -1293,23 +1319,27 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 // Never print an impossible number in a money app.
                 if (!Number.isFinite(dti) || dti > 300) {
                   return (
-                    <div className="muted" style={{ fontSize: 11, lineHeight: 1.5 }}>
-                      Debt-to-income — not enough data yet. Add your regular income and check loan
-                      start/end dates, and this ratio becomes meaningful.
-                    </div>
+                    (<div className="muted" style={{ fontSize: 11, lineHeight: 1.5 }}>
+                      {tx(
+                        'Debt-to-income — not enough data yet. Add your regular income and check loan\n                      start/end dates, and this ratio becomes meaningful.'
+                      )}
+                    </div>)
                   );
                 }
                 return (
-                  <RatioBar
-                    label="Debt-to-income"
+                  (<RatioBar
+                    label={tx('Debt-to-income')}
                     value={dti}
                     color={dti < 36 ? 'var(--up)' : dti < 50 ? 'var(--gold)' : 'var(--down)'}
-                    hint={`${fmtBase(monthlyDebt, profile.displayCurrency, { compact: true })} / month in debt payments`}
+                    hint={tx(
+                      '{0} / month in debt payments',
+                      [fmtBase(monthlyDebt, profile.displayCurrency, { compact: true })]
+                    )}
                     thresholds={[
-                      { at: 36, label: 'Comfortable' },
-                      { at: 50, label: 'Stretched' },
+                      { at: 36, label: tx('Comfortable') },
+                      { at: 50, label: tx('Stretched') },
                     ]}
-                  />
+                  />)
                 );
               })()}
             </div>
@@ -1320,11 +1350,11 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     cashmini: (
       <div className="card" style={{ padding: '16px 18px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' }}>
-          <h2 className="font-serif" style={{ fontSize: 14, margin: 0, fontWeight: 400 }}>Cash flow (6M)</h2>
+          <h2 className="font-serif" style={{ fontSize: 14, margin: 0, fontWeight: 400 }}>{tx('Cash flow (6M)')}</h2>
           {hasCF && (
             <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })}
               style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 10, color: 'var(--brand)', fontFamily: 'inherit', padding: 0 }}>
-              Details →
+              {tx('Details →')}
             </button>
           )}
         </div>
@@ -1352,34 +1382,36 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       const proj = projectPension({ currentAge, contributionsToDate, monthlyContribution, employerMatch, annualSalary, retirementAge: 60 });
       const lowReplacement = proj?.replacementRatio != null && proj.replacementRatio < 50;
       return (
-        <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
+        (<div className="card dash-section-card" style={{ padding: '22px 24px' }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
             <div>
-              <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>Retirement readiness</h2>
-              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>RSSB / Ejo Heza · projected to age 60 · modeled</div>
+              <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>{tx('Retirement readiness')}</h2>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{tx('RSSB / Ejo Heza · projected to age 60 · modeled')}</div>
             </div>
           </div>
           {!proj ? (
-            <div className="muted" style={{ fontSize: 12.5 }}>Add your age on the pension asset to project your replacement ratio and readiness score.</div>
+            <div className="muted" style={{ fontSize: 12.5 }}>{tx(
+              'Add your age on the pension asset to project your replacement ratio and readiness score.'
+            )}</div>
           ) : (
             <div className="row" style={{ gap: 26, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               {proj.readiness != null && (
                 <div>
-                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Readiness</div>
+                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Readiness')}</div>
                   <div className="num" style={{ fontSize: 28, fontWeight: 700, color: proj.readiness >= 80 ? 'var(--up)' : proj.readiness >= 50 ? 'var(--gold)' : 'var(--down)' }}>{proj.readiness}<span style={{ fontSize: 16 }}>/100</span></div>
                 </div>
               )}
               <div>
-                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Projected pot @60</div>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Projected pot @60')}</div>
                 <div className="num" style={{ fontSize: 22, fontWeight: 700 }}>{fmtBase(proj.projectedPot, profile.displayCurrency, { compact: true })}</div>
               </div>
               <div>
-                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Monthly pension</div>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Monthly pension')}</div>
                 <div className="num" style={{ fontSize: 22, fontWeight: 700 }}>{fmtBase(proj.monthlyPension, profile.displayCurrency, { compact: true })}</div>
               </div>
               {proj.replacementRatio != null && (
                 <div>
-                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Replacement</div>
+                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Replacement')}</div>
                   <div className="num" style={{ fontSize: 22, fontWeight: 700, color: lowReplacement ? 'var(--down)' : 'var(--ink)' }}>{Math.floor(proj.replacementRatio)}%</div>
                 </div>
               )}
@@ -1388,13 +1420,16 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           {lowReplacement && (
             <div style={{ marginTop: 14 }}>
               <CostOfAbsence severity="warning"
-                costStatement={`At your current contributions you'll replace only ${Math.floor(proj.replacementRatio)}% of income at 60 — below a comfortable 60%. Topping up Ejo Heza closes the gap.`}
-                action={{ label: 'Review pension', to: 'assets' }}
+                costStatement={tx(
+                  'At your current contributions you\'ll replace only {0}% of income at 60 — below a comfortable 60%. Topping up Ejo Heza closes the gap.',
+                  [Math.floor(proj.replacementRatio)]
+                )}
+                action={{ label: tx('Review pension'), to: 'assets' }}
                 onAction={(to) => dispatch({ type: 'nav', to })}
                 terms={[{ id: 'replacement-ratio', ...GLOSSARY['replacement-ratio'] }]} />
             </div>
           )}
-        </div>
+        </div>)
       );
     })(),
 
@@ -1402,10 +1437,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     income: (assets.length > 0 || cashflows.length > 0) ? (() => {
       const fs = financialStats;
       const INCOME_LABEL = {
-        salary:    'Salary / Wages', rental:   'Rental income',
-        dividends: 'Dividends',      'bond-int':'Bond interest',
-        business:  'Business income','freelance':'Freelance',
-        'other-inc':'Other income',
+        salary:    tx('Salary / Wages'), rental:   tx('Rental income'),
+        dividends: 'Dividends',      'bond-int':tx('Bond interest'),
+        business:  tx('Business income'),'freelance':'Freelance',
+        'other-inc':tx('Other income'),
       };
       const INCOME_COLOR = {
         salary:    'var(--sky)',    rental:    'var(--brand)',
@@ -1418,59 +1453,61 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
           label: INCOME_LABEL[cat] || cat, color: INCOME_COLOR[cat] || 'var(--ink-3)', monthly: mo, source: 'cashflow',
         })),
         ...Object.entries(fs.assetIncomeByKind).map(([group, mo]) => ({
-          label: `${group} (asset income)`, color: 'var(--brand)', monthly: mo, source: 'asset',
+          label: tx('{0} (asset income)', [tx(group)]), color: 'var(--brand)', monthly: mo, source: 'asset',
         })),
       ].sort((a, b) => b.monthly - a.monthly);
       const hasIncome = fs.totalMonthlyIncome > 0;
       return (
-          <div className="card" style={{ padding: '20px 22px' }}>
-            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-              <div>
-                <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>Monthly income</h2>
-                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>By source · recurring + asset income</div>
-              </div>
-              <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} style={{
-                border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11,
-                color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
-              }}>Add →</button>
+        (<div className="card" style={{ padding: '20px 22px' }}>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>{tx('Monthly income')}</h2>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{tx('By source · recurring + asset income')}</div>
             </div>
-            {hasIncome ? (
-              <div className="col" style={{ gap: 11 }}>
-                {allIncomeSources.map((src, i) => {
-                  const pct = fs.totalMonthlyIncome > 0 ? (src.monthly / fs.totalMonthlyIncome * 100) : 0;
-                  return (
-                    <div key={i}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <span style={{ width: 8, height: 8, borderRadius: 2, background: src.color, flexShrink: 0 }} />
-                          <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{src.label}</span>
-                        </div>
-                        <div className="row" style={{ gap: 10 }}>
-                          <span className="num" style={{ fontSize: 12, fontWeight: 700, color: 'var(--up)' }}>
-                            {fmtBase(src.monthly, profile.displayCurrency, { compact: true })}
-                          </span>
-                          <span className="muted" style={{ fontSize: 10, minWidth: 30, textAlign: 'right' }}>{pct.toFixed(0)}%</span>
-                        </div>
+            <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} style={{
+              border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11,
+              color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
+            }}>{tx('Add →')}</button>
+          </div>
+          {hasIncome ? (
+            <div className="col" style={{ gap: 11 }}>
+              {allIncomeSources.map((src, i) => {
+                const pct = fs.totalMonthlyIncome > 0 ? (src.monthly / fs.totalMonthlyIncome * 100) : 0;
+                return (
+                  (<div key={i}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: src.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{tx(src.label)}</span>
                       </div>
-                      <div style={{ height: 4, background: 'var(--bg-2)', borderRadius: 2, overflow: 'hidden' }}>
-                        <BarFill pct={pct} color={src.color} delay={i * 0.05} />
+                      <div className="row" style={{ gap: 10 }}>
+                        <span className="num" style={{ fontSize: 12, fontWeight: 700, color: 'var(--up)' }}>
+                          {fmtBase(src.monthly, profile.displayCurrency, { compact: true })}
+                        </span>
+                        <span className="muted" style={{ fontSize: 10, minWidth: 30, textAlign: 'right' }}>{pct.toFixed(0)}%</span>
                       </div>
                     </div>
-                  );
-                })}
-                <div style={{ paddingTop: 10, borderTop: '0.5px solid var(--line-soft)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span className="muted" style={{ fontSize: 11, fontWeight: 600 }}>Total / month</span>
-                  <span className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--up)' }}>
-                    {fmtBase(fs.totalMonthlyIncome, profile.displayCurrency, { compact: true })}
-                  </span>
-                </div>
+                    <div style={{ height: 4, background: 'var(--bg-2)', borderRadius: 2, overflow: 'hidden' }}>
+                      <BarFill pct={pct} color={src.color} delay={i * 0.05} />
+                    </div>
+                  </div>)
+                );
+              })}
+              <div style={{ paddingTop: 10, borderTop: '0.5px solid var(--line-soft)', display: 'flex', justifyContent: 'space-between' }}>
+                <span className="muted" style={{ fontSize: 11, fontWeight: 600 }}>{tx('Total / month')}</span>
+                <span className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--up)' }}>
+                  {fmtBase(fs.totalMonthlyIncome, profile.displayCurrency, { compact: true })}
+                </span>
               </div>
-            ) : (
-              <div className="muted" style={{ fontSize: 12, lineHeight: 1.6, padding: '8px 0' }}>
-                No recurring income yet. Add an income entry in Cash Flow, or mark an asset as income-generating, and the breakdown appears here.
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="muted" style={{ fontSize: 12, lineHeight: 1.6, padding: '8px 0' }}>
+              {tx(
+                'No recurring income yet. Add an income entry in Cash Flow, or mark an asset as income-generating, and the breakdown appears here.'
+              )}
+            </div>
+          )}
+        </div>)
       );
     })() : null,
 
@@ -1478,47 +1515,47 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     liquidity: (assets.length > 0 || cashflows.length > 0) ? (() => {
       const fs = financialStats;
       return (
-          <div className="card" style={{ padding: '20px 22px' }}>
-            <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 14px', fontWeight: 400 }}>Liquidity position</h2>
-            <div className="col" style={{ gap: 14 }}>
-              <div>
-                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Liquid balance</div>
-                <div className="num" style={{ fontSize: 26, fontWeight: 700 }}>
-                  {fmtBase(fs.liquidRWF, profile.displayCurrency, { compact: true })}
-                </div>
-                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Cash + mobile money + bank savings</div>
+        (<div className="card" style={{ padding: '20px 22px' }}>
+          <h2 className="font-serif" style={{ fontSize: 17, margin: '0 0 14px', fontWeight: 400 }}>{tx('Liquidity position')}</h2>
+          <div className="col" style={{ gap: 14 }}>
+            <div>
+              <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{tx('Liquid balance')}</div>
+              <div className="num" style={{ fontSize: 26, fontWeight: 700 }}>
+                {fmtBase(fs.liquidRWF, profile.displayCurrency, { compact: true })}
               </div>
-              {fs.monthlyObligations > 0 && (
-                <div>
-                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Monthly obligations</div>
-                  <div className="num" style={{ fontSize: 20, fontWeight: 600, color: 'var(--down)' }}>
-                    {fmtBase(fs.monthlyObligations, profile.displayCurrency, { compact: true })}
-                  </div>
-                  <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Loan repayments</div>
-                </div>
-              )}
-              {fs.maintenanceCount > 0 && (
-                <div style={{ padding: '10px 12px', borderRadius: 8, background: 'color-mix(in oklab, var(--clay) 8%, var(--bg-2))' }}>
-                  <span style={{ color: 'var(--clay)', fontSize: 12, fontWeight: 600 }}>
-                    {fs.maintenanceCount} maintenance asset{fs.maintenanceCount === 1 ? '' : 's'}
-                  </span>
-                  <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-                    Properties, vehicles, and livestock require ongoing upkeep.
-                  </div>
-                </div>
-              )}
-              {fs.totalMonthlyIncome > 0 && (
-                <div style={{ paddingTop: 10, borderTop: '0.5px solid var(--line-soft)' }}>
-                  <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Net cash flow / month</div>
-                  <div className="num" style={{ fontSize: 20, fontWeight: 600, color: fs.netCashMonthly >= 0 ? 'var(--up)' : 'var(--down)' }}>
-                    <span aria-hidden="true">{fs.netCashMonthly >= 0 ? '▲' : '▼'}</span>{' '}
-                    {fs.netCashMonthly >= 0 ? '+' : ''}{fmtBase(fs.netCashMonthly, profile.displayCurrency, { compact: true })}
-                  </div>
-                  <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Income minus avg monthly spend</div>
-                </div>
-              )}
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{tx('Cash + mobile money + bank savings')}</div>
             </div>
+            {fs.monthlyObligations > 0 && (
+              <div>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{tx('Monthly obligations')}</div>
+                <div className="num" style={{ fontSize: 20, fontWeight: 600, color: 'var(--down)' }}>
+                  {fmtBase(fs.monthlyObligations, profile.displayCurrency, { compact: true })}
+                </div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{tx('Loan repayments')}</div>
+              </div>
+            )}
+            {fs.maintenanceCount > 0 && (
+              <div style={{ padding: '10px 12px', borderRadius: 8, background: 'color-mix(in oklab, var(--clay) 8%, var(--bg-2))' }}>
+                <span style={{ color: 'var(--clay)', fontSize: 12, fontWeight: 600 }}>
+                  {fs.maintenanceCount} {tx('maintenance asset')}{fs.maintenanceCount === 1 ? '' : 's'}
+                </span>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+                  {tx('Properties, vehicles, and livestock require ongoing upkeep.')}
+                </div>
+              </div>
+            )}
+            {fs.totalMonthlyIncome > 0 && (
+              <div style={{ paddingTop: 10, borderTop: '0.5px solid var(--line-soft)' }}>
+                <div className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{tx('Net cash flow / month')}</div>
+                <div className="num" style={{ fontSize: 20, fontWeight: 600, color: fs.netCashMonthly >= 0 ? 'var(--up)' : 'var(--down)' }}>
+                  <span aria-hidden="true">{fs.netCashMonthly >= 0 ? '▲' : '▼'}</span>{' '}
+                  {fs.netCashMonthly >= 0 ? '+' : ''}{fmtBase(fs.netCashMonthly, profile.displayCurrency, { compact: true })}
+                </div>
+                <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{tx('Income minus avg monthly spend')}</div>
+              </div>
+            )}
           </div>
+        </div>)
       );
     })() : null,
 
@@ -1527,28 +1564,34 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16, gap: 10 }}>
           <div>
-            <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>Where your money goes</h2>
+            <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>{tx('Where your money goes')}</h2>
             <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
-              This month · {fmtBase(expenseByCategory.total, profile.displayCurrency, { compact: true })} across {expenseByCategory.rows.length} categories
-            </div>
+              {tx('This month ·')} {fmtBase(expenseByCategory.total, profile.displayCurrency, { compact: true })}across {expenseByCategory.rows.length}categories
+                          </div>
           </div>
           <button onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit', padding: 0 }}>
-            Open Cash Flow →
+            {tx('Open Cash Flow →')}
           </button>
         </div>
         <div className="row" style={{ gap: 22, alignItems: 'center', flexWrap: 'wrap' }}>
           <Donut size={104} thickness={14}
             slices={expenseByCategory.rows.map(r => ({ value: r.amount, color: r.color, label: r.label }))}
-            ariaLabel={`Expenses by category: ${expenseByCategory.rows.slice(0, 5).map(r => `${r.label} ${r.pct.toFixed(0)} percent`).join(', ')}`} />
+            ariaLabel={tx('Expenses by category: {0}', [
+              expenseByCategory.rows.slice(0, 5).map(r => `${r.label} ${r.pct.toFixed(0)} percent`).join(', ')
+            ])} />
           <div className="col" style={{ flex: 1, minWidth: 240, gap: 9 }}>
             {expenseByCategory.rows.slice(0, 6).map(r => (
               <button key={r.id} onClick={() => dispatch({ type: 'nav', to: 'cashflow' })} className="dash-link btn-unstyled"
                 style={{ display: 'block' }}
-                aria-label={`${r.label}: ${fmtBase(r.amount, profile.displayCurrency, { compact: true })}, ${r.pct.toFixed(0)}% of spend`}>
+                aria-label={tx('{0}: {1}, {2}% of spend', [
+                  r.label,
+                  fmtBase(r.amount, profile.displayCurrency, { compact: true }),
+                  r.pct.toFixed(0)
+                ])}>
                 <div className="row" style={{ justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
                   <div className="row" style={{ gap: 8, minWidth: 0, alignItems: 'center' }}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: r.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.label}</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tx(r.label)}</span>
                   </div>
                   <div className="row" style={{ gap: 10, flexShrink: 0, alignItems: 'center' }}>
                     {r.momPct != null && (
@@ -1572,7 +1615,7 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       const m = macroOverlay;
       const Pill = ({ kind, asOf }) => (
         <span className="muted" style={{ fontSize: 10, padding: '2px 6px', borderRadius: 'var(--r-pill)', background: 'var(--bg-2)', border: '0.5px solid var(--line)', whiteSpace: 'nowrap' }}>
-          {kind}{asOf ? ` · ${asOf}` : ''}
+          {tx(kind)}{asOf ? ` · ${tx(asOf)}` : ''}
         </span>
       );
       const Card = ({ title, children }) => (
@@ -1580,60 +1623,60 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       );
       const realYoY = m.nominalYoY != null ? m.nominalYoY - m.headlineCpi : null;
       return (
-        <div>
-          <h2 className="font-serif" style={{ fontSize: 19, margin: '0 0 4px', fontWeight: 400 }}>Your personal macro</h2>
+        (<div>
+          <h2 className="font-serif" style={{ fontSize: 19, margin: '0 0 4px', fontWeight: 400 }}>{tx('Your personal macro')}</h2>
           <div style={{ fontSize: 12.5, marginBottom: 14, color: 'var(--ink-2)' }}>
             {m.personalized && Math.abs(m.personalCpi - m.headlineCpi) >= 0.3 ? (
-              <>Your inflation runs <strong style={{ color: m.personalCpi > m.headlineCpi ? 'var(--down)' : 'var(--up)' }}>{m.personalCpi.toFixed(1)}%</strong> — {m.personalCpi > m.headlineCpi ? 'faster' : 'slower'} than the national {m.headlineCpi}%.</>
+              <>{tx('Your inflation runs')} <strong style={{ color: m.personalCpi > m.headlineCpi ? 'var(--down)' : 'var(--up)' }}>{m.personalCpi.toFixed(1)}%</strong>— {m.personalCpi > m.headlineCpi ? 'faster' : 'slower'} {tx('than the national')} {m.headlineCpi}%.</>
             ) : (
-              <>How Rwanda's economy lands on your money — not the headlines.</>
+              <>{tx('How Rwanda\'s economy lands on your money — not the headlines.')}</>
             )}
           </div>
           <div className="row" style={{ gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
             {/* Personal inflation */}
             <Card title={
               <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
-                <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Your inflation</span>
+                <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Your inflation')}</span>
                 <Pill kind={m.personalized ? 'Modeled' : 'Reference'} asOf={m.cpiAsOf} />
               </div>
             }>
               <div className="num" style={{ fontSize: 24, fontWeight: 700, color: m.personalCpi > m.headlineCpi ? 'var(--down)' : 'var(--ink)' }}>{m.personalCpi.toFixed(1)}%</div>
               <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
-                Headline CPI {m.headlineCpi}% · {m.personalized ? 'weighted by your spending mix' : 'add expenses to personalize'}
+                {tx('Headline CPI')} {m.headlineCpi}% · {m.personalized ? tx('weighted by your spending mix') : tx('add expenses to personalize')}
               </div>
               {m.personalized && m.personalCpi > m.headlineCpi && (
-                <div style={{ fontSize: 11, marginTop: 8, color: 'var(--ink-2)' }}>Your basket inflates faster than the national average.</div>
+                <div style={{ fontSize: 11, marginTop: 8, color: 'var(--ink-2)' }}>{tx('Your basket inflates faster than the national average.')}</div>
               )}
             </Card>
             {/* Real net-worth growth */}
             <Card title={
               <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
-                <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Real growth (1y)</span>
+                <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Real growth (1y)')}</span>
                 <Pill kind="Reference" asOf={m.cpiAsOf} />
               </div>
             }>
               {realYoY != null ? (
                 <>
                   <div className="num" style={{ fontSize: 24, fontWeight: 700, color: realYoY >= 0 ? 'var(--up)' : 'var(--down)' }}>{realYoY >= 0 ? '+' : ''}{realYoY.toFixed(1)}%</div>
-                  <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>Nominal {m.nominalYoY >= 0 ? '+' : ''}{m.nominalYoY.toFixed(1)}% − CPI {m.headlineCpi}% = real purchasing power</div>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{tx('Nominal')} {m.nominalYoY >= 0 ? '+' : ''}{m.nominalYoY.toFixed(1)}{tx('% − CPI')} {m.headlineCpi}{tx('% = real purchasing power')}</div>
                 </>
               ) : (
-                <div className="muted" style={{ fontSize: 12 }}>Needs ~a year of history to compare real vs nominal.</div>
+                <div className="muted" style={{ fontSize: 12 }}>{tx('Needs ~a year of history to compare real vs nominal.')}</div>
               )}
             </Card>
             {/* RSE vs benchmark */}
             {m.rseGain != null && (
               <Card title={
                 <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
-                  <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>RSE vs All-Share</span>
+                  <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('RSE vs All-Share')}</span>
                   <Pill kind="Reference" asOf={m.rseAsOf} />
                 </div>
               }>
-                <BenchmarkBar label="You vs RSESI" portfolioReturn={m.rseGain} benchmarkReturn={m.rseChange} />
+                <BenchmarkBar label={tx('You vs RSESI')} portfolioReturn={m.rseGain} benchmarkReturn={m.rseChange} />
               </Card>
             )}
           </div>
-        </div>
+        </div>)
       );
     })(),
 
@@ -1641,12 +1684,12 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
       <div className="card dash-section-card" style={{ padding: '22px 24px' }}>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 18 }}>
           <div>
-            <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>Category performance</h2>
-            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Unrealised gain / loss by asset class</div>
+            <h2 className="font-serif" style={{ fontSize: 19, margin: 0, fontWeight: 400 }}>{tx('Category performance')}</h2>
+            <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{tx('Unrealised gain / loss by asset class')}</div>
           </div>
           <button onClick={() => dispatch({ type: 'nav', to: 'assets' })} style={{
             border: 0, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
-          }}>View assets →</button>
+          }}>{tx('View assets →')}</button>
         </div>
         <CategoryBars groups={[...stats.groups].sort((a, b) => b.gainPct - a.gainPct)} totalValue={stats.totalValue} />
       </div>
@@ -1654,13 +1697,13 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
 
     alerts: (() => {
       const cards = [
-        { title: 'Asset concentration', accent: 'var(--gold)', items: concentrationAlerts, label: 'Rebalance →' },
-        { title: 'High-risk signals',   accent: 'var(--down)', items: riskAlerts,          label: 'Review assets →' },
-        { title: 'Maintenance assets',  accent: 'var(--clay)', items: maintenanceAssets,   label: 'View assets →' },
+        { title: tx('Asset concentration'), accent: 'var(--gold)', items: concentrationAlerts, label: tx('Rebalance →') },
+        { title: tx('High-risk signals'),   accent: 'var(--down)', items: riskAlerts,          label: tx('Review assets →') },
+        { title: tx('Maintenance assets'),  accent: 'var(--clay)', items: maintenanceAssets,   label: tx('View assets →') },
       ].filter(c => c.items.length > 0);
       if (cards.length === 0) {
         return (
-          <div className="card" style={{
+          (<div className="card" style={{
             padding: '14px 18px',
             display: 'flex', alignItems: 'center', gap: 12,
             background: 'color-mix(in oklab, var(--up) 6%, var(--paper))',
@@ -1673,20 +1716,20 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
               fontSize: 14, fontWeight: 700,
             }} aria-hidden="true">✓</span>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Portfolio is healthy</div>
-              <div className="muted" style={{ fontSize: 11, marginTop: 1 }}>No concentration, risk, or maintenance flags right now.</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{tx('Portfolio is healthy')}</div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 1 }}>{tx('No concentration, risk, or maintenance flags right now.')}</div>
             </div>
-          </div>
+          </div>)
         );
       }
       const cols = Math.min(cards.length, 3);
       return (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 14 }}>
+        (<div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 14 }}>
           {cards.map(c => (
-            <AlertCard key={c.title} title={c.title} accentColor={c.accent} items={c.items}
+            <AlertCard key={c.title} title={tx(c.title)} accentColor={c.accent} items={c.items}
               onNav={() => dispatch({ type: 'nav', to: 'assets' })} navLabel={c.label} />
           ))}
-        </div>
+        </div>)
       );
     })(),
 
@@ -1695,26 +1738,30 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     benchmarks: (
         <div className="card" style={{ padding: '20px 22px' }}>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-            <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>vs. Benchmarks</h2>
+            <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>{tx('vs. Benchmarks')}</h2>
             <span
               className="pill pill-soft"
-              title={`Portfolio bar = your net-worth change over the last ${chartRange}. Benchmarks scaled to the same window where possible.`}
+              title={tx(
+                'Portfolio bar = your net-worth change over the last {0}. Benchmarks scaled to the same window where possible.',
+                [chartRange]
+              )}
               style={{ fontSize: 10, cursor: 'help' }}
             >
               {chartRange} window
             </span>
           </div>
           <div className="muted" style={{ fontSize: 11, marginBottom: 16 }}>
-            Your <strong style={{ color: portfolioReturn >= 0 ? 'var(--up)' : 'var(--down)' }}>
-              {portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(1)}%
-            </strong> over the last {chartRange} compared to:
+            {tx('Your')} <strong style={{ color: portfolioReturn >= 0 ? 'var(--up)' : 'var(--down)' }}>
+                {portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(1)}%
+              </strong> {tx('over the last')} {chartRange} {tx('compared to:')}
           </div>
           {benchmarks.map(b => (
-            <BenchmarkBar key={b.label} label={b.label} portfolioReturn={portfolioReturn} benchmarkReturn={b.ret} />
+            <BenchmarkBar key={b.label} label={tx(b.label)} portfolioReturn={portfolioReturn} benchmarkReturn={b.ret} />
           ))}
           <div className="muted" style={{ fontSize: 10, marginTop: 12, lineHeight: 1.5 }}>
-            All bars compare the same <strong>{chartRange}</strong> window. Benchmark figures
-            (USD/RWF, CPI, RSE ASI, T-bond) are illustrative and scaled to the selected range.
+            {tx('All bars compare the same')} <strong>{chartRange}</strong> {tx(
+              'window. Benchmark figures\n            (USD/RWF, CPI, RSE ASI, T-bond) are illustrative and scaled to the selected range.'
+            )}
           </div>
         </div>
     ),
@@ -1723,10 +1770,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     goals: activeGoals.length > 0 ? (
           <div className="card" style={{ padding: '20px 22px' }}>
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>Goals progress</h2>
+              <h2 className="font-serif" style={{ fontSize: 17, margin: 0, fontWeight: 400 }}>{tx('Goals progress')}</h2>
               <button onClick={() => dispatch({ type: 'nav', to: 'goals' })} style={{
                 border: 0, background: 'transparent', cursor: 'pointer', fontSize: 11, color: 'var(--brand)', fontFamily: 'inherit',
-              }}>See all →</button>
+              }}>{tx('See all →')}</button>
             </div>
             <div className="col" style={{ gap: 16 }}>
               {activeGoals.map(g => {
@@ -1738,11 +1785,11 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                 const pct = goalProgressPct(g, state, today);
                 const daysLeft = g.deadline ? Math.ceil((new Date(g.deadline) - today) / 86400000) : null;
                 return (
-                  <div key={g.id}>
+                  (<div key={g.id}>
                     <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
                       <div className="row" style={{ gap: 6 }}>
                         <span>{cat.icon}</span>
-                        <span style={{ fontSize: 12, fontWeight: 500 }}>{g.title}</span>
+                        <span style={{ fontSize: 12, fontWeight: 500 }}>{tx(g.title)}</span>
                       </div>
                       <div className="row" style={{ gap: 8, alignItems: 'center' }}>
                         <span className="num" style={{ fontSize: 11, color: 'var(--ink-2)' }}>{pct.toFixed(0)}%</span>
@@ -1757,12 +1804,12 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
                     <div className="muted" style={{ fontSize: 10, marginTop: 4 }}>
                       {fmtBase(currentRWF, profile.displayCurrency, { compact: true })} of {fmtBase(targetRWF, profile.displayCurrency, { compact: true })} target
                     </div>
-                  </div>
+                  </div>)
                 );
               })}
             </div>
             {goals.length > 3 && (
-              <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>+{goals.length - 3} more goal{goals.length - 3 === 1 ? '' : 's'}</div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>+{goals.length - 3} {tx('more goal')}{goals.length - 3 === 1 ? '' : 's'}</div>
             )}
           </div>
     ) : null,
@@ -1770,10 +1817,10 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
     markets: (
       <div>
         <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-          <h2 className="font-serif" style={{ fontSize: 19, margin: 0, letterSpacing: '-0.01em', fontWeight: 400 }}>Markets you watch</h2>
+          <h2 className="font-serif" style={{ fontSize: 19, margin: 0, letterSpacing: '-0.01em', fontWeight: 400 }}>{tx('Markets you watch')}</h2>
           <button onClick={() => dispatch({ type: 'nav', to: 'trends' })} style={{
             border: 0, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--brand)', fontFamily: 'inherit', padding: 0,
-          }}>See all trends →</button>
+          }}>{tx('See all trends →')}</button>
         </div>
         <div className="dash-grid-4">
           {watchlist.map(d => <TrendCard key={d.id} d={d} override={marketOverrides[d.id]} />)}
@@ -1783,176 +1830,167 @@ export default function DashboardView({ state, dispatch, netWorth: appNetWorth, 
   };
 
   return (
-    <MotionConfig reducedMotion="user">
-    <div className="dash-page dash-flow">
+    (<MotionConfig reducedMotion="user">
+      <div className="dash-page dash-flow">
 
-      {/* Keyframes */}
-      <style>{`
-        @keyframes imari-slideUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes imari-shimmer {
-          0%   { background-position: 200% center; }
-          100% { background-position: -200% center; }
-        }
-        .dash-btn-range { transition: background 0.14s ease-out, color 0.14s ease-out; }
-        .dash-btn-range:active { transform: scale(0.97); }
-        .dash-arrange-btn { transition: background 0.14s ease-out, color 0.14s ease-out, box-shadow 0.14s ease-out, border-color 0.14s ease-out; }
-        .dash-arrange-btn:active { transform: scale(0.97); }
-      `}</style>
+        {/* Keyframes */}
+        <style>{'\n        @keyframes imari-slideUp {\n          from { opacity: 0; transform: translateY(10px); }\n          to   { opacity: 1; transform: translateY(0); }\n        }\n        @keyframes imari-shimmer {\n          0%   { background-position: 200% center; }\n          100% { background-position: -200% center; }\n        }\n        .dash-btn-range { transition: background 0.14s ease-out, color 0.14s ease-out; }\n        .dash-btn-range:active { transform: scale(0.97); }\n        .dash-arrange-btn { transition: background 0.14s ease-out, color 0.14s ease-out, box-shadow 0.14s ease-out, border-color 0.14s ease-out; }\n        .dash-arrange-btn:active { transform: scale(0.97); }\n      '}</style>
 
-      {/* ── Advisor strip (§1, demoted per design review #9) ──
-          A permanent red alarm trains users to ignore it. The full-width
-          CostOfAbsence treatment is reserved for CRITICAL findings; everything
-          else is a calm one-line strip that deep-links to the Advice Center —
-          the single canonical surface for recommendations. */}
-      {pinnedCost && !bannerIsNew ? (
-        <motion.button
-          type="button"
-          onClick={() => dispatch({ type: 'nav', to: 'advisor' })}
-          className="dash-advisor-strip btn-unstyled"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          whileHover={{ scale: 1.005 }}
-          whileTap={{ scale: 0.99 }}
-          transition={SPRING}
-          style={{
-            order: 11, display: 'flex', alignItems: 'center', gap: 10,
-            width: '100%', padding: '11px 16px', marginBottom: 16, cursor: 'pointer',
-            borderRadius: 'var(--r-lg)', background: 'var(--paper)',
-            border: '0.5px solid var(--line)', boxShadow: 'var(--shadow-1)',
-          }}
-          aria-label={`${engine.recommendations.length} recommendations — open the Advice Center`}
-        >
-          <span aria-hidden="true" style={{
-            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-            background: severityColor(pinnedCost.costOfAbsence.severity),
-          }} />
-          <span style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {pinnedCost.headline}
-          </span>
-          <span className="muted" style={{ fontSize: 11.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-            {pinnedCost.costOfAbsence.costStatement}
-          </span>
-          <span className="pill pill-brand" style={{ fontSize: 10, flexShrink: 0 }}>
-            ✦ {engine.recommendations.length} advice →
-          </span>
-        </motion.button>
-      ) : pinnedCost ? (
-        <CostOfAbsence
-          style={{ order: 11 }}
-          severity={pinnedCost.costOfAbsence.severity}
-          headline={pinnedCost.headline}
-          costStatement={pinnedCost.costOfAbsence.costStatement}
-          action={pinnedCost.costOfAbsence.action}
-          asOf={pinnedCost.dataAsOf}
-          now={today}
-          onAction={(to) => dispatch({ type: 'nav', to })}
-          onDismiss={() => dismissCost(pinnedCost.id)}
-          terms={glossaryFor(pinnedCost.id)}
-        />
-      ) : assets.length > 0 ? (
-        <div role="status" style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '12px 16px', marginBottom: 16, borderRadius: 'var(--r-lg)',
-          background: 'color-mix(in oklab, var(--up) 7%, var(--paper))',
-          border: '0.5px solid color-mix(in oklab, var(--up) 28%, transparent)',
-        }}>
-          <span aria-hidden="true" style={{ color: 'var(--up)', fontSize: 15 }}>✓</span>
-          <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-            Nothing urgent today — no accruing costs or deadlines in your data right now.
-          </span>
+        {/* ── Advisor strip (§1, demoted per design review #9) ──
+            A permanent red alarm trains users to ignore it. The full-width
+            CostOfAbsence treatment is reserved for CRITICAL findings; everything
+            else is a calm one-line strip that deep-links to the Advice Center —
+            the single canonical surface for recommendations. */}
+        {pinnedCost && !bannerIsNew ? (
+          <motion.button
+            type="button"
+            onClick={() => dispatch({ type: 'nav', to: 'advisor' })}
+            className="dash-advisor-strip btn-unstyled"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.005 }}
+            whileTap={{ scale: 0.99 }}
+            transition={SPRING}
+            style={{
+              order: 11, display: 'flex', alignItems: 'center', gap: 10,
+              width: '100%', padding: '11px 16px', marginBottom: 16, cursor: 'pointer',
+              borderRadius: 'var(--r-lg)', background: 'var(--paper)',
+              border: '0.5px solid var(--line)', boxShadow: 'var(--shadow-1)',
+            }}
+            aria-label={tx(
+              '{0} recommendations — open the Advice Center',
+              [engine.recommendations.length]
+            )}
+          >
+            <span aria-hidden="true" style={{
+              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+              background: severityColor(pinnedCost.costOfAbsence.severity),
+            }} />
+            <span style={{ fontSize: 12.5, color: 'var(--ink)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {tx(pinnedCost.headline)}
+            </span>
+            <span className="muted" style={{ fontSize: 11.5, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              {tx(pinnedCost.costOfAbsence.costStatement)}
+            </span>
+            <span className="pill pill-brand" style={{ fontSize: 10, flexShrink: 0 }}>✦ {engine.recommendations.length} {tx('advice →')}
+            </span>
+          </motion.button>
+        ) : pinnedCost ? (
+          <CostOfAbsence
+            style={{ order: 11 }}
+            severity={pinnedCost.costOfAbsence.severity}
+            headline={tx(pinnedCost.headline)}
+            costStatement={pinnedCost.costOfAbsence.costStatement}
+            action={pinnedCost.costOfAbsence.action}
+            asOf={pinnedCost.dataAsOf}
+            now={today}
+            onAction={(to) => dispatch({ type: 'nav', to })}
+            onDismiss={() => dismissCost(pinnedCost.id)}
+            terms={glossaryFor(pinnedCost.id)}
+          />
+        ) : assets.length > 0 ? (
+          <div role="status" style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '12px 16px', marginBottom: 16, borderRadius: 'var(--r-lg)',
+            background: 'color-mix(in oklab, var(--up) 7%, var(--paper))',
+            border: '0.5px solid color-mix(in oklab, var(--up) 28%, transparent)',
+          }}>
+            <span aria-hidden="true" style={{ color: 'var(--up)', fontSize: 15 }}>✓</span>
+            <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+              {tx(
+                'Nothing urgent today — no accruing costs or deadlines in your data right now.'
+              )}
+            </span>
+          </div>
+        ) : null}
+
+        {/* ── Arrange button ─────────────────────────────────────── */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: editMode ? 10 : 8, order: 9 }}>
+          <button
+            className="dash-arrange-btn"
+            onClick={() => setEditMode(e => !e)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '6px 14px', borderRadius: 8,
+              border: '1px solid',
+              fontFamily: 'inherit', fontSize: 11, fontWeight: 500, cursor: 'pointer',
+              background:   editMode ? 'var(--brand)' : 'var(--paper)',
+              color:        editMode ? 'var(--brand-ink)' : 'var(--ink-2)',
+              borderColor:  editMode ? 'var(--brand)' : 'var(--line)',
+              boxShadow:    editMode ? '0 2px 10px color-mix(in oklab, var(--brand) 28%, transparent)' : 'none',
+            }}
+          >
+            {editMode ? (
+              <>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="2,6 4.5,8.5 9,2.5" />
+                </svg>
+                {tx('Done')}
+              </>
+            ) : (
+              <>
+                <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">
+                  {[[3,2],[7,2],[3,7],[7,7],[3,12],[7,12]].map(([cx,cy],i) => (
+                    <circle key={i} cx={cx} cy={cy} r={1.5} fill="currentColor" />
+                  ))}
+                </svg>
+                {tx('Arrange')}
+              </>
+            )}
+          </button>
         </div>
-      ) : null}
 
-      {/* ── Arrange button ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: editMode ? 10 : 8, order: 9 }}>
-        <button
-          className="dash-arrange-btn"
-          onClick={() => setEditMode(e => !e)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            padding: '6px 14px', borderRadius: 8,
-            border: '1px solid',
-            fontFamily: 'inherit', fontSize: 11, fontWeight: 500, cursor: 'pointer',
-            background:   editMode ? 'var(--brand)' : 'var(--paper)',
-            color:        editMode ? 'var(--brand-ink)' : 'var(--ink-2)',
-            borderColor:  editMode ? 'var(--brand)' : 'var(--line)',
-            boxShadow:    editMode ? '0 2px 10px color-mix(in oklab, var(--brand) 28%, transparent)' : 'none',
-          }}
-        >
-          {editMode ? (
-            <>
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="2,6 4.5,8.5 9,2.5" />
-              </svg>
-              Done
-            </>
-          ) : (
-            <>
-              <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">
-                {[[3,2],[7,2],[3,7],[7,7],[3,12],[7,12]].map(([cx,cy],i) => (
-                  <circle key={i} cx={cx} cy={cy} r={1.5} fill="currentColor" />
-                ))}
-              </svg>
-              Arrange
-            </>
-          )}
-        </button>
+        {/* ── Edit-mode info bar ─────────────────────────────────── */}
+        {editMode && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 14px', marginBottom: 14, borderRadius: 10,
+            background: 'color-mix(in oklab, var(--brand) 7%, var(--bg))',
+            border: '1px solid color-mix(in oklab, var(--brand) 20%, transparent)',
+            animation: 'imari-slideUp 0.18s cubic-bezier(0.23,1,0.32,1) both',
+          }}>
+            <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">
+              {[[3,2],[7,2],[3,7],[7,7],[3,12],[7,12]].map(([cx,cy],i) => (
+                <circle key={i} cx={cx} cy={cy} r={1.5} fill="var(--brand)" />
+              ))}
+            </svg>
+            <span style={{ fontSize: 11.5, color: 'var(--ink-2)', flex: 1 }}>
+              <strong>{tx('Drag')}</strong> {tx('a widget up or down to reorder ·')} <strong>{tx('Hide')}</strong> {tx('to remove it from view · tap')} <strong>{tx('Done')}</strong> {tx('to see the result')}
+            </span>
+            <button onClick={resetLayout} style={{
+              fontSize: 11, padding: '4px 10px', borderRadius: 6,
+              border: '1px solid var(--line)', background: 'var(--paper)',
+              cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink-3)',
+              transition: 'background 0.12s ease',
+            }}>{tx('Reset defaults')}</button>
+          </div>
+        )}
+
+        {/* ── Sections — independent widgets, drag-to-rearrange in edit mode.
+            Reorder.Group owns the order; every swap is persisted immediately.
+            Items not rendered (no data, outside edit mode) can't be dragged,
+            so the values/items mismatch is safe by construction. ── */}
+        <Reorder.Group as="div" axis="y" values={order} onReorder={applyOrder}>
+          {order.map((id) => {
+            const content = sectionContent[id];
+            if (!editMode && !content) return null; // data-conditional: skip when no data
+            return (
+              (<SectionShell
+                key={id}
+                id={id}
+                label={tx(SECTION_META[id].label)}
+                canHide={SECTION_META[id].canHide}
+                isHidden={hidden.has(id)}
+                hasData={!!content}
+                editMode={editMode}
+                onToggleHide={toggleHide}
+              >
+                <Reveal amount={0.08}>{content}</Reveal>
+              </SectionShell>)
+            );
+          })}
+        </Reorder.Group>
       </div>
-
-      {/* ── Edit-mode info bar ─────────────────────────────────── */}
-      {editMode && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 14px', marginBottom: 14, borderRadius: 10,
-          background: 'color-mix(in oklab, var(--brand) 7%, var(--bg))',
-          border: '1px solid color-mix(in oklab, var(--brand) 20%, transparent)',
-          animation: 'imari-slideUp 0.18s cubic-bezier(0.23,1,0.32,1) both',
-        }}>
-          <svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">
-            {[[3,2],[7,2],[3,7],[7,7],[3,12],[7,12]].map(([cx,cy],i) => (
-              <circle key={i} cx={cx} cy={cy} r={1.5} fill="var(--brand)" />
-            ))}
-          </svg>
-          <span style={{ fontSize: 11.5, color: 'var(--ink-2)', flex: 1 }}>
-            <strong>Drag</strong> a widget up or down to reorder · <strong>Hide</strong> to remove it from view · tap <strong>Done</strong> to see the result
-          </span>
-          <button onClick={resetLayout} style={{
-            fontSize: 11, padding: '4px 10px', borderRadius: 6,
-            border: '1px solid var(--line)', background: 'var(--paper)',
-            cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink-3)',
-            transition: 'background 0.12s ease',
-          }}>Reset defaults</button>
-        </div>
-      )}
-
-      {/* ── Sections — independent widgets, drag-to-rearrange in edit mode.
-          Reorder.Group owns the order; every swap is persisted immediately.
-          Items not rendered (no data, outside edit mode) can't be dragged,
-          so the values/items mismatch is safe by construction. ── */}
-      <Reorder.Group as="div" axis="y" values={order} onReorder={applyOrder}>
-        {order.map((id) => {
-          const content = sectionContent[id];
-          if (!editMode && !content) return null; // data-conditional: skip when no data
-          return (
-            <SectionShell
-              key={id}
-              id={id}
-              label={SECTION_META[id].label}
-              canHide={SECTION_META[id].canHide}
-              isHidden={hidden.has(id)}
-              hasData={!!content}
-              editMode={editMode}
-              onToggleHide={toggleHide}
-            >
-              <Reveal amount={0.08}>{content}</Reveal>
-            </SectionShell>
-          );
-        })}
-      </Reorder.Group>
-    </div>
-    </MotionConfig>
+    </MotionConfig>)
   );
 }

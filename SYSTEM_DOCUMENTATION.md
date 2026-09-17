@@ -105,6 +105,7 @@ Core Postgres tables (RLS enforced on every row):
 - **`portfolios`** — one row per portfolio. Holds the full state JSON (assets, liabilities, goals, cashflows, snapshots, chat).
 - **`portfolio_members`** — many-to-many between users and portfolios; carries role (`owner` | `editor` | `viewer`).
 - **`portfolio_invitations`** — tokenized invites, 14-day expiry, consumed on first sign-in after click.
+- **`family_habit_logs`** / **`family_notes`** (migration 006) — the Family module's row-level tables: one row per (week, habit) tick and one row per note key. Kept *out* of the portfolio JSON blob on purpose so two members editing the same week never clobber each other through the compare-and-swap save. RLS = membership **and** the `family` entitlement feature; `updated_by` is forced to `auth.uid()`.
 
 RLS policy `user_has_portfolio_access()` gates all reads/writes by membership. Foreign keys cascade on portfolio delete.
 
@@ -208,6 +209,43 @@ All features below are implemented end-to-end (CRUD + persistence + UI) and live
 ### Progressive features
 - The menu starts at four core items (Dashboard, Assets, Advisor, Settings) and grows with the user's data: first expense reveals Cash Flow + Reports, first debt reveals Liabilities, a salary/pension reveals Retirement, etc. — [features.js](src/features.js)
 - Settings → Features: explicit force-on/off per module with an "auto" indicator and reset. Hidden is never blocked — routes, search, and deep links still resolve.
+- Gated modules (`gated: <feature>` in `FEATURE_MODULES`) read the portfolio's entitlement instead of data, ignore the Settings toggle, and are hidden from the Settings list. First user: the Family module.
+
+### Family module (Sprint 1, 2026-09)
+Household planning shared by every member of a portfolio — the 2026 standalone family dashboard folded into Imari as a nav group.
+- **Family Home** ([Family.jsx](src/views/Family.jsx)) — money cockpit read from the engine (net worth, runway, debt remaining, largest loan end date), this week's score, the 17 annual milestones (tick = done-date), five shared planning notes with debounced autosave, and the top-5 active goals with progress.
+- **Scorecard** ([FamilyScorecard.jsx](src/views/FamilyScorecard.jsx)) — 33 habits in 7 areas per week (Monday-keyed, local dates), rating + streak, month cards with week drill-down, yearly heatmap and per-area averages, weekly reflection note, and a one-off importer for the old dashboard's localStorage JSON.
+- Engine: [family/habits.js](src/family/habits.js) — stable habit ids, week math, scoring, roll-ups and the legacy mapper (unit-tested). Data: [family/cloud.js](src/family/cloud.js) (scoped upserts, chunked import, realtime channel) and [family/useFamily.js](src/family/useFamily.js) (optimistic writes with rollback, live rows from the other member).
+- Gate: entitlement feature `family` (service-role insert — snippet at the foot of `supabase-migration-006.sql`). Both views are lazy chunks; nothing family-related loads for non-entitled users beyond one `entitlements` read.
+- Viewers see everything read-only (inputs disabled) and RLS refuses their writes regardless.
+
+### Family module — Sprint 2 (2026-09): calendar, household, insurance, documents, wish list
+- **Data**: one generic row-level table `family_items` (migration 007; kinds `event | task | policy | document | wish`, typed columns kind/title/due_date/amount/status + ≤8 KB jsonb `data`). Field specs, validation (`normalizeItem`), the derived calendar, wish affordability and insurance-gap detection are pure and tested in [family/planning.js](src/family/planning.js). Access: [family/items.js](src/family/items.js) + [family/useItems.js](src/family/useItems.js) (optimistic, realtime). Shared editor/chrome: [family/ui.jsx](src/family/ui.jsx).
+- **Calendar** ([FamilyCalendar.jsx](src/views/FamilyCalendar.jsx)) — derived, not maintained: family events (yearly repeats), open tasks, policy renewals, document expiries, wish targets, goal deadlines, loan end dates, next occurrence of recurring expense cashflows, and Rwanda statutory dates that follow from owned assets (RRA fixed-asset tax 31 Mar, vehicle road levy 31 Dec). ICS feed via edge function `family-ics` (`--no-verify-jwt`): a 256-bit capability token per portfolio in `family_calendar_tokens` (editors create/rotate/disable in the app), service-role read, entitlement re-checked, RFC 5545 escaping, per-token rate limit.
+- **Household** ([Household.jsx](src/views/Household.jsx)) — shared tasks with owner + repeat (completing a repeating task schedules the next one) and the recurring bills already in Cash Flow with next due date.
+- **Insurance** ([Insurance.jsx](src/views/Insurance.jsx)) — policies with premium/frequency/cover/renewal/linked asset; uninsured vehicles/houses surfaced as a cost-of-absence card; one-click push of the premium into Cash Flow as a recurring expense (idempotent via `data.cashflow_id`).
+- **Documents** ([Documents.jsx](src/views/Documents.jsx)) — metadata in `family_items`, files in the PRIVATE bucket `family-docs` (10 MB, PDF/JPG/PNG/WebP) under `<portfolio>/<item>/<file>`; storage policies resolve the portfolio from the path through `family_doc_access()` (safe cast, never errors into allow); files open via 60-second signed URLs; only a 4-character reference hint may be stored, never a full ID number.
+- **Wish list** ([Wishlist.jsx](src/views/Wishlist.jsx)) — priority-ranked wishes with an affordability verdict (liquid − 3-month buffer vs cost; months-to-afford from the 6-month savings pace) and “Make it a goal” (creates a liquid-funded Goal, idempotent via `data.goal_id`).
+- Family Home gained a “Next two weeks” card from the same derived calendar.
+### Family module — Sprint 3 (2026-09): advisor context + tools, family insights, Sunday review
+- **Advisor grounding** — when the household is entitled, [App.jsx](src/App.jsx) loads one family bundle ([family/useFamilyBundle.js](src/family/useFamilyBundle.js)) and the floating advisor adds a compact `<FAMILY_DATA>` block ([family/context.js](src/family/context.js) `familySummary`, < 1.5 KB, same helpers as the screens; the portfolio JSON budget drops from 6200 to 4600 chars to stay under the 8000-char proxy cap).
+- **Advisor tools** — `ai-proxy` owns three tool definitions (`family_add_item`, `family_tick_habits`, `family_update_plan`) behind `toolset: 'family'`; the browser only executes allow-listed names through the same RLS-scoped functions the forms use (`runFamilyTool` → `normalizeItem`/habit ids/plan fields), so the model gains no authority a form lacks. Multi-turn: `completeChatTools` in [ai.js](src/ai.js) runs ≤ 3 rounds; the proxy validates tool_use/tool_result blocks (ids, names, sizes). No delete tool by design. Actions are echoed as "✓ …" lines in the chat.
+- **Family insight rules** — `FAMILY_RULES` (renewal/expiry due, uninsured vehicle/house, scorecard slipping late in the week) run inside the shared engine only when `ctx.family` is present ([engine/insights/index.js](src/engine/insights/index.js)); family item ids and the `family-scorecard` pseudo-ref are accepted by the stale-ref guard.
+- **Sunday review** — edge function `family-weekly-review` (`--no-verify-jwt`; auth = `x-review-secret` for the scheduler across all entitled households, or a user JWT for that editor's own portfolio, 10-minute dedupe). Computes facts server-side (scorecard by section, next 7 days, liquid/debt/runway from the portfolio jsonb + fx), Claude Haiku narrates 120–180 words (fallback text if the key is missing), stored as `family_notes` key `review:<monday>` (Family Home "Sunday review" card, live via realtime, "Write it now" button). Delivery: n8n workflow **Imari · Family Sunday Review** (id `1QkwwBVatcD7h8jS`, Sunday 18:00 Africa/Kigali, error workflow `P5KmDb1UvpuUlXRz`) → HTTP POST → Split Out → Gmail to member emails. Secrets: `FAMILY_REVIEW_SECRET`, `APP_URL` (Supabase); the same secret sits in the n8n HTTP node header — rotate both together.
+- **Family data layer is lazy (2026-09).** `App.jsx` mounts a render-nothing `FamilyBridge` (React.lazy) only for entitled households; it hands the engine and the advisor the family rules, id set, summary and tool runner, so nothing under `src/family/` is in the main chunk (389 KB vs 418 KB when it was static). `runFamilyTool` is idempotent for `family_add_item` (same kind/title/date → “Already exists”), and the advisor prompt states that ✓ lines are completed actions — a follow-up question once re-created a task.
+- **Dependencies (2026-09-08):** `npm audit fix` closed all 19 Dependabot alerts (vite 6.4.3, postcss 8.5.28, @babel/core 7.29.7, browserslist 4.28.9, fast-uri, brace-expansion, nanoid — build tooling only); production output was byte-identical.
+### Security & operations audit (2026-09-09)
+- **Cross-user isolation, verified empirically**: impersonating two real users and `anon` at the database (rolled-back transaction) — the second user sees 0 rows of the first user's portfolio, members, invitations, entitlements, family tables, calendar token and document objects; inserts into another portfolio's family_items, self-granting an entitlement and updating another portfolio are all refused by RLS; `anon` sees nothing (including exchange_rates, which are authenticated-only). RLS is enabled on every public table.
+- **Input hygiene**: `reducer.scrub()` is the single choke point for user-typed fields (control chars stripped; 300-char labels, 4 000-char notes/bio, data URIs kept ≤ 4 MB, prototype keys dropped); family tables enforce their own DB checks (migration 006/007); migration 008 adds per-column size caps on the portfolio document (assets 12 MB, cashflows 6 MB, profile/snapshots 2 MB, others ≤ 1 MB), a 120-char portfolio name cap and an e-mail format constraint on invitations. AI replies are HTML-escaped before markdown-lite rendering; the two `dangerouslySetInnerHTML` sinks only ever receive `renderMD()` output.
+- **Rate limits**: ai-proxy 12 req/min/user; send-invitation 5 e-mails/10 min/user + owner-only + invite cap; family-weekly-review 3 req/10 min/user on the in-app path (+10-min dedupe) and shared-secret on the scheduler path; family-ics 60 req/5 min/token; Supabase Auth (dashboard): 100 e-mails/h, 150 token refreshes/5 min/IP, 100 verifications/5 min/IP, 30 anonymous/h, 100 sign-ins/5 min/IP. Note: function limiters are per-instance memory — strict enough to stop bill bombs, not a substitute for a table-backed limiter if abuse appears.
+- **Auth policy (dashboard, read 2026-09-09)**: e-mail OTP / reset / magic links expire after 3600 s; invitations after 14 days (DB); access tokens 3600 s with refresh-token rotation; min password 8 chars with lower/upper/digit/symbol; secure e-mail change, secure password change and require-current-password ON; leaked-password check OFF (Pro plan only); session time-box/inactivity are Pro-only. Recommended tightening: OTP expiry 1800 s.
+- **Error handling**: React ErrorBoundary with reload; every Family screen shows load/save errors inline and rolls back optimistic writes; edge functions always answer JSON `{error}` with the right status; n8n workflows carry the shared error workflow `P5KmDb1UvpuUlXRz`; new: `window` `error` / `unhandledrejection` listeners surface a toast so nothing fails silently.
+- **E-mail delivery, root cause (2026-09-09)**: Supabase Auth has **no custom SMTP configured** (sender/host/user empty) while **Confirm email is ON**. The built-in Supabase mailer only delivers to the project team's own addresses and is capped at a handful of e-mails per hour, so: new sign-ups never receive their confirmation link ("sign-up not working"), password resets to outside addresses do not arrive, and nothing can come from noreply@maxventures.rw until SMTP for that mailbox is entered in Auth → Emails → SMTP Settings. Once it is, every Auth e-mail (confirmation, reset, magic link, invite) is sent from that address with the project's templates.
+- **Invitations now go through Supabase Auth's mailer** (`send-invitation` rewritten): new person → `auth.admin.inviteUserByEmail` ("Invite user" template; the link signs them in, lands on `?invite=<token>`, they choose a password via the recovery screen — `type=invite` is treated like recovery — and the invitation is accepted); existing user → `signInWithOtp` magic link with the same landing. No Resend key, no Gmail relay: the n8n relay workflow `zGrAB4vnsWemYuh7` was unpublished and archived and its secrets removed the same day it was created, at the owner's request that mail must come from the project sender.
+- **Repeated sign-up with an existing e-mail** now tells the person so: Supabase returns a placeholder user with an empty `identities` array (audit action `user_repeated_signup`), and Login.jsx switches to sign-in with "An account with this email already exists".
+- **(Superseded) Why invitations never sent**: `send-invitation` refused to run without `RESEND_API_KEY` + `FROM_EMAIL`, which were never set. Fix: a second transport — n8n workflow **Imari · Transactional e-mail (Gmail)** (id `zGrAB4vnsWemYuh7`, webhook `/webhook/imari-email`, gated by `onlyRunIf` on header `x-email-secret`, Gmail credential `LmmJhjVFDXjWI1Qv`); Supabase secrets `EMAIL_WEBHOOK_URL` + `EMAIL_WEBHOOK_SECRET`. Resend still takes precedence when configured. The function now also validates the invitee e-mail and rejects expired invitations.
+- **APIs configured (inventory)**: edge functions ai-proxy, bnr-rates (pg_cron 06:15 daily, rates fresh), send-invitation, family-ics, family-weekly-review; secrets ANTHROPIC_KEY, FAMILY_REVIEW_SECRET, APP_URL, EMAIL_WEBHOOK_URL/SECRET; n8n workflows `1QkwwBVatcD7h8jS` (Sunday review) and `zGrAB4vnsWemYuh7` (e-mail relay); external: BNR rates, Anthropic, Gmail (via n8n), Google/Apple Calendar (ICS). Not configured: Resend, WhatsApp, Web3/anonymous auth (disabled), captcha.
+- **PWA shell is network-first (2026-09).** `index.html` left the Workbox precache and navigations use `NetworkFirst` (3 s timeout, cache fallback offline). Before this, every first load after a deploy served the previous build and users had to hard-reload to see new screens.
 
 ### Trends & market data
 - Live crypto prices (CoinGecko) and FX (open.er-api.com fallback)
@@ -286,7 +324,7 @@ Production deploys are never a side effect of a push — that was changed delibe
 | Integration tests | None configured. |
 | Type checking | None (project is plain JS, not TS). |
 | Linting | Not enforced in CI. |
-| i18n audit | ✅ `npm run i18n:audit` — locale completeness (en/fr/rw) + hardcoded-string gate on chrome files. |
+| i18n audit | ✅ `npm run i18n:audit` — chrome bundle completeness (en/fr/rw), interior catalogue completeness (every key of `scripts/i18n-keys.all.json` present in both catalogues), and a hardcoded-string gate on chrome files. |
 | Build verification | ✅ `vite build` runs on every push to `main`; a failure blocks the deploy. |
 | Runtime checks | React `StrictMode` is enabled in dev. |
 | Manual QA | Each feature has been exercised against the deployed site. |
@@ -339,6 +377,64 @@ Until all three are done, email-based auth and the invitation flow silently brea
 
 ---
 
+## 6b. Internationalisation (EN / FR / Kinyarwanda)
+
+Every screen, report, insight sentence and AI reply follows the language picked
+in **Settings → Language**. Two layers cooperate:
+
+| Layer | Where | Keyed by | Used for |
+|---|---|---|---|
+| `t('key.path')` | `src/locales/{en,fr,rw}.js` | dotted key | chrome: landing, nav, login, onboarding, settings |
+| `tx('English text')` | `src/i18n/messages.{fr,rw}.json` | the English string itself | the whole app interior |
+
+**Why message-keyed.** The interior had ~2,000 strings written in place. Using
+the English text as the key meant no key invention, and a missing entry falls
+back to readable English instead of a blank cell.
+
+**Pipeline** (run in this order after touching interior copy):
+
+```bash
+node scripts/i18n-codemod.mjs      # pass 1 — JSX text, allow-listed attributes
+node scripts/i18n-pass2.mjs        # pass 2 — prose in plain literals inside functions
+node scripts/i18n-data-keys.mjs    # module-level data tables + string arrays
+node scripts/i18n-keys.mjs         # union → scripts/i18n-keys.all.json
+node scripts/i18n-merge.mjs        # scripts/i18n/{fr,rw}_N.json → src/i18n/messages.*.json
+npm run i18n:audit                 # fails on any untranslated key
+```
+
+Translations are authored in reviewable chunks under `scripts/i18n/`
+(`fr_1.json` … `rw_11.json`); the merge script is the only writer of
+`src/i18n/messages.*.json`. It fails on a missing key or on a placeholder the
+English source never had. Dropping a placeholder is allowed — English plural
+suffixes (`{1}` = "s") have no equivalent in French or Kinyarwanda.
+
+**Data-table strings** (asset classes, categories, market domains, glossary,
+advisor starter questions) are translated at the *read site* — `tx(x.label)` —
+so they never appear as a literal inside a `tx()` call. `i18n-data-keys.mjs`
+collects them separately; that is why it must run before `i18n-keys.mjs`.
+
+**Three things that bite:**
+
+1. **The first paint waits for the catalogue.** `tx()` reads module state, so
+   anything computed before the catalogue loads (market source labels, insight
+   sentences, toasts) would capture English into React state and never
+   re-translate. `I18nProvider` holds children behind a splash until
+   `hasMessages(locale)`; English never waits, and a failed fetch falls back to
+   English rather than hanging.
+2. **`LocaleBoundary` re-keys the subtree** on locale change so every `tx()`
+   call re-runs.
+3. **Dates follow the language** through `txLocale()` (`en-GB` / `fr-FR` /
+   `rw-RW`) — never hard-code a locale in `toLocaleDateString`.
+
+**AI surfaces** are instructed in the reader's language, not just the UI: the
+floating advisor's system prompt, the Fast Forward narration, and the Sunday
+family review Edge Function (which also localises the e-mail subject).
+
+Catalogues are lazy chunks (~57 kB gzip each) loaded only for a non-English
+locale, so the main bundle is unchanged at 394 kB.
+
+---
+
 ## 7. Known limits & next steps
 
 - **UI flows have no automated tests.** 220 vitest tests cover every calculation engine, the reducer, services, and content integrity — but rendering/routing regressions are caught visually (a hooks-order crash once shipped to staging with all tests green). A headless smoke test in CI is the known gap.
@@ -347,7 +443,7 @@ Until all three are done, email-based auth and the invitation flow silently brea
 - **Anthropic rate limits are global to the function**, not per user; abuse mitigation is basic.
 - **Tax report is hard-coded to 2024 RRA bands.** Needs yearly maintenance.
 - ~~Advisor context truncation, session-local dismissals, per-consumer engine runs~~ — *resolved 2026-06*: a budgeted serializer ([advisorContext.js](src/services/advisorContext.js)) guarantees complete JSON inside the 8000-char cap; dismissals persist on `profile.dismissedInsights` with a 7-day TTL; [InsightsContext](src/contexts/InsightsContext.jsx) runs the engine once per state change for all consumers. The engine remains in the main bundle by design (the sidebar badge needs it at startup).
-- **Supabase schema must be at migration 005** (`portfolios.catrules/budgets` columns). The client degrades gracefully when behind, but rules/budgets won't cloud-sync until it's applied.
+- **Supabase schema must be at migration 007** (005 = `portfolios.catrules/budgets`; 006 = Family scorecard tables + `portfolio_has_feature()`; 007 = `family_items`, `family_calendar_tokens`, `family-docs` bucket + storage policies). Family views show a load error until applied and the portfolio holds the `family` entitlement. Edge function `family-ics` must be deployed with `--no-verify-jwt`.
 
 ### Deferred to the Imari mobile app (2026-06)
 
@@ -368,7 +464,7 @@ A factual one-page digest for pitch material. Every claim below is verifiable in
 
 **The thesis (loss aversion, "Cost of Absence").** Every advisory insight is ranked by what inaction costs — in francs, days, and risk — computed deterministically from the user's own data. 16 individually-tested rules; the AI only phrases what the math already proved. Honesty discipline is a feature: figures are dated, sourced, floored (never rounded up), and rules go silent when data is thin.
 
-**Built for Rwanda's rails, not adapted to them.** BNR official FX (daily, self-healing scraper), RRA tax estimates (Fixed Asset Tax, vehicle levy, CGT, EBM VAT credit), RSSB + Ejo Heza pension projection on the statutory schedule, UPI land-title anchoring, MTN MoMo / Airtel statement import with AI categorisation, EN/FR/Kinyarwanda. This is the moat a global app can't reach.
+**Built for Rwanda's rails, not adapted to them.** BNR official FX (daily, self-healing scraper), RRA tax estimates (Fixed Asset Tax, vehicle levy, CGT, EBM VAT credit), RSSB + Ejo Heza pension projection on the statutory schedule, UPI land-title anchoring, MTN MoMo / Airtel statement import with AI categorisation, and a fully translated product — every screen, report and AI reply in English, French or Kinyarwanda. This is the moat a global app can't reach.
 
 **Product maturity.**
 - ~20 views, 17 movable dashboard widgets, PWA installable + offline, realtime multi-device sync, role-based sharing (owner/editor/viewer — diaspora trustee use-case), 25+ asset classes.

@@ -8,6 +8,8 @@
 
 import { completeText } from '../ai.js';
 
+import { tx } from '../i18n/tx.js';
+
 // ─── File-type dispatcher ────────────────────────────────────────────────────
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB — covers a year of MoMo
 
@@ -16,9 +18,12 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB — covers a year of MoMo
 // .xlsx — feeding it anything else surfaces a raw JSZip error. So dispatch on
 // the file's actual leading bytes, never on its name.
 export async function parseFile(file) {
-  if (!file) throw new Error('No file provided');
+  if (!file) throw new Error(tx('No file provided'));
   if (file.size > MAX_BYTES) {
-    throw new Error(`File too large (max ${MAX_BYTES / 1024 / 1024} MB). Export a shorter date range.`);
+    throw new Error(tx(
+      'File too large (max {0} MB). Export a shorter date range.',
+      [MAX_BYTES / 1024 / 1024]
+    ));
   }
   const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
   const startsWith = (...bytes) => bytes.every((b, i) => head[i] === b);
@@ -26,7 +31,9 @@ export async function parseFile(file) {
   if (startsWith(0x50, 0x4B, 0x03, 0x04)) return parseExcel(file); // zip container = real .xlsx
   if (startsWith(0xD0, 0xCF, 0x11, 0xE0)) return parseLegacyXls(file); // OLE2 = legacy binary .xls
   if (startsWith(0x25, 0x50, 0x44, 0x46)) { // %PDF
-    throw new Error('PDF statements aren’t supported yet. Export the statement as Excel (.xlsx) or CSV from your bank portal instead.');
+    throw new Error(tx(
+      'PDF statements aren’t supported yet. Export the statement as Excel (.xlsx) or CSV from your bank portal instead.'
+    ));
   }
 
   const text = await file.text();
@@ -131,7 +138,9 @@ export function parseHTMLTable(html) {
     }).filter(r => Object.values(r).some(v => v));
     if (rows.length) return { headers, rawHeaders: headers, rows };
   }
-  throw new Error('This file is a web page without a recognisable transaction table. Export the statement as CSV or Excel (.xlsx) instead.');
+  throw new Error(tx(
+    'This file is a web page without a recognisable transaction table. Export the statement as CSV or Excel (.xlsx) instead.'
+  ));
 }
 
 // ─── Excel parser (lazy-loaded — exceljs only fetched when used) ─────────────
@@ -147,7 +156,7 @@ export async function parseExcel(file) {
       wb.worksheets.find(s => /statement|transaction|trans/i.test(s.name)) ||
       wb.worksheets.find(s => s.rowCount > 1) ||
       wb.worksheets[0];
-    if (!ws) throw new Error('No usable sheet found in this workbook.');
+    if (!ws) throw new Error(tx('No usable sheet found in this workbook.'));
 
     // Find the header row: best header-shaped row in the opening stretch.
     const rowTexts = [];
@@ -165,7 +174,7 @@ export async function parseExcel(file) {
     });
     // Trim empty trailing columns
     while (headers.length && !headers[headers.length - 1]) headers.pop();
-    if (!headers.length) throw new Error('Could not find a header row in this Excel file.');
+    if (!headers.length) throw new Error(tx('Could not find a header row in this Excel file.'));
 
     const rows = [];
     const lastRow = ws.rowCount;
@@ -186,7 +195,9 @@ export async function parseExcel(file) {
     // translate it; the raw message reads like a stack trace to users.
     const raw = String((err && err.message) || err);
     if (/central directory|zip/i.test(raw)) {
-      throw new Error('This Excel file looks damaged or incomplete. Re-download it from your bank portal, or export CSV instead.');
+      throw new Error(tx(
+        'This Excel file looks damaged or incomplete. Re-download it from your bank portal, or export CSV instead.'
+      ));
     }
     throw err instanceof Error ? err : new Error(raw);
   }
@@ -207,9 +218,11 @@ async function parseLegacyXls(file) {
     grid = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' })
       .map(cells => cells.map(v => v instanceof Date ? v.toISOString() : String(v ?? '').trim()));
   } catch {
-    throw new Error('This Excel file could not be read. Re-download it from your bank portal, or export CSV instead.');
+    throw new Error(tx(
+      'This Excel file could not be read. Re-download it from your bank portal, or export CSV instead.'
+    ));
   }
-  if (!grid.length) throw new Error('No usable sheet found in this workbook.');
+  if (!grid.length) throw new Error(tx('No usable sheet found in this workbook.'));
 
   // Same header heuristic as the other parsers: best header-shaped row in
   // the opening stretch; otherwise row 1.
@@ -217,7 +230,7 @@ async function parseLegacyXls(file) {
   const headerIdx = found === -1 ? 0 : found;
   const headers = [...grid[headerIdx]];
   while (headers.length && !headers[headers.length - 1]) headers.pop();
-  if (!headers.some(Boolean)) throw new Error('Could not find a header row in this Excel file.');
+  if (!headers.some(Boolean)) throw new Error(tx('Could not find a header row in this Excel file.'));
 
   const rows = grid.slice(headerIdx + 1).map(cells => {
     const row = {};

@@ -8,6 +8,8 @@ import { makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { valueRWF, toBase } from '../../data.js';
 import { monthlyEquivalent } from '../recurrence.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export default function rentalYieldGap(state, { now = new Date(), refs = REFERENCE } = {}) {
   const houses = (state.assets || []).filter(a => a.kind === 'realestate-house');
   if (houses.length === 0) return null;
@@ -33,13 +35,27 @@ export default function rentalYieldGap(state, { now = new Date(), refs = REFEREN
     id: 'rental-yield-gap',
     type: 'comparison',
     category: 'property',
-    headline: `Rental yield ${grossYieldPct.toFixed(1)}% vs ${refs.tBillYieldPct}% risk-free`,
-    body: `Rent of ${rwf(monthlyRent)}/month on property valued at ${rwf(houseValue)} is a ${grossYieldPct.toFixed(1)}% gross yield — under half the ${refs.tBillYieldPct}% T-bill reference. Property values here are your own estimates, so first check the valuation is current; then review whether the rent has kept up with the market.`,
+    headline: tx(
+      'Rental yield {0}% vs {1}% risk-free',
+      [grossYieldPct.toFixed(1), refs.tBillYieldPct]
+    ),
+    body: tx(
+      'Rent of {0}/month on property valued at {1} is a {2}% gross yield — under half the {3}% T-bill reference. Property values here are your own estimates, so first check the valuation is current; then review whether the rent has kept up with the market.',
+      [
+        rwf(monthlyRent),
+        rwf(houseValue),
+        grossYieldPct.toFixed(1),
+        refs.tBillYieldPct
+      ]
+    ),
     costOfAbsence: {
       severity: 'info',
       amount: gapAnnual,
-      costStatement: `The gap to the risk-free rate is ~${rwf(gapAnnual)}/year of underworked equity — a rent review costs nothing to ask for.`,
-      action: { label: 'Review the property', to: 'assets' },
+      costStatement: tx(
+        'The gap to the risk-free rate is ~{0}/year of underworked equity — a rent review costs nothing to ask for.',
+        [rwf(gapAnnual)]
+      ),
+      action: { label: tx('Review the property'), to: 'assets' },
     },
     sourceRefs: ids,
     dataAsOf: inputsAsOf(state, houses.map(a => a.id), now),

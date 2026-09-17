@@ -6,15 +6,17 @@
 import { completeVision } from '../ai.js';
 import { EXPENSE_CATEGORIES } from '../data.js';
 
+import { tx } from '../i18n/tx.js';
+
 /** Read a File into the { data, mediaType } shape completeVision expects. */
 export function fileToImage(file) {
   return new Promise((resolve, reject) => {
-    if (!file || !/^image\//.test(file.type)) return reject(new Error('Please choose an image (PNG or JPG).'));
-    if (file.size > 5 * 1024 * 1024) return reject(new Error('Image too large (max 5 MB).'));
+    if (!file || !/^image\//.test(file.type)) return reject(new Error(tx('Please choose an image (PNG or JPG).')));
+    if (file.size > 5 * 1024 * 1024) return reject(new Error(tx('Image too large (max 5 MB).')));
     const reader = new FileReader();
     reader.onload = () => {
       const m = /^data:(.+?);base64,(.+)$/.exec(reader.result);
-      if (!m) return reject(new Error('Could not read that image.'));
+      if (!m) return reject(new Error(tx('Could not read that image.')));
       resolve({ mediaType: m[1], data: m[2] });
     };
     reader.onerror = () => reject(reader.error);
@@ -30,9 +32,9 @@ export async function parseReceiptImage(image) {
 Amounts are in RWF unless the receipt clearly shows another currency. If a field is unclear, still return your best guess and lower the confidence.`;
   const text = await completeVision(prompt, image);
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('Could not read the receipt — try a clearer photo.');
+  if (!match) throw new Error(tx('Could not read the receipt — try a clearer photo.'));
   let obj;
-  try { obj = JSON.parse(match[0]); } catch { throw new Error('Could not parse the receipt.'); }
+  try { obj = JSON.parse(match[0]); } catch { throw new Error(tx('Could not parse the receipt.')); }
   const validCat = EXPENSE_CATEGORIES.some(c => c.id === obj.category) ? obj.category : 'other-exp';
   return {
     merchant: String(obj.merchant || '').slice(0, 120),

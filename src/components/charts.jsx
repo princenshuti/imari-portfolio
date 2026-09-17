@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { fmtBase, fromBase } from '../data.js';
 
+import { tx, txLocale } from '../i18n/tx.js';
+
 export function Sparkline({ data, w = 80, h = 26, stroke = 'currentColor', fill = false, ariaLabel }) {
   if (!data || data.length < 2) return null;
   const min = Math.min(...data), max = Math.max(...data);
@@ -14,7 +16,10 @@ export function Sparkline({ data, w = 80, h = 26, stroke = 'currentColor', fill 
   const firstV = data[0], lastV = data[data.length - 1];
   const trendPct = firstV ? ((lastV - firstV) / firstV * 100) : 0;
   const dir = trendPct >= 0 ? 'up' : 'down';
-  const label = ariaLabel || `Sparkline trend ${dir} ${Math.abs(trendPct).toFixed(1)} percent over ${data.length} points`;
+  const label = ariaLabel || tx(
+    'Sparkline trend {0} {1} percent over {2} points',
+    [dir, Math.abs(trendPct).toFixed(1), data.length]
+  );
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display:'block' }} role="img" aria-label={label}>
       {fill && <path d={area} fill={stroke} opacity={0.12} />}
@@ -67,7 +72,15 @@ export function AreaChart({
   const firstV = data[0], lastV = data[data.length - 1];
   const trendPct = firstV ? ((lastV - firstV) / firstV * 100) : 0;
   const a11yLabel = ariaLabel ||
-    `Area chart with ${data.length} points, latest value ${fmtV(lastV)}, ${trendPct >= 0 ? 'up' : 'down'} ${Math.abs(trendPct).toFixed(1)} percent vs start.`;
+    tx(
+      'Area chart with {0} points, latest value {1}, {2} {3} percent vs start.',
+      [
+        data.length,
+        fmtV(lastV),
+        trendPct >= 0 ? 'up' : 'down',
+        Math.abs(trendPct).toFixed(1)
+      ]
+    );
 
   return (
     <div style={{ position: 'relative' }}>
@@ -139,13 +152,13 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
 
   if (!snapshots || snapshots.length < 2) {
     return (
-      <div style={{
+      (<div style={{
         height, display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'var(--bg-2)', borderRadius: 'var(--r-md)',
         color: 'var(--ink-3)', fontSize: 13,
       }}>
-        Portfolio history builds over time — check back tomorrow.
-      </div>
+        {tx('Portfolio history builds over time — check back tomorrow.')}
+      </div>)
     );
   }
 
@@ -193,7 +206,7 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
       xLabelsRaw.push({
         date: s.date,
         x: xOf(i),
-        label: new Date(s.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        label: new Date(s.date + 'T00:00:00').toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' }),
       });
     }
   }
@@ -228,17 +241,17 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
       const x = fromBase(v, displayCurrency);
       return x >= 1e9 ? `${(x / 1e9).toFixed(1)}B` : x >= 1e6 ? `${(x / 1e6).toFixed(1)}M` : `${(x / 1e3).toFixed(0)}k`;
     };
-    const dateOf = (i) => new Date(snapshots[i].date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const dateOf = (i) => new Date(snapshots[i].date + 'T00:00:00').toLocaleDateString(txLocale(), { day: 'numeric', month: 'short' });
     if (pi > 1 && pi < snapshots.length - 2) {
-      annotations.push({ x: xOf(pi), y: yOf(nwArr[pi]), text: `Peak ${lbl(nwArr[pi])} · ${dateOf(pi)}`, above: true, color: 'var(--up)' });
+      annotations.push({ x: xOf(pi), y: yOf(nwArr[pi]), text: tx('Peak {0} · {1}', [lbl(nwArr[pi]), dateOf(pi)]), above: true, color: 'var(--up)' });
     }
     if (ti > 1 && ti < snapshots.length - 2 && ti !== pi) {
-      annotations.push({ x: xOf(ti), y: yOf(nwArr[ti]), text: `Low ${lbl(nwArr[ti])} · ${dateOf(ti)}`, above: false, color: 'var(--down)' });
+      annotations.push({ x: xOf(ti), y: yOf(nwArr[ti]), text: tx('Low {0} · {1}', [lbl(nwArr[ti]), dateOf(ti)]), above: false, color: 'var(--down)' });
     }
   }
 
   return (
-    <div style={{ position: 'relative', userSelect: 'none' }}>
+    (<div style={{ position: 'relative', userSelect: 'none' }}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
@@ -247,7 +260,15 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
         onPointerLeave={() => setHover(null)}
         onPointerDown={handleMouseMove}
         role="img"
-        aria-label={`Portfolio growth chart — ${snapshots.length} data points from ${snapshots[0]?.date} to ${snapshots[snapshots.length-1]?.date}. Latest net worth ${fmtBase(snapshots[snapshots.length-1]?.netWorth, displayCurrency, { compact: true })}.`}
+        aria-label={tx(
+          'Portfolio growth chart — {0} data points from {1} to {2}. Latest net worth {3}.',
+          [
+            snapshots.length,
+            snapshots[0]?.date,
+            snapshots[snapshots.length-1]?.date,
+            fmtBase(snapshots[snapshots.length-1]?.netWorth, displayCurrency, { compact: true })
+          ]
+        )}
       >
         <defs>
           <linearGradient id="pcGradNW" x1="0" y1="0" x2="0" y2="1">
@@ -278,7 +299,7 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
         {/* X-axis labels */}
         {xLabels.map((l, i) => (
           <text key={i} className="pc-axis" x={l.x} y={H - 4} textAnchor="middle"
-            fontSize="9" fill="var(--ink-4)" fontFamily="inherit">{l.label}</text>
+            fontSize="9" fill="var(--ink-4)" fontFamily="inherit">{tx(l.label)}</text>
         ))}
 
         {/* Y-axis labels */}
@@ -301,7 +322,7 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
               textAnchor="middle" fontSize="9.5" fontWeight="600"
               fill={a.color} fontFamily="inherit"
               stroke="var(--paper)" strokeWidth="3" paintOrder="stroke"
-            >{a.text}</text>
+            >{tx(a.text)}</text>
           </g>
         ))}
 
@@ -316,7 +337,6 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
           </>
         )}
       </svg>
-
       {/* Hover tooltip */}
       {hover && snap && (
         <div style={{
@@ -334,13 +354,13 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
           minWidth: 160,
         }}>
           <div className="muted" style={{ fontSize: 10, marginBottom: 4 }}>
-            {new Date(snap.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {new Date(snap.date + 'T00:00:00').toLocaleDateString(txLocale(), { day: 'numeric', month: 'short', year: 'numeric' })}
           </div>
           <div className="num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand)' }}>
             {fmtBase(snap.netWorth, displayCurrency, { compact: true })}
           </div>
           <div className="muted" style={{ fontSize: 10, marginTop: 2 }}>
-            Cost: {fmtBase(snap.costBasis, displayCurrency, { compact: true })}
+            {tx('Cost:')} {fmtBase(snap.costBasis, displayCurrency, { compact: true })}
           </div>
           <div style={{
             fontSize: 10, fontWeight: 600, marginTop: 2,
@@ -350,12 +370,11 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
           </div>
         </div>
       )}
-
       {/* Legend */}
       <div style={{ display: 'flex', gap: 18, justifyContent: 'flex-end', marginTop: 4, paddingRight: 8 }}>
         {[
-          { color: 'var(--brand)', label: 'Net worth', dash: false },
-          { color: 'var(--ink-3)', label: 'Cost basis', dash: true },
+          { color: 'var(--brand)', label: tx('Net worth'), dash: false },
+          { color: 'var(--ink-3)', label: tx('Cost basis'), dash: true },
         ].map((l) => (
           <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <svg width="20" height="10" viewBox="0 0 20 10">
@@ -363,11 +382,11 @@ export function PortfolioChart({ snapshots = [], displayCurrency = 'RWF', height
                 stroke={l.color} strokeWidth="2"
                 strokeDasharray={l.dash ? '4 3' : ''} />
             </svg>
-            <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{l.label}</span>
+            <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{tx(l.label)}</span>
           </div>
         ))}
       </div>
-    </div>
+    </div>)
   );
 }
 
@@ -390,7 +409,12 @@ export function BenchmarkBar({ label, portfolioReturn, benchmarkReturn }) {
   const spread = portfolioReturn - benchmarkReturn;
   const winning = spread >= 0;
   return (
-    <div style={{ marginBottom: 14 }} role="group" aria-label={`${label}: portfolio ${portfolioReturn.toFixed(1)} percent, benchmark ${benchmarkReturn.toFixed(1)} percent, spread ${spread.toFixed(1)} percent`}>
+    (<div style={{ marginBottom: 14 }} role="group" aria-label={tx('{0}: portfolio {1} percent, benchmark {2} percent, spread {3} percent', [
+      label,
+      portfolioReturn.toFixed(1),
+      benchmarkReturn.toFixed(1),
+      spread.toFixed(1)
+    ])}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
         <span style={{ fontSize: 11.5, color: 'var(--ink-2)', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {label}
@@ -407,7 +431,7 @@ export function BenchmarkBar({ label, portfolioReturn, benchmarkReturn }) {
       </div>
       {/* Portfolio bar — solid brand */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 10, color: 'var(--ink-3)', width: 60, flexShrink: 0, fontWeight: 600 }}>You</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-3)', width: 60, flexShrink: 0, fontWeight: 600 }}>{tx('You')}</span>
         <div style={{ position: 'relative', height: 7, flex: 1, background: 'var(--bg-2)', borderRadius: 4 }}>
           <div style={{
             position: 'absolute', left: 0, top: 0,
@@ -423,7 +447,7 @@ export function BenchmarkBar({ label, portfolioReturn, benchmarkReturn }) {
       </div>
       {/* Benchmark bar — outlined gold */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 10, color: 'var(--ink-3)', width: 60, flexShrink: 0 }}>Benchmark</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-3)', width: 60, flexShrink: 0 }}>{tx('Benchmark')}</span>
         <div style={{ position: 'relative', height: 7, flex: 1, background: 'var(--bg-2)', borderRadius: 4 }}>
           <div style={{
             position: 'absolute', left: 0, top: 0,
@@ -438,7 +462,7 @@ export function BenchmarkBar({ label, portfolioReturn, benchmarkReturn }) {
           {bUp ? '+' : ''}{benchmarkReturn.toFixed(1)}%
         </span>
       </div>
-    </div>
+    </div>)
   );
 }
 
@@ -450,8 +474,10 @@ export function Donut({ slices, size = 120, thickness = 14, gap = 1.5, ariaLabel
   let offset = 0;
   const label = ariaLabel || (
     slices.length > 0
-      ? `Allocation donut: ${slices.map(s => `${s.label || ''} ${(s.value / total * 100).toFixed(0)} percent`).join(', ')}`
-      : 'Allocation donut'
+      ? tx('Allocation donut: {0}', [
+      slices.map(s => `${s.label || ''} ${(s.value / total * 100).toFixed(0)} percent`).join(', ')
+    ])
+      : tx('Allocation donut')
   );
   return (
     <svg
@@ -516,9 +542,12 @@ export function ProjectionFan({ points = [], displayCurrency = 'RWF', height = 2
     .map(m => points.reduce((best, p) => Math.abs(p.month - m) < Math.abs(best.month - m) ? p : best, points[0]));
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height, display: 'block', overflow: 'visible' }}
+    (<svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height, display: 'block', overflow: 'visible' }}
       role="img"
-      aria-label={`Modeled net-worth projection: ${marks.map(p => `${msLabel(p.month)} ≈ ${compact(p.expected)}`).join(', ')}. Band shows the low-to-high range.`}>
+      aria-label={tx(
+        'Modeled net-worth projection: {0}. Band shows the low-to-high range.',
+        [marks.map(p => `${msLabel(p.month)} ≈ ${compact(p.expected)}`).join(', ')]
+      )}>
       <defs>
         <linearGradient id="fanBand" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.26" />
@@ -530,7 +559,7 @@ export function ProjectionFan({ points = [], displayCurrency = 'RWF', height = 2
       <path d={line('high')} stroke="var(--brand)" strokeWidth="1.25" fill="none" opacity="0.55" strokeDasharray="2 3" />
       <path d={line('expected')} stroke="var(--brand)" strokeWidth="2.5" fill="none" strokeDasharray="6 4" strokeLinecap="round" />
       <circle cx={xOf(0)} cy={yOf(points[0].expected)} r="4" fill="var(--brand)" stroke="var(--paper)" strokeWidth="2" />
-      <text x={xOf(0) + 6} y={yOf(points[0].expected) - 8} fontSize="9.5" fontWeight="600" fill="var(--ink-3)" fontFamily="inherit">Today</text>
+      <text x={xOf(0) + 6} y={yOf(points[0].expected) - 8} fontSize="9.5" fontWeight="600" fill="var(--ink-3)" fontFamily="inherit">{tx('Today')}</text>
       {marks.map((p) => (
         <g key={p.month} aria-hidden="true">
           <line x1={xOf(p.month)} x2={xOf(p.month)} y1={yOf(p.high)} y2={H - PAD.b} stroke="var(--line)" strokeDasharray="2 3" />
@@ -544,6 +573,6 @@ export function ProjectionFan({ points = [], displayCurrency = 'RWF', height = 2
           </text>
         </g>
       ))}
-    </svg>
+    </svg>)
   );
 }

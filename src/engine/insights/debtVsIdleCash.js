@@ -17,6 +17,8 @@ import { REFERENCE } from './refs.js';
 import { liquidIds, liquidValueRWF, safetyBufferRWF, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { toBase } from '../../data.js';
 
+import { tx } from '../../i18n/tx.js';
+
 const MIN_ANNUAL_SAVING_RWF = 50_000; // below this the advice is noise
 
 export default function debtVsIdleCash(state, { now = new Date(), refs = REFERENCE } = {}) {
@@ -41,7 +43,7 @@ export default function debtVsIdleCash(state, { now = new Date(), refs = REFEREN
   const annualSave = applicable * netRatePct / 100;
   if (annualSave < MIN_ANNUAL_SAVING_RWF) return null;
 
-  const loanName = top.l.name || top.l.lender || 'your loan';
+  const loanName = top.l.name || top.l.lender || tx('your loan');
   const cashIds = liquidIds(assets);
   const sourceRefs = [top.l.id, ...cashIds];
   const fullRepay = applicable >= top.remainingRWF;
@@ -50,13 +52,28 @@ export default function debtVsIdleCash(state, { now = new Date(), refs = REFEREN
     id: 'debt-vs-idle-cash',
     type: 'comparison',
     category: 'debt',
-    headline: `Cash in the bank while "${loanName}" charges ${top.ratePct}%`,
-    body: `You hold ~${rwf(surplus)} beyond a ${monthlyExpense > 0 ? `${refs.runwayWarnMonths}-month` : 'safety'} buffer while ${loanName} accrues ${top.ratePct}%/year on ${rwf(top.remainingRWF)}. ${fullRepay ? `Clearing it entirely` : `Putting ${rwf(applicable)} toward it`} saves ~${rwf(annualSave)}/year in interest — a guaranteed ${netRatePct.toFixed(1)}% return no deposit matches. Check prepayment terms with the lender first.`,
+    headline: tx('Cash in the bank while "{0}" charges {1}%', [loanName, top.ratePct]),
+    body: tx(
+      'You hold ~{0} beyond a {1} buffer while {2} accrues {3}%/year on {4}. {5} saves ~{6}/year in interest — a guaranteed {7}% return no deposit matches. Check prepayment terms with the lender first.',
+      [
+        rwf(surplus),
+        monthlyExpense > 0 ? `${refs.runwayWarnMonths}-month` : 'safety',
+        loanName,
+        top.ratePct,
+        rwf(top.remainingRWF),
+        fullRepay ? `Clearing it entirely` : `Putting ${rwf(applicable)} toward it`,
+        rwf(annualSave),
+        netRatePct.toFixed(1)
+      ]
+    ),
     costOfAbsence: {
       severity: 'warning',
       amount: annualSave,
-      costStatement: `Every year this cash sits idle next to ${loanName}, ~${rwf(annualSave)} flows to the bank in interest you could stop paying.`,
-      action: { label: 'Review your loans', to: 'liabilities' },
+      costStatement: tx(
+        'Every year this cash sits idle next to {0}, ~{1} flows to the bank in interest you could stop paying.',
+        [loanName, rwf(annualSave)]
+      ),
+      action: { label: tx('Review your loans'), to: 'liabilities' },
     },
     sourceRefs,
     dataAsOf: inputsAsOf(state, cashIds, now),

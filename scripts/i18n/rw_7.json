@@ -1,0 +1,22 @@
+{
+"Am I too concentrated in any single asset or class?": "Ese nshoye byinshi cyane mu mutungo umwe cyangwa icyiciro kimwe?",
+"Build a 12-month plan to grow my net worth 25%.": "Nteguriye gahunda y’amezi 12 yo kuzamura ubukire bwanjye bwite ku 25%.",
+"Give me a one-paragraph summary of my financial health.": "Mpa incamake y’igika kimwe y’uko imari yanjye ihagaze.",
+"If I save 200,000 {0}/month, when do I hit 50M {1}?": "Nzigamye 200 000 {0}/ukwezi, ni ryari ngera kuri 50M {1}?",
+"Imari flagged this for me: \"{0}\". {1} Walk me through what's behind it and exactly how I should act on it, step by step.": "Imari yanyeretse ibi: « {0} ». {1} Nsobanurira ibiri inyuma yabyo n’uko nagombye kubikoraho, intambwe ku yindi.",
+"No category set — defaulted to 0.1%. Edit the asset to pick one.": "Nta cyiciro cyashyizweho — hakoreshejwe 0,1%. Hindura umutungo uhitemo kimwe.",
+"UPI {0}": "UPI {0}",
+"What should my next investment be, given today's rates?": "Ni iki nagombye gushoramo ubutaha, hakurikijwe ibipimo by’uyu munsi?",
+"What's my approximate annual RRA tax exposure?": "Ni angahe agereranyijwe y’imisoro ya RRA ngomba buri mwaka?",
+"Why is {0} my biggest holding — should I be worried?": "Kuki {0} ari wo mutungo wanjye munini kurusha indi — nagombye guhangayika?",
+"add {0} new": "ongeraho {0} bishya",
+"update {0} existing": "vugurura {0} bisanzweho",
+"{0} asset{1} added.": "Umutungo {0} wongeweho.",
+"{0} asset{1} updated.": "Umutungo {0} wavuguruwe.",
+"{0} has gained the most — is it likely to keep going?": "{0} ni yo yazamutse cyane — ese bishoboka ko ikomeza?",
+"{0} row{1} skipped.": "Imirongo {0} yasimbutswe.",
+"{0} {1} · Income {2} · Expense {3} · Net {4}{5}": "{0} {1} · Ayinjira {2} · Ayasohoka {3} · Asigara {4}{5}",
+"{0}: buy {1} / sell {2}": "{0}: kugura {1} / kugurisha {2}",
+"{0}: expected {1} RWF (range {2}–{3})": "{0}: biteganyijwe {1} RWF (hagati ya {2}–{3})",
+"{0}: {1}{2} · closed at {3}": "{0}: {1}{2} · byafunze kuri {3}"
+}

@@ -6,6 +6,8 @@
 
 import { CLASSES, CURRENCIES, id } from './data.js';
 
+import { tx } from './i18n/tx.js';
+
 // All possible asset fields, in the order they appear in the template
 const COLUMNS = [
   { key: 'kind',          label: 'kind',          required: true,  hint: 'Asset class code — see "Classes" sheet' },
@@ -188,7 +190,7 @@ const MAX_EXCEL_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export function parseAssetExcel(file) {
   if (file.size > MAX_EXCEL_BYTES) {
-    return Promise.reject(new Error(`File too large (max ${MAX_EXCEL_BYTES / 1024 / 1024} MB)`));
+    return Promise.reject(new Error(tx('File too large (max {0} MB)', [MAX_EXCEL_BYTES / 1024 / 1024])));
   }
 
   return new Promise((resolve, reject) => {
@@ -200,8 +202,12 @@ export function parseAssetExcel(file) {
         const head = new Uint8Array(e.target.result.slice(0, 4));
         if (!(head[0] === 0x50 && head[1] === 0x4B && head[2] === 0x03 && head[3] === 0x04)) {
           throw new Error(head[0] === 0xD0 && head[1] === 0xCF
-            ? 'This is the old binary Excel format (.xls). Open it in Excel and save as .xlsx, then import again.'
-            : 'This isn’t an Excel (.xlsx) file. Download the template, fill it in, and upload that file.');
+            ? tx(
+            'This is the old binary Excel format (.xls). Open it in Excel and save as .xlsx, then import again.'
+          )
+            : tx(
+            'This isn’t an Excel (.xlsx) file. Download the template, fill it in, and upload that file.'
+          ));
         }
         const ExcelJS = (await import('exceljs')).default;
         const wb = new ExcelJS.Workbook();
@@ -209,7 +215,7 @@ export function parseAssetExcel(file) {
         await wb.xlsx.load(e.target.result);
 
         const ws = wb.worksheets.find(s => s.name.toLowerCase() === 'assets') || wb.worksheets[0];
-        if (!ws) throw new Error('No "Assets" sheet found in the workbook.');
+        if (!ws) throw new Error(tx('No "Assets" sheet found in the workbook.'));
 
         // Read headers from row 1
         const headers = [];

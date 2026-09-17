@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { tx } from '../i18n/tx.js';
+
 /**
  * Explain — the education layer's inline explainer (F9).
  * Renders small "ⓘ term" chips; activating one opens a plain-language
@@ -14,9 +16,9 @@ export default function Explain({ entries = [], style }) {
   const open = entries.find(e => e.id === openId);
 
   return (
-    <div style={style}>
+    (<div style={style}>
       <div className="row" style={{ gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Learn</span>
+        <span className="muted" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tx('Learn')}</span>
         {entries.map(e => (
           <button
             key={e.id}
@@ -24,7 +26,7 @@ export default function Explain({ entries = [], style }) {
             onClick={() => setOpenId(openId === e.id ? null : e.id)}
             aria-expanded={openId === e.id}
             aria-controls={openId === e.id ? `explain-${e.id}` : undefined}
-            title={e.short}
+            title={tx(e.short)}
             style={{
               padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
               fontSize: 10.5, fontWeight: 600, fontFamily: 'inherit',
@@ -34,7 +36,7 @@ export default function Explain({ entries = [], style }) {
               transition: 'background 0.14s, color 0.14s',
             }}
           >
-            <span aria-hidden="true" style={{ marginRight: 4 }}>ⓘ</span>{e.term}
+            <span aria-hidden="true" style={{ marginRight: 4 }}>ⓘ</span>{tx(e.term)}
           </button>
         ))}
       </div>
@@ -48,9 +50,9 @@ export default function Explain({ entries = [], style }) {
             animation: 'imari-slideUp 200ms cubic-bezier(0.23,1,0.32,1) both',
           }}
         >
-          <strong style={{ color: 'var(--ink)' }}>{open.term}.</strong> {open.body}
+          <strong style={{ color: 'var(--ink)' }}>{tx(open.term)}.</strong> {tx(open.body)}
         </div>
       )}
-    </div>
+    </div>)
   );
 }

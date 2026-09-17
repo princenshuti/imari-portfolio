@@ -21,6 +21,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import en from '../locales/en.js';
 import fr from '../locales/fr.js';
 import rw from '../locales/rw.js';
+import { setTxLocale, registerMessages, hasMessages } from '../i18n/tx.js';
+
+// Interior catalogues (English text → translation), loaded only when chosen.
+const LOADERS = {
+  fr: () => import('../i18n/messages.fr.json'),
+  rw: () => import('../i18n/messages.rw.json'),
+};
+
+import { tx } from '../i18n/tx.js';
 
 const BUNDLES = { en, fr, rw };
 const STORAGE_KEY = 'imari:locale';
@@ -68,6 +77,22 @@ const I18nContext = createContext(null);
 
 export function I18nProvider({ profile, onChangeLocale, children }) {
   const [locale, setLocaleState] = useState(() => detectLocale(profile?.locale));
+  // Bumps once the interior catalogue for `locale` is loaded so consumers re-render.
+  const [catalogueVersion, setCatalogueVersion] = useState(0);
+  // Set to the locale whose catalogue could not be fetched, so a failed load
+  // falls back to English text instead of blocking the app on the splash.
+  const [failedLocale, setFailedLocale] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    setTxLocale(locale);
+    try { document.documentElement.lang = locale; } catch {}
+    if (hasMessages(locale)) { setCatalogueVersion(v => v + 1); return; }
+    const load = LOADERS[locale];
+    if (!load) return;
+    load().then(mod => { if (!alive) return; registerMessages(locale, mod.default || mod); setCatalogueVersion(v => v + 1); })
+          .catch(() => { if (alive) setFailedLocale(locale); });
+    return () => { alive = false; };
+  }, [locale]);
 
   // Sync down: when profile.locale changes externally (cloud sync from
   // another device), adopt it. Skip if user just changed it locally.
@@ -99,12 +124,46 @@ export function I18nProvider({ profile, onChangeLocale, children }) {
     return key;
   }, [locale]);
 
-  const value = useMemo(() => ({ t, locale, setLocale }), [t, locale, setLocale]);
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+  // `key` changes when the language (or its catalogue) changes so the whole
+  // subtree re-renders with the new strings — tx() reads module state.
+  const value = useMemo(() => ({ t, locale, setLocale, key: `${locale}:${catalogueVersion}` }), [t, locale, setLocale, catalogueVersion]);
+  // Hold the first paint until the interior catalogue is in memory. tx() reads
+  // module state, so anything computed before the catalogue lands (market
+  // sources, insight sentences, toasts) would capture English into React state
+  // and never re-translate. English needs no catalogue, so it never waits.
+  const ready = hasMessages(locale) || failedLocale === locale;
+  return (
+    <I18nContext.Provider value={value}>
+      {ready ? <LocaleBoundary>{children}</LocaleBoundary> : <CatalogueSplash />}
+    </I18nContext.Provider>
+  );
+}
+
+/** Neutral placeholder shown for the moment a non-English catalogue is loading. */
+function CatalogueSplash() {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, display: 'flex',
+      alignItems: 'center', justifyContent: 'center', background: 'var(--bg)',
+    }}>
+      <div style={{
+        width: 30, height: 30, borderRadius: '50%',
+        border: '3px solid var(--line)', borderTopColor: 'var(--brand)',
+        animation: 'i18n-spin 0.7s linear infinite',
+      }} />
+      <style>{'@keyframes i18n-spin { to { transform: rotate(360deg); } }'}</style>
+    </div>
+  );
+}
+
+/** Re-mounts everything below it when the language or its catalogue changes, so tx() output refreshes. */
+function LocaleBoundary({ children }) {
+  const ctx = useContext(I18nContext);
+  return <div key={ctx?.key || 'en'} style={{ display: 'contents' }}>{children}</div>;
 }
 
 export function useT() {
   const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error('useT must be used within <I18nProvider>');
+  if (!ctx) throw new Error(tx('useT must be used within <I18nProvider>'));
   return ctx;
 }

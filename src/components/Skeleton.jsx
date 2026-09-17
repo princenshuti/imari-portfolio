@@ -1,3 +1,4 @@
+import { tx } from '../i18n/tx.js';
 /**
  * Skeleton primitives — placeholder UI that mirrors final card geometry
  * during async loads. Better than centred "Loading…" text because the user
@@ -36,9 +37,9 @@ export function Skeleton({
  */
 export function CardSkeleton({ height = 140 }) {
   return (
-    <div
+    (<div
       role="status"
-      aria-label="Loading"
+      aria-label={tx('Loading')}
       className="card"
       style={{
         padding: 16,
@@ -55,7 +56,7 @@ export function CardSkeleton({ height = 140 }) {
       <Skeleton width="55%" height={22} />
       <Skeleton width="100%" height={30} radius={4} />
       <Skeleton width="70%" height={10} />
-    </div>
+    </div>)
   );
 }
 
@@ -68,7 +69,7 @@ export function CardSkeleton({ height = 140 }) {
  * dashboard/assets/trends layout closely enough to feel like the right page
  * is about to appear.
  */
-export function ViewSkeleton({ cards = 6, label = 'Loading view' }) {
+export function ViewSkeleton({ cards = 6, label = tx('Loading view') }) {
   return (
     <div
       role="status"
@@ -96,7 +97,7 @@ export function ViewSkeleton({ cards = 6, label = 'Loading view' }) {
  */
 export function RowSkeleton({ count = 3, showAvatar = false }) {
   return (
-    <div role="status" aria-label="Loading list" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    (<div role="status" aria-label={tx('Loading list')} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
@@ -117,6 +118,6 @@ export function RowSkeleton({ count = 3, showAvatar = false }) {
           <Skeleton width={56} height={22} radius={6} />
         </div>
       ))}
-    </div>
+    </div>)
   );
 }

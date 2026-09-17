@@ -100,3 +100,19 @@ describe('budgets (F6)', () => {
     expect(next.budgets).toEqual({ transport: 50000 });
   });
 });
+
+describe('scrub — input hygiene at the reducer boundary', () => {
+  it('strips control characters, caps lengths, keeps data URIs, drops prototype keys', () => {
+    const asset = { id: 'a', name: 'Plot\x00 in\x07 Bugesera', notes: 'n'.repeat(5000), photos: ['data:image/png;base64,AAAA'], nested: { deep: 'x'.repeat(400) }, __proto__: { polluted: true } };
+    const s = reducer(baseState({ assets: [] }), { type: 'upsertAsset', asset });
+    const a = s.assets.find(x => x.id === 'a');
+    expect(a.name).toBe('Plot in Bugesera');
+    expect(a.notes.length).toBe(4000);
+    expect(a.photos[0]).toBe('data:image/png;base64,AAAA');
+    expect(a.nested.deep.length).toBe(300);
+    expect(a.polluted).toBeUndefined();
+    const p = reducer(baseState(), { type: 'setProfile', patch: { name: 'Prince\x1b[31m', bio: 'b'.repeat(9000) } });
+    expect(p.profile.name).toBe('Prince[31m');
+    expect(p.profile.bio.length).toBe(4000);
+  });
+});

@@ -5,6 +5,8 @@ import { REFERENCE } from './refs.js';
 import { LIQUID_KINDS, makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { valueRWF } from '../../data.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export default function idleCashYieldGap(state, { now = new Date(), refs = REFERENCE } = {}) {
   const assets = state.assets || [];
   const idle = assets.filter(a => {
@@ -30,13 +32,19 @@ export default function idleCashYieldGap(state, { now = new Date(), refs = REFER
     id: 'idle-cash-yield-gap',
     type: 'comparison',
     category: 'liquidity',
-    headline: `${rwf(idleValue)} earning almost nothing`,
-    body: `${rwf(idleValue)} sits in cash/MoMo below ${refs.idleYieldThresholdPct}% while BNR T-bills reference ~${refs.tBillYieldPct}%.`,
+    headline: tx('{0} earning almost nothing', [rwf(idleValue)]),
+    body: tx(
+      '{0} sits in cash/MoMo below {1}% while BNR T-bills reference ~{2}%.',
+      [rwf(idleValue), refs.idleYieldThresholdPct, refs.tBillYieldPct]
+    ),
     costOfAbsence: {
       severity: 'warning',
       amount: forgoneMonthly,
-      costStatement: `That's ~${rwf(forgoneMonthly)}/month you're not earning — about ${rwf(forgoneMonthly * 12)}/year forgone.`,
-      action: { label: 'See idle-cash options', to: 'trends' },
+      costStatement: tx(
+        'That\'s ~{0}/month you\'re not earning — about {1}/year forgone.',
+        [rwf(forgoneMonthly), rwf(forgoneMonthly * 12)]
+      ),
+      action: { label: tx('See idle-cash options'), to: 'trends' },
     },
     sourceRefs: ids,
     dataAsOf: inputsAsOf(state, ids, now),

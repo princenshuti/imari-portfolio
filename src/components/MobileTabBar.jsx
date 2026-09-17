@@ -22,6 +22,13 @@ const TAB_KEY = {
   retirement:   'nav.tabs_pension',
   advisor:      'nav.advisor',
   settings:     'nav.settings',
+  family:       'nav.tabs_family',
+  scorecard:    'nav.scorecard',
+  calendar:     'nav.calendar',
+  household:    'nav.household',
+  insurance:    'nav.insurance',
+  documents:    'nav.documents',
+  wishlist:     'nav.tabs_wishes',
 };
 
 export default function MobileTabBar({ active, onNav, visibleIds = null }) {

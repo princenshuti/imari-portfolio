@@ -8,6 +8,8 @@ import { makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { valueRWF } from '../../data.js';
 import { parseLocalDate } from '../recurrence.js';
 
+import { tx, txLocale } from '../../i18n/tx.js';
+
 const HORIZON_DAYS = 60; // look-ahead window
 
 export default function maturityReinvestment(state, { now = new Date(), refs = REFERENCE } = {}) {
@@ -24,7 +26,7 @@ export default function maturityReinvestment(state, { now = new Date(), refs = R
   const daysUntil = Math.ceil((next.due - now) / 86400000);
   const matured = daysUntil <= 0;
   const idleMonthly = next.value * refs.tBillYieldPct / 100 / 12;
-  const dateStr = next.due.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const dateStr = next.due.toLocaleDateString(txLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
   const ids = maturing.map(x => x.a.id);
 
   return makeInsight({
@@ -32,16 +34,29 @@ export default function maturityReinvestment(state, { now = new Date(), refs = R
     type: 'foresight',
     category: 'fixed-income',
     headline: matured
-      ? `"${next.a.name}" has matured — proceeds need a home`
-      : `"${next.a.name}" matures in ${daysUntil} days`,
+      ? tx('"{0}" has matured — proceeds need a home', [next.a.name])
+      : tx('"{0}" matures in {1} days', [next.a.name, daysUntil]),
     body: matured
-      ? `${rwf(next.value)} matured on ${dateStr}. Until it's reinvested it earns nothing — decide its next home (roll into a new T-bill/bond, a goal, or debt repayment).`
-      : `${rwf(next.value)} lands on ${dateStr}. Plan the reinvestment now so the proceeds never sit idle${maturing.length > 1 ? ` (${maturing.length} positions mature within ${HORIZON_DAYS} days)` : ''}.`,
+      ? tx(
+      '{0} matured on {1}. Until it\'s reinvested it earns nothing — decide its next home (roll into a new T-bill/bond, a goal, or debt repayment).',
+      [rwf(next.value), dateStr]
+    )
+      : tx(
+      '{0} lands on {1}. Plan the reinvestment now so the proceeds never sit idle{2}.',
+      [
+        rwf(next.value),
+        dateStr,
+        maturing.length > 1 ? ` (${maturing.length} positions mature within ${HORIZON_DAYS} days)` : ''
+      ]
+    ),
     costOfAbsence: {
       severity: matured || daysUntil <= 30 ? 'warning' : 'info',
       amount: idleMonthly,
-      costStatement: `Idle after maturity, ${rwf(next.value)} forgoes ~${rwf(idleMonthly)}/month at the ${refs.tBillYieldPct}% reference yield.`,
-      action: { label: 'Review the position', to: 'assets' },
+      costStatement: tx(
+        'Idle after maturity, {0} forgoes ~{1}/month at the {2}% reference yield.',
+        [rwf(next.value), rwf(idleMonthly), refs.tBillYieldPct]
+      ),
+      action: { label: tx('Review the position'), to: 'assets' },
     },
     sourceRefs: ids,
     dataAsOf: inputsAsOf(state, ids, now),

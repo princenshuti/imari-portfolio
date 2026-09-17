@@ -1,3 +1,4 @@
+import { tx } from '../i18n/tx.js';
 // freshness.js — Data Freshness & Trust layer (§11).
 // Every derived number should be able to say how old its inputs are. A
 // confidently-wrong stale number erodes trust faster than no number.
@@ -37,11 +38,11 @@ export function humanizeAge(ms) {
   const days = ms / 86400000;
   if (days < 1) return 'today';
   if (days < 2) return 'yesterday';
-  if (days < 14) return `${Math.round(days)} days ago`;
-  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
-  if (days < 365) return `${Math.round(days / 30)} months ago`;
+  if (days < 14) return tx('{0} days ago', [Math.round(days)]);
+  if (days < 60) return tx('{0} weeks ago', [Math.round(days / 7)]);
+  if (days < 365) return tx('{0} months ago', [Math.round(days / 30)]);
   const yrs = days / 365;
-  return `${yrs.toFixed(yrs < 2 ? 1 : 0)} years ago`;
+  return tx('{0} years ago', [yrs.toFixed(yrs < 2 ? 1 : 0)]);
 }
 
 /**
@@ -55,7 +56,7 @@ export function freshnessChip(asOfISO, { now = new Date(), thresholdMs = THRESHO
     asOf: asOfISO,
     ageMs: age,
     isStale: age > thresholdMs,
-    label: `as of ${humanizeAge(age)}`,
+    label: tx('as of {0}', [humanizeAge(age)]),
   };
 }
 
@@ -91,15 +92,24 @@ export function staleNetWorthInsight(state, { now = new Date() } = {}) {
     id: 'stale-net-worth',
     type: 'foresight',
     category: 'networth',
-    headline: `Your net worth is ${ageLabel.replace('ago', 'old').trim()}`,
-    body: `These figures rest on data last touched ${ageLabel}. Refresh your assets so the number on screen is real.`,
+    headline: tx('Your net worth is {0}', [ageLabel.replace('ago', 'old').trim()]),
+    body: tx(
+      'These figures rest on data last touched {0}. Refresh your assets so the number on screen is real.',
+      [ageLabel]
+    ),
     costOfAbsence: {
       severity,
       amount: age / 86400000,
       costStatement: n > 0
-        ? `Your net worth is based on data last touched ${ageLabel} — update ${n} asset${n === 1 ? '' : 's'} to make it real.`
-        : `Your net worth is based on data last touched ${ageLabel} — refresh your assets to make it real.`,
-      action: { label: 'Update assets', to: 'assets' },
+        ? tx(
+        'Your net worth is based on data last touched {0} — update {1} asset{2} to make it real.',
+        [ageLabel, n, n === 1 ? '' : 's']
+      )
+        : tx(
+        'Your net worth is based on data last touched {0} — refresh your assets to make it real.',
+        [ageLabel]
+      ),
+      action: { label: tx('Update assets'), to: 'assets' },
     },
     sourceRefs,
     computedAt: now.toISOString(),

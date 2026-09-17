@@ -4,6 +4,8 @@
 // about "money going out on autopilot."
 import { monthlyEquivalentRWF } from '../recurrence.js';
 
+import { tx } from '../../i18n/tx.js';
+
 /**
  * @param {Array} cashflows  state.cashflows
  * @returns {{
@@ -19,7 +21,7 @@ export function auditRecurring(cashflows = []) {
     .filter(cf => cf.type === 'expense' && cf.recurring && cf.recurring !== 'once')
     .map(cf => ({
       id: cf.id,
-      description: cf.description || cf.notes || cf.category || 'Recurring expense',
+      description: cf.description || cf.notes || cf.category || tx('Recurring expense'),
       category: cf.category || 'other',
       recurring: cf.recurring,
       amount: cf.amount,

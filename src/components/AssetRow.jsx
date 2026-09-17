@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { CLASSES, fmt, fmtBase, suggestValue, toBase, yearsBetween } from '../data.js';
 import AssetIcon from './AssetIcon.jsx';
 
+import { tx, txLocale } from '../i18n/tx.js';
+
 export default function AssetRow({ asset, displayCurrency, isSelected, onToggle, onEdit, onDelete, onSaveValue, rowProps = {} }) {
   const cls = CLASSES.find(c => c.kind === asset.kind) || CLASSES[CLASSES.length - 1];
   const suggested = suggestValue(asset);
@@ -35,24 +37,24 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
   const cancel = () => setEditing(false);
 
   return (
-    <div
-      {...rowProps}
-      role="option"
-      aria-selected={isSelected}
-      aria-label={`${asset.name}, ${fmt(current, asset.currency, { compact: true })}`}
-      className="asset-row-focusable hover-actions"
-      style={{
-        display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
-        alignItems:'center', padding: '14px 22px', gap: 12,
-        background: isSelected ? 'color-mix(in oklab, var(--down) 6%, transparent)' : 'transparent',
-        transition: 'background 0.15s',
-        outline: 'none', // visible ring comes from .asset-row-focusable:focus-visible
-      }}
-    >
+    (<div
+        {...rowProps}
+        role="option"
+        aria-selected={isSelected}
+        aria-label={`${asset.name}, ${fmt(current, asset.currency, { compact: true })}`}
+        className="asset-row-focusable hover-actions"
+        style={{
+          display:'grid', gridTemplateColumns:'28px 2.3fr 1fr 1.2fr 1.2fr 0.9fr 80px',
+          alignItems:'center', padding: '14px 22px', gap: 12,
+          background: isSelected ? 'color-mix(in oklab, var(--down) 6%, transparent)' : 'transparent',
+          transition: 'background 0.15s',
+          outline: 'none', // visible ring comes from .asset-row-focusable:focus-visible
+        }}
+      >
       <input
         type="checkbox" checked={!!isSelected} onChange={onToggle}
         onClick={e => e.stopPropagation()}
-        aria-label={`Select ${asset.name}`}
+        aria-label={tx('Select {0}', [asset.name])}
         style={{ cursor: 'pointer', accentColor: 'var(--down)', margin: 0, width: 18, height: 18 }}
       />
       <div className="row" style={{ gap: 12, minWidth: 0 }}>
@@ -70,13 +72,15 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
             {cost === 0 && current === 0 && (
               <span
                 className="pill"
-                title="No value entered — this asset isn't counted in your net worth. Edit to set a value."
+                title={tx(
+                  'No value entered — this asset isn\'t counted in your net worth. Edit to set a value.'
+                )}
                 style={{
                   marginLeft: 8, fontSize: 10, padding: '1px 7px',
                   background: 'var(--gold-soft)', color: 'var(--gold-ink, var(--gold))',
                   cursor: 'help', verticalAlign: 'middle',
                 }}
-              >Set value</span>
+              >{tx('Set value')}</span>
             )}
           </div>
           <div
@@ -89,29 +93,27 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
               asset.units != null && `${asset.units} units`,
               asset.count != null && `${asset.count} head`,
               asset.neighbourhood && asset.neighbourhood,
-              asset.upi && `UPI ${asset.upi}`,
+              asset.upi && tx('UPI {0}', [asset.upi]),
               asset.chassis && asset.chassis,
             ].filter(Boolean).join(' · ')}
           >
-            {cls.label}
+            {tx(cls.label)}
             {asset.ticker && ` · ${asset.ticker}`}
-            {asset.shares != null && ` · ${asset.shares.toLocaleString()} sh`}
-            {asset.units != null && ` · ${asset.units} units`}
-            {asset.count != null && ` · ${asset.count} head`}
+            {asset.shares != null && tx(' · {0} sh', [asset.shares.toLocaleString()])}
+            {asset.units != null && tx(' · {0} units', [asset.units])}
+            {asset.count != null && tx(' · {0} head', [asset.count])}
             {asset.neighbourhood && ` · ${asset.neighbourhood}`}
-            {asset.upi && ` · UPI ${asset.upi}`}
+            {asset.upi && tx(' · UPI {0}', [asset.upi])}
             {asset.chassis && ` · ${asset.chassis}`}
           </div>
         </div>
       </div>
-
       <div className="col" style={{ gap: 2 }}>
         <div className="num" style={{ fontSize: 12 }}>
           {fmt(cost, asset.currency, { compact: true })}
         </div>
-        <div className="muted" style={{ fontSize: 10 }}>{new Date(asset.purchaseDate).toLocaleDateString('en-GB', { month:'short', year:'numeric' })} · {yrs.toFixed(1)}y ago</div>
+        <div className="muted" style={{ fontSize: 10 }}>{new Date(asset.purchaseDate).toLocaleDateString(txLocale(), { month:'short', year:'numeric' })} · {yrs.toFixed(1)}{tx('y ago')}</div>
       </div>
-
       <div className="col" style={{ gap: 2 }}>
         {editing ? (
           <input
@@ -125,7 +127,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
               if (e.key === 'Enter') { e.preventDefault(); commit(); }
               else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
             }}
-            aria-label={`Edit value of ${asset.name}`}
+            aria-label={tx('Edit value of {0}', [asset.name])}
             style={{
               width: '100%', padding: '4px 6px', borderRadius: 5,
               border: '1px solid var(--brand)',
@@ -138,7 +140,7 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
           <button
             type="button"
             onDoubleClick={beginEdit}
-            aria-label={onSaveValue ? `Value of ${asset.name} (double-click to edit)` : undefined}
+            aria-label={onSaveValue ? tx('Value of {0} (double-click to edit)', [asset.name]) : undefined}
             className="btn-unstyled"
             style={{
               cursor: onSaveValue ? 'text' : 'default',
@@ -153,18 +155,22 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
           style={{ fontSize: 10, cursor: 'help' }}
           title={
             asset.currentValue
-              ? `Your value — the figure you entered for this asset.${onSaveValue ? ' Double-click the number to edit inline.' : ''}`
-              : `Estimated — Imari's starting suggestion using ${cls.note || 'the default rule'}.${onSaveValue ? ' Double-click the number to set your own value.' : ' Edit the asset to set your own value.'}`
+              ? tx(
+              'Your value — the figure you entered for this asset.{0}',
+              [onSaveValue ? ' Double-click the number to edit inline.' : '']
+            )
+              : tx('Estimated — Imari\'s starting suggestion using {0}.{1}', [
+              cls.note || 'the default rule',
+              onSaveValue ? ' Double-click the number to set your own value.' : ' Edit the asset to set your own value.'
+            ])
           }
         >
-          {asset.currency} · {asset.currentValue ? 'your value' : 'estimated'}
+          {asset.currency} · {asset.currentValue ? tx('your value') : 'estimated'}
         </div>
       </div>
-
       <div className="num" style={{ fontSize: 12.5, color:'var(--ink-2)' }}>
         {fmtBase(toBase(current, asset.currency), displayCurrency, { compact: true })}
       </div>
-
       <div className="col" style={{ alignItems:'flex-end', gap: 2 }}>
         <div className="num" style={{ fontSize: 12, fontWeight: 600, color: gain >= 0 ? 'var(--up-ink)' : 'var(--down-ink)' }}>
           <span aria-hidden="true">{gain >= 0 ? '▲' : '▼'}</span>{' '}
@@ -174,21 +180,20 @@ export default function AssetRow({ asset, displayCurrency, isSelected, onToggle,
           {gain >= 0 ? '+' : ''}{fmt(gain, asset.currency, { compact: true })}
         </div>
       </div>
-
       <div className="row row-actions" style={{ gap: 2, justifyContent:'flex-end' }}>
         <button
           type="button"
           onClick={() => onEdit(asset)}
-          aria-label={`Edit ${asset.name}`}
+          aria-label={tx('Edit {0}', [asset.name])}
           className="btn-icon-sm is-row-action"
         ><span aria-hidden="true">✎</span></button>
         <button
           type="button"
           onClick={() => onDelete(asset)}
-          aria-label={`Delete ${asset.name}`}
+          aria-label={tx('Delete {0}', [asset.name])}
           className="btn-icon-sm is-row-action is-danger"
         ><span aria-hidden="true">×</span></button>
       </div>
-    </div>
+    </div>)
   );
 }

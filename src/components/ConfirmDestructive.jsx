@@ -21,11 +21,13 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { SPRING } from './motion.jsx';
 
+import { tx } from '../i18n/tx.js';
+
 export function ConfirmDestructive({
   open,
   onClose,
   onConfirm,
-  title         = 'Are you sure?',
+  title         = tx('Are you sure?'),
   description,
   confirmLabel  = 'Delete',
   requireType   = null,
@@ -76,7 +78,7 @@ export function ConfirmDestructive({
   const canConfirm = requireType ? typed === requireType : true;
 
   return (
-    <div
+    (<div
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-destructive-title"
@@ -136,7 +138,7 @@ export function ConfirmDestructive({
         {requireType && (
           <div>
             <label style={{ fontSize: 11.5, color: 'var(--ink-3)', display: 'block', marginBottom: 6 }}>
-              Type <strong style={{ color: 'var(--down)', fontFamily: 'var(--mono, monospace)' }}>{requireType}</strong> to confirm
+              {tx('Type')} <strong style={{ color: 'var(--down)', fontFamily: 'var(--mono, monospace)' }}>{requireType}</strong> {tx('to confirm')}
             </label>
             <input
               ref={inputRef}
@@ -166,7 +168,7 @@ export function ConfirmDestructive({
             className="btn btn-ghost"
             style={{ padding: '9px 16px' }}
           >
-            Cancel
+            {tx('Cancel')}
           </button>
           <button
             type="button"
@@ -179,10 +181,10 @@ export function ConfirmDestructive({
               cursor: (!canConfirm || loading) ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Working…' : confirmLabel}
+            {loading ? tx('Working…') : confirmLabel}
           </button>
         </div>
       </motion.div>
-    </div>
+    </div>)
   );
 }

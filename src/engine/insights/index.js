@@ -25,6 +25,8 @@ import fxExposureMismatch from './fxExposureMismatch.js';
 import rentalYieldGap from './rentalYieldGap.js';
 import receivableOverdue from './receivableOverdue.js';
 import pensionContributionGap from './pensionContributionGap.js';
+// Family module rules arrive on ctx.family (rules, idSet) for entitled households —
+// supplied by the lazily-loaded family bundle, so the module stays out of the main chunk.
 
 // Registration order = stable tiebreak for equal-severity, equal-magnitude items.
 export const RULES = [
@@ -62,7 +64,7 @@ function severityRank(insight) {
 
 /**
  * @param {object} state  portfolio state
- * @param {object} ctx    { now?: Date, refs?, dismissed?: Set<string>, limit?: number }
+ * @param {object} ctx    { now?: Date, refs?, dismissed?: Set<string>, limit?: number, family?: {logs,notes,items} }
  * @returns {{ insights: Insight[], topCost: Insight|null }}
  */
 export function runInsights(state, ctx = {}) {
@@ -70,13 +72,15 @@ export function runInsights(state, ctx = {}) {
   const refs = ctx.refs || REFERENCE;
   const dismissed = ctx.dismissed instanceof Set ? ctx.dismissed : new Set(ctx.dismissed || []);
   const limit = ctx.limit ?? 6;
+  const family = ctx.family && Array.isArray(ctx.family.rules) ? ctx.family : null;
   const valid = validIdSet(state);
+  if (family && typeof family.idSet === 'function') for (const id of family.idSet(family)) valid.add(id);
 
   const out = [];
-  for (const rule of RULES) {
+  for (const rule of family ? [...RULES, ...family.rules] : RULES) {
     let insight = null;
     try {
-      insight = rule(state, { now, refs });
+      insight = rule(state, { now, refs, family });
     } catch {
       insight = null; // a single bad rule must never break the engine (NFR-REL-1)
     }

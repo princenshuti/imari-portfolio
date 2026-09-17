@@ -6,6 +6,8 @@
 import { liquidIds as liquidIdsOf, monthlyFlowsRWF, makeInsight, inputsAsOf, rwf } from './_shared.js';
 import { goalCurrentRWF, goalTargetRWF } from '../goals.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export default function goalPaceGap(state, { now = new Date() } = {}) {
   const goals = (state.goals || []).filter(g => !g.achieved && g.deadline);
   if (goals.length === 0) return null;
@@ -60,13 +62,16 @@ export default function goalPaceGap(state, { now = new Date() } = {}) {
       id: 'goal-pace-gap',
       type: 'foresight',
       category: 'goal',
-      headline: `"${g.title}" is past its deadline`,
-      body: `Deadline has passed with ${rwf(remaining)} still to go.`,
+      headline: tx('"{0}" is past its deadline', [g.title]),
+      body: tx('Deadline has passed with {0} still to go.', [rwf(remaining)]),
       costOfAbsence: {
         severity: 'warning',
         amount: remaining,
-        costStatement: `"${g.title}" missed its target date — ${rwf(remaining)} short. Reset the date or raise contributions to make it real.`,
-        action: { label: 'Adjust this goal', to: 'goals' },
+        costStatement: tx(
+          '"{0}" missed its target date — {1} short. Reset the date or raise contributions to make it real.',
+          [g.title, rwf(remaining)]
+        ),
+        action: { label: tx('Adjust this goal'), to: 'goals' },
       },
       sourceRefs,
       dataAsOf: inputsAsOf(state, backingIds, now),
@@ -82,13 +87,19 @@ export default function goalPaceGap(state, { now = new Date() } = {}) {
       id: 'goal-pace-gap',
       type: 'foresight',
       category: 'goal',
-      headline: `"${g.title}" is out of reach at the current pace`,
-      body: `Hitting it on time needs ${rwf(required)}/month; your recent net saving is ~${rwf(available)}/month — effectively no progress toward it.`,
+      headline: tx('"{0}" is out of reach at the current pace', [g.title]),
+      body: tx(
+        'Hitting it on time needs {0}/month; your recent net saving is ~{1}/month — effectively no progress toward it.',
+        [rwf(required), rwf(available)]
+      ),
       costOfAbsence: {
         severity: 'warning',
         amount: required,
-        costStatement: `"${g.title}" never arrives at your current saving rate. It needs ${rwf(required)}/month — start anywhere above zero.`,
-        action: { label: 'Review goals', to: 'goals' },
+        costStatement: tx(
+          '"{0}" never arrives at your current saving rate. It needs {1}/month — start anywhere above zero.',
+          [g.title, rwf(required)]
+        ),
+        action: { label: tx('Review goals'), to: 'goals' },
       },
       sourceRefs,
       dataAsOf: inputsAsOf(state, backingIds, now),
@@ -101,13 +112,19 @@ export default function goalPaceGap(state, { now = new Date() } = {}) {
     id: 'goal-pace-gap',
     type: 'foresight',
     category: 'goal',
-    headline: `"${g.title}" is slipping ~${slipStr}`,
-    body: `Hitting it on time needs ${rwf(required)}/month, but your recent net saving is ~${rwf(available)}/month.`,
+    headline: tx('"{0}" is slipping ~{1}', [g.title, slipStr]),
+    body: tx(
+      'Hitting it on time needs {0}/month, but your recent net saving is ~{1}/month.',
+      [rwf(required), rwf(available)]
+    ),
     costOfAbsence: {
       severity: 'warning',
       amount: required,
-      costStatement: `At your current pace "${g.title}" lands about ${slipStr} late. Closing the gap needs ${rwf(required)}/month.`,
-      action: { label: 'Review goals', to: 'goals' },
+      costStatement: tx(
+        'At your current pace "{0}" lands about {1} late. Closing the gap needs {2}/month.',
+        [g.title, slipStr, rwf(required)]
+      ),
+      action: { label: tx('Review goals'), to: 'goals' },
     },
     sourceRefs,
     dataAsOf: inputsAsOf(state, backingIds, now),

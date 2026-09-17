@@ -6,6 +6,8 @@ import { REFERENCE } from './refs.js';
 import { makeInsight } from './_shared.js';
 import { valueRWF } from '../../data.js';
 
+import { tx } from '../../i18n/tx.js';
+
 export default function realVsNominalNetWorth(state, { now = new Date(), refs = REFERENCE } = {}) {
   const snaps = (state.snapshots || []).slice().sort((a, b) => a.date.localeCompare(b.date));
   if (snaps.length < 2) return null;
@@ -37,23 +39,42 @@ export default function realVsNominalNetWorth(state, { now = new Date(), refs = 
 
   const losingGround = realPct < 0;
   const severity = losingGround ? 'warning' : 'info';
-  const monthsLabel = days >= 330 ? 'over the past year' : `over the past ${Math.round(days / 30)} months`;
+  const monthsLabel = days >= 330 ? tx('over the past year') : tx('over the past {0} months', [Math.round(days / 30)]);
 
   return makeInsight({
     id: 'real-vs-nominal',
     type: 'comparison',
     category: 'networth',
     headline: losingGround
-      ? `Up ${nominalPct.toFixed(1)}% in RWF, ${realPct.toFixed(1)}% in real terms`
-      : `${erodedPct.toFixed(1)}% of your growth was inflation`,
-    body: `Net worth moved ${nominalPct >= 0 ? '+' : ''}${nominalPct.toFixed(1)}% in RWF ${monthsLabel}, but after ${refs.cpiYoYPct}% inflation that's ${realPct >= 0 ? '+' : ''}${realPct.toFixed(1)}% in real purchasing power.`,
+      ? tx(
+      'Up {0}% in RWF, {1}% in real terms',
+      [nominalPct.toFixed(1), realPct.toFixed(1)]
+    )
+      : tx('{0}% of your growth was inflation', [erodedPct.toFixed(1)]),
+    body: tx(
+      'Net worth moved {0}{1}% in RWF {2}, but after {3}% inflation that\'s {4}{5}% in real purchasing power.',
+      [
+        nominalPct >= 0 ? '+' : '',
+        nominalPct.toFixed(1),
+        monthsLabel,
+        refs.cpiYoYPct,
+        realPct >= 0 ? '+' : '',
+        realPct.toFixed(1)
+      ]
+    ),
     costOfAbsence: {
       severity,
       amount: erodedPct,
       costStatement: losingGround
-        ? `In real terms your wealth is shrinking — inflation outran your ${nominalPct.toFixed(1)}% nominal gain.`
-        : `Inflation quietly ate ${erodedPct.toFixed(1)} points of your gain. Real growth, not the RWF number, is what compounds.`,
-      action: { label: 'See real vs nominal', to: 'trends' },
+        ? tx(
+        'In real terms your wealth is shrinking — inflation outran your {0}% nominal gain.',
+        [nominalPct.toFixed(1)]
+      )
+        : tx(
+        'Inflation quietly ate {0} points of your gain. Real growth, not the RWF number, is what compounds.',
+        [erodedPct.toFixed(1)]
+      ),
+      action: { label: tx('See real vs nominal'), to: 'trends' },
     },
     sourceRefs: topIds,
     dataAsOf: first.date, // oldest input = earliest snapshot in the window

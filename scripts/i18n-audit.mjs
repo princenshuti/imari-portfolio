@@ -99,6 +99,21 @@ async function auditHardcoded() {
   return found;
 }
 
+// ── Interior catalogue (tx) completeness ──────────────────────
+// Every English string the codemod wrapped (scripts/i18n-keys.all.json) must
+// have a non-empty entry in src/i18n/messages.<locale>.json.
+async function auditCatalogue() {
+  let keys = [];
+  try { keys = JSON.parse(await readFile(resolve(root, 'scripts/i18n-keys.all.json'), 'utf8')); } catch { return {}; }
+  const report = {};
+  for (const code of ['fr', 'rw']) {
+    let dict = {};
+    try { dict = JSON.parse(await readFile(resolve(root, `src/i18n/messages.${code}.json`), 'utf8')); } catch {}
+    report[code] = keys.filter(k => !dict[k] || !String(dict[k]).trim());
+  }
+  return report;
+}
+
 // ── Run ───────────────────────────────────────────────────────
 const update = process.argv.includes('--update');
 const missing = await auditKeys();
@@ -117,6 +132,9 @@ const baselineSet = new Set(baseline);
 const newViolations = hardcoded.filter(v => !baselineSet.has(v.key));
 
 let failed = false;
+const catalogue = await auditCatalogue();
+console.log('— interior catalogue (tx) —');
+for (const [code, miss] of Object.entries(catalogue)) { console.log(`  ${code}: ${miss.length} missing`); if (miss.length) { failed = true; miss.slice(0, 8).forEach(k => console.log(`     · ${k.slice(0, 80)}`)); } }
 console.log('— i18n missing-keys report (chrome) —');
 for (const code of ['fr', 'rw']) {
   const list = missing[code];

@@ -16,17 +16,17 @@ import { activeDismissals } from '../engine/insights/_shared.js';
 
 const InsightsContext = createContext(null);
 
-export function InsightsProvider({ state, dispatch, children }) {
+export function InsightsProvider({ state, dispatch, family = null, children }) {
   const dismissed = useMemo(() => activeDismissals(state.profile), [state.profile]);
 
   const engine = useMemo(() => {
     try {
-      return runInsights(state, { dismissed, limit: 16 });
+      return runInsights(state, { dismissed, limit: 16, family });
     } catch (e) {
       if (import.meta.env.DEV) console.warn('insight engine failed', e);
       return { insights: [], topCost: null };
     }
-  }, [state, dismissed]);
+  }, [state, dismissed, family]);
 
   const dismiss = useCallback((id) => {
     const cur = state.profile?.dismissedInsights || {};

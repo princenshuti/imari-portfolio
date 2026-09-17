@@ -1,0 +1,22 @@
+{
+"Am I too concentrated in any single asset or class?": "Suis-je trop concentré sur un seul actif ou une seule classe ?",
+"Build a 12-month plan to grow my net worth 25%.": "Construis un plan sur 12 mois pour faire croître mon patrimoine net de 25 %.",
+"Give me a one-paragraph summary of my financial health.": "Donne-moi un résumé en un paragraphe de ma santé financière.",
+"If I save 200,000 {0}/month, when do I hit 50M {1}?": "Si j’épargne 200 000 {0}/mois, quand atteindrai-je 50 M {1} ?",
+"Imari flagged this for me: \"{0}\". {1} Walk me through what's behind it and exactly how I should act on it, step by step.": "Imari m’a signalé ceci : « {0} ». {1} Explique-moi ce qu’il y a derrière et exactement comment agir, étape par étape.",
+"No category set — defaulted to 0.1%. Edit the asset to pick one.": "Aucune catégorie définie — 0,1 % appliqué par défaut. Modifiez l’actif pour en choisir une.",
+"UPI {0}": "UPI {0}",
+"What should my next investment be, given today's rates?": "Quel devrait être mon prochain investissement, vu les taux actuels ?",
+"What's my approximate annual RRA tax exposure?": "Quelle est mon exposition fiscale annuelle approximative auprès de la RRA ?",
+"Why is {0} my biggest holding — should I be worried?": "Pourquoi {0} est-il ma plus grosse position — dois-je m’inquiéter ?",
+"add {0} new": "ajouter {0} nouveaux",
+"update {0} existing": "mettre à jour {0} existants",
+"{0} asset{1} added.": "{0} actif{1} ajouté(s).",
+"{0} asset{1} updated.": "{0} actif{1} mis à jour.",
+"{0} has gained the most — is it likely to keep going?": "{0} a le plus progressé — est-ce que cela devrait continuer ?",
+"{0} row{1} skipped.": "{0} ligne{1} ignorée(s).",
+"{0} {1} · Income {2} · Expense {3} · Net {4}{5}": "{0} {1} · Revenus {2} · Dépenses {3} · Net {4}{5}",
+"{0}: buy {1} / sell {2}": "{0} : achat {1} / vente {2}",
+"{0}: expected {1} RWF (range {2}–{3})": "{0} : attendu {1} RWF (fourchette {2}–{3})",
+"{0}: {1}{2} · closed at {3}": "{0} : {1}{2} · clôturé à {3}"
+}

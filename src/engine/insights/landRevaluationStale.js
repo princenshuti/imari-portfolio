@@ -5,6 +5,8 @@
 import { makeInsight } from './_shared.js';
 import { TREND_DOMAINS } from '../../data.js';
 
+import { tx } from '../../i18n/tx.js';
+
 const STALE_MONTHS = 12;
 
 export default function landRevaluationStale(state, { now = new Date() } = {}) {
@@ -25,13 +27,23 @@ export default function landRevaluationStale(state, { now = new Date() } = {}) {
     id: 'land-revaluation-stale',
     type: 'foresight',
     category: 'allocation',
-    headline: `"${worst.a.name}" not revalued in ${monthsStr} months`,
-    body: `"${worst.a.name}" was last revalued ${monthsStr} months ago; its on-screen value may have drifted from the market.${idx ? ` The ${idx.label} (Modeled) has moved since.` : ''}`,
+    headline: tx('"{0}" not revalued in {1} months', [worst.a.name, monthsStr]),
+    body: tx(
+      '"{0}" was last revalued {1} months ago; its on-screen value may have drifted from the market.{2}',
+      [
+        worst.a.name,
+        monthsStr,
+        idx ? ` The ${idx.label} (Modeled) has moved since.` : ''
+      ]
+    ),
     costOfAbsence: {
       severity: 'info',
       amount: worst.months,
-      costStatement: `A stale land value distorts your net worth and Fixed Asset Tax base — update "${worst.a.name}" to make it real.`,
-      action: { label: 'Update valuation', to: 'assets' },
+      costStatement: tx(
+        'A stale land value distorts your net worth and Fixed Asset Tax base — update "{0}" to make it real.',
+        [worst.a.name]
+      ),
+      action: { label: tx('Update valuation'), to: 'assets' },
     },
     sourceRefs: [worst.a.id],
     dataAsOf: worst.a.lastRevaluedAt,

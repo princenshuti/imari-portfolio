@@ -7,6 +7,8 @@ import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../data.js';
 import { budgetStatus } from './budgets.js';
 import { monthlyEquivalentRWF, countsInMonth } from './recurrence.js';
 
+import { tx } from '../i18n/tx.js';
+
 const ALL_CATS = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 const catLabel = (id) => ALL_CATS.find(c => c.id === id)?.label;
 
@@ -70,9 +72,9 @@ export function buildMonthlyReport({ cashflows = [], snapshots = [], budgets = {
     .sort((a, b) => b._rwf - a._rwf)
     .slice(0, 5)
     .map(e => ({
-      description: e.notes || e.description || catLabel(e.category) || 'Expense',
+      description: e.notes || e.description || catLabel(e.category) || tx('Expense'),
       category: e.category || 'other-exp',
-      label: catLabel(e.category) || 'Other',
+      label: catLabel(e.category) || tx('Other'),
       amount: e._rwf,
       date: e.date,
     }));
