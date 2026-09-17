@@ -32,6 +32,11 @@
   Header set X-Content-Type-Options "nosniff"
   Header set X-Frame-Options "SAMEORIGIN"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
+  # Content-Security-Policy for Imari. Also overrides the policy inherited
+  # from the parent public_html/.htaccess (maxventures.rw), whose connect-src
+  # only allowed shop.maxventures.rw and blocked Supabase ("Failed to fetch").
+  # Add any new external API host to connect-src before shipping it.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://ulbzjkakjvtjcvnwxyzm.supabase.co wss://ulbzjkakjvtjcvnwxyzm.supabase.co https://query1.finance.yahoo.com https://open.er-api.com https://api.metals.live https://api.coingecko.com https://prod.spline.design https://unpkg.com; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 </IfModule>
 
 # ── Compression ────────────────────────────────────────────────────
